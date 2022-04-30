@@ -9,6 +9,8 @@ To use ensemble-lvq, you must access learned prototypes from different models of
 
 # simulated results
 Below is a simulated results of the technique with the iris data set.
+![en1](https://user-images.githubusercontent.com/82911284/166089235-914ebcfb-2076-4ae3-8b15-cafd092efd7c.png)
+
 
 # Questions?
 For questions contact abekaotoo@gmail.com

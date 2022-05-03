@@ -15,8 +15,7 @@ Below is a simulation of the technique with the iris data set using the ```test_
 ![smh2](https://user-images.githubusercontent.com/82911284/166449818-27cad0f9-2b59-4159-9bbc-635d8b2a3edb.png)
 
 
-Below is a simulation of the technique with the wdbc data set using the ```test_wdbc.py``` based on transfered tranfered pre-trained model prototypes from   
-```GLVQ```, ```LGMLVQ```,```GMLVQ```, ```CELVQ```, 
+Below is a simulation of the technique with the wdbc data set using the ```test_wdbc.py``` based on transfered tranfered pre-trained model prototypes from ```GLVQ```, ```GMLVQ```,```CELVQ```, 
 
 # Questions?
 For questions contact abekaotoo@gmail.com

@@ -9,9 +9,10 @@ To use ensemble-lvq, you must access learned prototypes from different models of
 
 
 # simulated results
-Below is a simulation of the technique with the iris data set using the ```test_iris1.py```
+Below is a simulation of the technique with the iris data set using the ```test_iris1.py``` based on transfered learned prototypes
 ![en1](https://user-images.githubusercontent.com/82911284/166089235-914ebcfb-2076-4ae3-8b15-cafd092efd7c.png)
 
+Below is a simulation of the technique with the iris data set using the ```test_wdbc.py``` based on transfered tranfered pre-trained model prototypes
 
 # Questions?
 For questions contact abekaotoo@gmail.com

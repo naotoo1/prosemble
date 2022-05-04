@@ -9,13 +9,13 @@ To use ensemble-lvq, you must access learned prototypes from different models of
 
 
 # simulated results
-Below is a simulation of the technique with the iris data set using the ```test_iris1.py``` based on transfered learned prototypes from ```GLVQ```, ```GMLVQ``` and ``` CELVQ``` models.
+Below is a simulation of the technique with the iris data set using the ```test_iris1.py``` based on transferred learned prototypes from ```GLVQ```, ```GMLVQ``` and ``` CELVQ``` models.
 
 
 ![smh2](https://user-images.githubusercontent.com/82911284/166449818-27cad0f9-2b59-4159-9bbc-635d8b2a3edb.png)
 
 
-Below is a simulation of the technique with the wdbc data set using the ```test_wdbc.py``` based on transfered tranferred pre-trained model prototypes from ```GLVQ```, ```GMLVQ``` and ```CELVQ``` models.
+Below is a simulation of the technique with the wdbc data set using the ```test_wdbc.py``` based on transfered transferred pre-trained model prototypes from ```GLVQ```, ```GMLVQ``` and ```CELVQ``` models.
 
 ![wdbc1](https://user-images.githubusercontent.com/82911284/166610528-93c3dd63-fdd4-4b53-89e5-bce4bf932fe5.png)
 

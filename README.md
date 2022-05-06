@@ -22,6 +22,7 @@ Below is a simulation of the technique with the wdbc data set using the ```test_
 
 Below is a plot which explains why an optimised hyperparameter(m) for the computation of the classification label security must used based on the reliability of the model.  The reliability of the model is thus linked to the performance evaluation measures used. 
 
+![op1](https://user-images.githubusercontent.com/82911284/167155040-8652d9b9-f8c0-41b5-b5d1-87a2aa80028f.png)
 
 Below is a plot of an optimal search of the hyperparater m based on the method in ```opt_m.py```
 

@@ -25,6 +25,8 @@ Below is a plot which explains why an optimised hyperparameter(m) for the comput
 
 Below is a plot of an optimal search of the hyperparater m based on the method in ```opt_m.py```
 
+![optimsed m](https://user-images.githubusercontent.com/82911284/167154806-4175bf8f-6991-4fbe-83b8-4f08f131aa4e.png)
+
 # Questions?
 For questions contact abekaotoo@gmail.com
 

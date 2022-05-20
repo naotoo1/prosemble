@@ -1,5 +1,5 @@
 # ensemble-lvq
-Ensemble lvq is based on the idea of transfer learning cum ensemble technique with lvq models.
+ML project which utilizes learned protototypes from LVQs in ensemble learning.
 
 # why?
 The idea explores the possibility of harnessing transfer learning cum ensemble learning in lvq models. In this regard the hard voting and soft voting scheme is applied to achieve the classification results. 

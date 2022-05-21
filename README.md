@@ -1,4 +1,4 @@
-# ensemble-lvq
+# Ensemble-lvq
 A Prototype based ML project implementation which utilizes learned protototypes from LVQs in ensemble learning by soft and hard voting
 
 # why?

@@ -1,11 +1,16 @@
 # ensemble-lvq
-ML project which utilizes learned protototypes from LVQs in ensemble learning.
+A Prototype based ML project implementation which utilizes learned protototypes from LVQs in ensemble learning by soft and hard voting
 
 # why?
-The idea explores the possibility of harnessing transfer learning cum ensemble learning in lvq models. In this regard the hard voting and soft voting scheme is applied to achieve the classification results. 
+In ML the convention has been to save a trained model for future use or deployment. An alternative way would be to access learned prototypes from pre-trained models
+for use in deployemnt.
+
+This project implements the harnessing of pre-trained prototypes in ensemble learning with lvq models. In this regard the hard voting and soft voting scheme is applied to achieve the classification results. 
 
 # How to use
-To use ensemble-lvq, you must access learned prototypes from different models of lvq as transfered prototypes. So for a data set to be classified, apply the methods in ```hybrid.py``` script to obtain the predicated labels and the prediction probabilities as well as the votes which supports the outcomes. To exemplify, refer to ```test_iris_.py```  and ```test_wdbc_.py```. To try a simulation of performance accuracy refer to ```test_iris1.py``` and ```test_wdbc1.py```. Please note that optimal performance in this regard is based on how well either your transfered prototypes or pre-trained models are trained. In the case of soft voting scheme, additionally, we have to optimise the classification label certainty hyperparamter(m) which is linked to the reliablity of the model in use. Inorder to optimise ```m```, refer to the  method  introduced in ```opt_m.py```.
+To use ensemble-lvq, you must access learned prototypes from of lvq models. So for a data set to be classified, apply the methods in ```hybrid.py``` to obtain the predicated labels and the prediction probabilities as well as the votes which supports the outcomes. To exemplify, refer to ```test_iris_.py```  and ```test_wdbc_.py```. 
+
+To try a simulation of performance accuracy refer to ```test_iris1.py``` and ```test_wdbc1.py```. Please note that optimal performance in this regard is based on how well either your transfered prototypes or pre-trained models are trained. In the case of soft voting scheme, additionally, we have to optimise the classification label certainty hyperparamter(m) which is linked to the reliablity of the model in use. Inorder to optimise ```m```, refer to the  method  introduced in ```opt_m.py```.
 
 
 

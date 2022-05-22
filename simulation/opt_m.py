@@ -1,7 +1,7 @@
 from sklearn.datasets import load_iris
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from hybrid12 import Hybrid
+from prosemble import Hybrid
 import matplotlib.pyplot as plt
 import numpy as np
 

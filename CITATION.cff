@@ -2,16 +2,14 @@
 # Visit https://bit.ly/cffinit to generate yours today!
 
 cff-version: 1.2.0
-title: Prosemble
-message: >-
-  If you would like to cite the package, please use
-  this:
-type: generic
+title: "Prosemble"
+message: "If you would like to cite the package, please use this."
+type: misc
 authors:
-  - given-names: Nana Abeka
-    family-names: Otoo
+  - given-names: "Nana Abeka"
+    family-names: "Otoo"
 publisher: "GitHub"
 journal: "GitHub repository"
 howpublished: 'https://github.com/naotoo1/Prosemble'
-version: '"0.0.1"'
+version: 0.0.1
 date-released: 2022

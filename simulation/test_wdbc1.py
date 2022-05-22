@@ -51,9 +51,9 @@ def simulation(x):
         pred1 = tryy_1.predict(x_test=a)
         pred2 = tryy_2.predict(x_test=a)
         pred3 = tryy_3.predict(x_test=a)
-        sec1 = tryy_1.get_security(x=a)
-        sec2 = tryy_2.get_security_m(x=a)
-        sec3 = tryy_3.get_security(x=a)
+        sec1 = tryy_1.get_security(x=a, y=2)
+        sec2 = tryy_2.get_security_m(x=a, y=2)
+        sec3 = tryy_3.get_security(x=a, y=2)
         all_pred = [pred1, pred2, pred3]
         all_sec = [sec1, sec2, sec3]
         final_pred1 = tryy_1.pred_sprob(x=a, y=all_sec)

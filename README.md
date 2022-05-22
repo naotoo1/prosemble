@@ -21,14 +21,6 @@ pip install prosemble
 To exemplify refer to the test_iris_.py and test_wdbc_.py in the examples folder
 
 
-![smh2](https://user-images.githubusercontent.com/82911284/166449818-27cad0f9-2b59-4159-9bbc-635d8b2a3edb.png)
-
-
-Below is a simulation of the technique with the wdbc data set using the ```test_wdbc1.py``` based on transferred transferred pre-trained model prototypes from ```GLVQ```, ```GMLVQ``` and ```CELVQ``` models.
-
-![wdbc1](https://user-images.githubusercontent.com/82911284/166610528-93c3dd63-fdd4-4b53-89e5-bce4bf932fe5.png)
-
-
 ## Bibtex
 If you would like to cite the package, please use this:
 ```python

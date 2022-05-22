@@ -10,9 +10,6 @@ This project implements the harnessing of pre-trained prototypes in ensemble lea
 # How to use
 To use ensemble-lvq, you must access learned prototypes from of lvq models. So for a data set to be classified, apply the methods in ```hybrid.py``` to obtain the predicated labels and the prediction probabilities as well as the votes which supports the outcomes. To exemplify, refer to ```test_iris_.py```  and ```test_wdbc_.py```. 
 
-To try a simulation of performance accuracy refer to ```test_iris1.py``` and ```test_wdbc1.py```. Please note that optimal performance in this regard is based on how well either your transfered prototypes or pre-trained models are trained. In the case of soft voting scheme, additionally, we have to optimise the classification label certainty hyperparamter(m) which is linked to the reliablity of the model in use. Inorder to optimise ```m```, refer to the  method  introduced in ```opt_m.py```.
-
-
 
 # simulated results
 Below is a simulation of the technique with the iris data set using the ```test_iris1.py``` based on transferred learned prototypes from ```GLVQ```, ```GMLVQ``` and ``` CELVQ``` models.

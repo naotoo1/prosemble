@@ -1,9 +1,10 @@
-from sklearn.datasets import load_iris
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+# Import libraries
 import pickle
 import numpy as np
 from prosemble import Hybrid
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 
 # load trained models
 rslvq = pickle.load(open('rslvq.pkl', 'rb'))

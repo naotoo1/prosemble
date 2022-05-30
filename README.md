@@ -4,7 +4,7 @@
 [![pypi](https://img.shields.io/badge/pypi-0.0.1-orange.svg)](https://pypi.org/project/prosemble)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-A Prototype based ML project implementation which utilizes learned protototypes from LVQs in ensemble learning by soft and hard voting
+ML package for both prototype and non-prototype-based classifiers that utilizes ensemble learning by soft and hard voting.
 
 ## why?
 In ML the convention has been to save a trained model for future use or deployment. An alternative way would be to access learned prototypes from pre-trained models

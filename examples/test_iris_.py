@@ -47,11 +47,11 @@ proto_classes = np.array([0, 1, 2])
 # object for the hybrid class
 # ensemble = Hybrid(None, proto_classes, 3, omega_matrix=None, matrix='n')
 
-rslvq_ = Hybrid(rslvq.w_, proto_classes, 3, omega_matrix=None, matrix='n')
-mrslvq_ = Hybrid(mrslvq.w_, proto_classes, 3, omega_matrix=omega_matrix1, matrix='y')
-lmrslvq_ = Hybrid(lmrslvq.w_, proto_classes, 3, omega_matrix=None, matrix='n')
-grlvq_ = Hybrid(grlvq.w_, proto_classes, 3, omega_matrix=None, matrix='n')
-grmlvq_ = Hybrid(grmlvq.w_, proto_classes, 3, omega_matrix=None, matrix='n')
+rslvq_ = Hybrid(model_prototypes=rslvq.w_, proto_classes=proto_classes, mm=3, omega_matrix=None, matrix='n')
+mrslvq_ = Hybrid(model_prototypes=mrslvq.w_, proto_classes=proto_classes,mm=3, omega_matrix=omega_matrix1, matrix='y')
+lmrslvq_ = Hybrid(model_prototypes=lmrslvq.w_, proto_classes=proto_classes,mm=3, omega_matrix=None, matrix='n')
+grlvq_ = Hybrid(model_prototypes=grlvq.w_,proto_classes=proto_classes,m=3,omega_matrix=None, matrix='n')
+grmlvq_ = Hybrid(model_prototypes=grmlvq.w_, proto_classes=proto_classes,mm=3, omega_matrix=None, matrix='n')
 
 # certainty of predicted results with hyperparameter m chosen as 2
 sec1 = rslvq_.get_security(x=X_test, y=2)

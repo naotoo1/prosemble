@@ -24,15 +24,15 @@ def select_(x, i_):
 proto_classes = np.array([0, 1, 2])
 
 # Transferred learned prototypes for glvq, gmlvq and celvq respectively
-new_prototypes_1 = np.array([[-1.092267, 0.9856019], [-0.29071018, -1.230379], [1.5310693, 0.08934504]])
-new_prototypes_2 = np.array([[-0.97786397, 0.8252505], [-0.25761604, -0.49248296], [1.2729689, 0.05621301]])
-new_prototypes_3 = np.array([[-1.654047, 1.1912421], [0.06487547, -1.4322541], [1.6647131, -0.4211262]])
+glvq_prototypes = np.array([[-1.092267, 0.9856019], [-0.29071018, -1.230379], [1.5310693, 0.08934504]])
+gmlvq_prototypes = np.array([[-0.97786397, 0.8252505], [-0.25761604, -0.49248296], [1.2729689, 0.05621301]])
+celvq_prototypes = np.array([[-1.654047, 1.1912421], [0.06487547, -1.4322541], [1.6647131, -0.4211262]])
 omega_matrix = np.array([[1.3414, -0.6254], [-0.5219, 0.2435]])
 
 # object of the Hybrid class
-tryy_1 = Hybrid(new_prototypes_1, proto_classes, 3, omega_matrix=None, matrix='n')
-tryy_2 = Hybrid(new_prototypes_2, proto_classes, 3, omega_matrix=omega_matrix, matrix='y')
-tryy_3 = Hybrid(new_prototypes_3, proto_classes, 3, omega_matrix=None, matrix='n')
+glvq = Hybrid(model_prototypes=glvq_prototypes, proto_classes=proto_classes, mm=3, omega_matrix=None, matrix='n')
+gmlvq = Hybrid(model_prototypes=gmlvq_prototypes, proto_classe=proto_classes,mm=3, omega_matrix=omega_matrix, matrix='y')
+celvq = Hybrid(model_prototypes=celvq_prototypes, proto_classes=proto_classes, mm=3, omega_matrix=None, matrix='n')
 
 
 #  simulate ensemble lvq based on transfer learning with glvq, gmlvq and celvq learned prototypes
@@ -49,18 +49,18 @@ def simulation(x):
     # test_ss = np.arange(0.2, 1, 0.1)
     for i in range(20):
         a, b = select_(x, i_=0.2)
-        pred1 = tryy_1.predict(x_test=a)
-        pred2 = tryy_2.predict(x_test=a)
-        pred3 = tryy_3.predict(x_test=a)
-        sec1 = tryy_1.get_security(x=a, y=2)
-        sec2 = tryy_2.get_security_m(x=a, y=2)
-        sec3 = tryy_3.get_security(x=a, y=2)
+        pred1 = glvq.predict(x_test=a)
+        pred2 = gmlvq.predict(x_test=a)
+        pred3 = celvq.predict(x_test=a)
+        sec1 = glvq.get_security(x=a, y=2)
+        sec2 = gmlvq.get_security_m(x=a, y=2)
+        sec3 = celvq.get_security(x=a, y=2)
         all_pred = [pred1, pred2, pred3]
         all_sec = [sec1, sec2, sec3]
-        final_pred1 = tryy_1.pred_sprob(x=a, y=all_sec)
-        accuracy1 = tryy_1.accuracy(x=b, y=final_pred1)
-        final_pred = tryy_1.pred_prob(x=a, y=all_pred)
-        accuracy = tryy_1.accuracy(x=b, y=final_pred)
+        final_pred1 = glvq.pred_sprob(x=a, y=all_sec)
+        accuracy1 = glvq.accuracy(x=b, y=final_pred1)
+        final_pred = glvq.pred_prob(x=a, y=all_pred)
+        accuracy = glvq.accuracy(x=b, y=final_pred)
         accuracy_list1.append(accuracy1)
         simu_list1.append(i)
         accuracy_list.append(accuracy)

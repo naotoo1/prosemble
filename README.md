@@ -7,7 +7,7 @@
 ML package for both prototype and non-prototype-based classifiers that utilizes ensemble learning by soft and hard voting.
 
 ## why?
-In ML the convention has been to save a trained model for future use or deployment. An alternative way in the case of prototype based models(learning vector quantization) would be to access learned prototypes from pre-trained models for use in deployment.
+In ML the convention has been to save a trained model for future use or deployment. An alternative way in the case of prototype-based models(learning vector quantization) would be to access learned prototypes from pre-trained models for use in deployment.
 
 This project implements the harnessing of trained models and learned prototypes in ensemble learning for both prototype-based and non protype-based classification models. In this regard the hard voting and soft voting scheme is applied to achieve the classification results. 
 

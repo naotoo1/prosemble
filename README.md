@@ -12,6 +12,7 @@ In ML the convention has been to save a trained model for future use or deployme
 This project implements the harnessing of trained models and learned prototypes in ensemble learning for both prototype-based and non protype-based classification models. In this regard the hard voting and soft voting scheme is applied to achieve the classification results. 
 
 ## Installation
+Prosemble can be installed using pip.
 ```python
 pip install prosemble
 ```

@@ -13,10 +13,10 @@ def simulate_m(x, y_):
     :param y_:list : set of possible fuzzifiers
     :return: classification label securities based on the fuzzifiers
     """
-    sample_dat = [tryy_1.get_security(x, i) for i in y_]
-    sample_dat2 = [tryy_2.get_security_m(x, i) for i in y_]
-    sample_dat3 = [tryy_3.get_security(x, i) for i in y_]
-    return sample_dat, sample_dat2, sample_dat3
+    security_dat1 = [glvq.get_security(x, i) for i in y_]
+    security_dat2 = [gmlvq.get_security_m(x, i) for i in y_]
+    security_dat3 = [celvq.get_security(x, i) for i in y_]
+    return security_dat1, security_dat2, security_dat3
 
 
 def optimise_m(x):
@@ -65,15 +65,15 @@ if __name__ == '__main__':
     proto_classes = np.array([0, 1, 2])
 
     # Transferred learned prototypes for glvq, gmlvq and celvq respectively
-    new_prototypes_1 = np.array([[-1.092267, 0.9856019], [-0.29071018, -1.230379], [1.5310693, 0.08934504]])
-    new_prototypes_2 = np.array([[-0.97786397, 0.8252505], [-0.25761604, -0.49248296], [1.2729689, 0.05621301]])
-    new_prototypes_3 = np.array([[-1.654047, 1.1912421], [0.06487547, -1.4322541], [1.6647131, -0.4211262]])
+    glvq_prototypes = np.array([[-1.092267, 0.9856019], [-0.29071018, -1.230379], [1.5310693, 0.08934504]])
+    gmlvq_prototypes = np.array([[-0.97786397, 0.8252505], [-0.25761604, -0.49248296], [1.2729689, 0.05621301]])
+    celvq_prototypes = np.array([[-1.654047, 1.1912421], [0.06487547, -1.4322541], [1.6647131, -0.4211262]])
     omega_matrix = np.array([[1.3414, -0.6254], [-0.5219, 0.2435]])
 
     # object of the Hybrid class
-    tryy_1 = Hybrid(new_prototypes_1, proto_classes, 3, omega_matrix=None, matrix='n')
-    tryy_2 = Hybrid(new_prototypes_2, proto_classes, 3, omega_matrix=omega_matrix, matrix='y')
-    tryy_3 = Hybrid(new_prototypes_3, proto_classes, 3, omega_matrix=None, matrix='n')
+    glvq = Hybrid(model_prototypes=glvq_prototypes, proto_classes=proto_classes, mm=3, omega_matrix=None, matrix='n')
+    gmlvq = Hybrid(model_prototypes=gmlvq_prototypes, proto_classes=proto_classes, mm=3, omega_matrix=omega_matrix, matrix='y')
+    celvq = Hybrid(model_prototypes=celvq_prototypes,proto_classes=proto_classes, mm=3, omega_matrix=None, matrix='n')
 
     #  simulate ensemble lvq based on transfer learning with glvq, gmlvq and celvq learned prototypes
     ym = [2, 3, 4, 5, 6, 7, 8, 9, 10]

@@ -18,7 +18,7 @@ pip install prosemble
 
 ## How to use
 ### Prototype-based example with LVQs
-1.Import libraries
+Import libraries
 ```python
 import pickle
 import numpy as np
@@ -35,15 +35,6 @@ lmrslvq = pickle.load(open('lmrslvq.pkl', 'rb'))
 grlvq = pickle.load(open('grlvq.pkl', 'rb'))
 grmlvq = pickle.load(open('grmlvq.pkl', 'rb'))
 
-```
-Summary of the trained models
-```python
-# summary of models
-print(rslvq.get_params())
-print(mrslvq.get_params())
-print(lmrslvq.get_params())
-print(grlvq.get_params())
-print(grmlvq.get_params())
 ```
 In this example we consider the iris data set
 ```python

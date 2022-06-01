@@ -85,7 +85,7 @@ sec4 = grlvq_.get_security(x=X_test, y=2)
 sec5 = grmlvq_.get_security(x=X_test, y=2)
 ```
 Make predictions using the hard and soft voting scheme. Use the ```pred_porb``` and ```pred_sprob methods``` for the hard and soft voting schemes respectively.
-NB that these methods are avaible for all objects of the Hybrid Class instance and can be called and applied to all the ensemble models.
+NB that these methods are available for all objects of the Hybrid Class instance and can be called and applied to all the ensemble models.
 ```python
 # list with all respective predictions from the trained prototypes.
 all_pred = [predict1, predict2, predict3, predict4, predict5]
@@ -120,8 +120,79 @@ print(rslvq_.prob(x=X_test, y=all_pred))
 # summary of prediction probability Soft Voting
 print(rslvq_.sprob(x=X_test, y=all_sec))
 ```
-## Non Prototype-based example
-For non prototype-based examples the proceedure remains almost the same. The only change comes in the method that will be used in getting the prediction probabilities does not involve the use of learned prototypes but is based on the models that are used in the ensemble.
+### Prototype-based with Non-LVQs
+Load some ```trained models``` from your working directory.In this example the models ```svc```,```knn``` and ```dtc``` were trained using the diagnostic breast cancer data.Refer to ```trained_models2``` for details on the training. NB: The only changes comes in the method of obtaining our prediction probabilities and how the object of the Hybrid class is instantiated. Any other step is the same as described above.
+
+```python 
+svc = pickle.load(open('svc.pkl', 'rb'))
+knn = pickle.load(open('knn.pkl', 'rb'))
+dtc = pickle.load(open('dtc.pkl', 'rb'))
+```
+Summary of predictions from the ```svc```, ```knn``` and ```dtc``` trained models
+```python
+predict1 = svc.predict(X_test)
+predict2 = knn.predict(X_test)
+predict3 = dtc.predict(X_test)
+```
+Use the function ```get_posterior(x, y_, z_)``` to obtain the probabilities of classifications from the models to be used in the ensemble
+```python
+def get_posterior(x, y_, z_):
+    z1 = z_.predict_proba(x)
+    certainties = [np.max(i) for i in z1]
+    cert = np.array(certainties).flatten()
+    cert = cert.reshape(len(cert), 1)
+    y_ = y_.reshape(len(y_), 1)
+    labels_with_certainty = np.concatenate((y_, cert), axis=1)
+    return np.round(labels_with_certainty, 4)
+  ```
+  
+```python
+#probabilities of predicted results
+sec1 = get_posterior(X_test, predict1, svc)
+sec2 = get_posterior(X_test, predict2, knn)
+sec3 = get_posterior(X_test, predict3, dtc)
+```
+
+```python
+# class labels of prototypes
+proto_classes = np.array([0, 1])
+
+#object for the hybrid class
+ensemble = Hybrid(model_prototypes=None, proto_classes=proto_classes, mm=2, omega_matrix=None, matrix='n')
+```
+
+Make predictions using the hard and soft voting scheme. Use the ```pred_porb``` and ```pred_sprob methods``` for the hard and soft voting schemes respectively.
+```python
+#list with all respective predictions from the trained prototypes.
+all_pred = [ [predict1, predict2, predict3]
+all_sec = [sec1, sec2, sec3]
+
+#predictions based on max voting
+final_pred = ensemble.pred_prob(x=X_test, y=all_pred)
+print(final_pred)
+
+#predictions based on soft voting
+final_pred_1 = ensemble.pred_sprob(x=X_test, y=all_sec)
+print(final_pred_1)
+```
+For performance evaluation call on the performance metric methods or you may used any other metric of your choice.
+```python
+#summary results of the hard voting accuracy
+print(ensemble.accuracy(y_test, final_pred))
+
+#summary results of the soft voting accuracy
+print(ensemble.accuracy(y_test, final_pred_1))
+```
+For the ensemble prediction certainties/probabilities call on the ```prob``` and ```sprob``` recall proceedure for the soft and hard voting respectively.
+```python
+#summary of prediction probability Hard Voting
+print(ensemble.prob(x=X_test, y=all_pred))
+
+#summary of prediction probability Soft Voting
+print(ensemble.sprob(x=X_test, y=all_sec))
+```
+### Non Prototype-based example
+For non prototype-based examples the proceedure remains almost the same as in prototype with non-LVQs. The only change comes in the method that will be used in getting the prediction probabilities does not involve the use of learned prototypes but is based on the models that are used in the ensemble.
 
 ## Bibtex
 If you would like to cite the package, please use this:

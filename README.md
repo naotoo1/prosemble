@@ -121,7 +121,7 @@ print(rslvq_.prob(x=X_test, y=all_pred))
 print(rslvq_.sprob(x=X_test, y=all_sec))
 ```
 ## Non Prototype-based example
-For non prototype-based examplen the proceedure remains almost the same. The only change comes in the method that will be used in getting the prediction probabilities does not involve the use of learned prototypes but is based on the models that are used in the ensemble.
+For non prototype-based examples the proceedure remains almost the same. The only change comes in the method that will be used in getting the prediction probabilities does not involve the use of learned prototypes but is based on the models that are used in the ensemble.
 
 ## Bibtex
 If you would like to cite the package, please use this:

@@ -37,5 +37,5 @@ for i in range(len(models)):
     test_acc.append(accuracy_score(y_test, models[i].predict(X_test)))
     pickle.dump(models[i], open(model_names[i], 'wb'))
 
-# summary of trained accuracy
+# summary of test accuracy
 print(test_acc)

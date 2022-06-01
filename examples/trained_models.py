@@ -35,7 +35,9 @@ test_acc = []
 for i in range(len(models)):
     models[i].fit(X_train, y_train)
     test_acc.append(accuracy_score(y_test, models[i].predict(X_test)))
-    pickle.dump(models[i], open(model_names[i], 'wb'))
+    pickle_out = open(model_names[i], 'wb')
+    pickle.dump(models[i], pickle_out)
+    pickle_out.close()
 
 # summary of test accuracy
 print(test_acc)

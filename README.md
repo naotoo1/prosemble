@@ -28,7 +28,7 @@ from sklearn.datasets import load_iris
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 ```
-Load some ```trained models``` from your working directory to be used in the ensemble. The models were trained using LVQs with the Iris test set.
+Load some ```trained models``` from your working directory to be used in the ensemble. The models were trained using LVQs with the Iris test set. To exemplify, refer to ```trained_models.py``` in the examples folder.
 ```python
 rslvq = pickle.load(open('rslvq.pkl', 'rb'))
 mrslvq = pickle.load(open('mrslvq.pkl', 'rb'))

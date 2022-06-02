@@ -121,7 +121,7 @@ print(rslvq_.prob(x=X_test, y=all_pred))
 print(rslvq_.sprob(x=X_test, y=all_sec))
 ```
 ### Prototype-based with Non-LVQs
-Load some ```trained models``` from your working directory.In this example the models ```svc```,```knn``` and ```dtc``` were trained using the diagnostic breast cancer data.Refer to ```trained_models2``` for details on the training. NB: The only changes comes in the method of obtaining our prediction probabilities and how the object of the Hybrid class is instantiated. Any other step is the same as described above.
+Load some ```trained models``` from your working directory.In this example the models ```svc```,```knn``` and ```dtc``` were trained using the diagnostic breast cancer data. Refer to ```trained_models2``` for details on the training. NB: The only changes comes in the method of obtaining our prediction probabilities and how the object of the Hybrid class is instantiated. Any other step is the same as described above.
 
 ```python 
 svc = pickle.load(open('svc.pkl', 'rb'))

@@ -4,7 +4,7 @@
 [![pypi](https://img.shields.io/badge/pypi-0.0.2-orange.svg)](https://pypi.org/project/prosemble)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-ML package for both prototype and non-prototype-based classifiers that utilizes ensemble learning by soft and hard voting.
+ML package for both prototype and non-prototype-based classifiers that utilizes ensemble learning by soft and hard voting with inclusions for [Multiple reject thresholds ](https://github.com/naotoo1/prosemble) for improving classification reliability.
 
 ## why?
 In ML the convention has been to save a trained model for future use or deployment. An alternative way in the case of prototype-based models would be to access learned prototypes from pre-trained models for use in deployment.

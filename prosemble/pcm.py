@@ -12,8 +12,8 @@ from collections import Counter
 import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
-from fcm import FCM
-from distance import get_distance, get_distance_squared
+from .fcm import FCM
+from .distance import get_distance, get_distance_squared
 # matplotlib.use('QtAgg')
 
 class PCM:

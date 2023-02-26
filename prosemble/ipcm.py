@@ -12,8 +12,8 @@ import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
 # matplotlib.use('QtAgg')
-from fcm import FCM
-from distance import get_distance, get_distance_squared
+from .fcm import FCM
+from .distance import get_distance, get_distance_squared
 
 
 class IPCM1:

@@ -11,8 +11,8 @@ from collections import Counter
 import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
-from distance import get_distance, get_distance_squared
-from kmeans import kmeans_plusplus
+from .distance import get_distance, get_distance_squared
+from .kmeans import kmeans_plusplus
 
 # matplotlib.use('QtAgg')
 

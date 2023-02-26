@@ -5,8 +5,8 @@ Implementation of Kmeans++ Alternative Optimisation Algorithm
 # Author: Nana Abeka Otoo <abekaotoo@gmial.com>
 # License: MIT
 
-from hcm import Kmeans
-from distance import get_distance
+from .hcm import Kmeans
+from .distance import get_distance
 
 import matplotlib
 

@@ -1,5 +1,5 @@
 # import prosemble package
-from prosemble import fcm
+from prosemble.models.fcm import FCM
 from sklearn.model_selection import train_test_split
 import pickle as pkl
 

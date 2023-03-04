@@ -1,5 +1,5 @@
 # import prosemble package
-from prosemble import fcm
+from prosemble.models.fcm import FCM
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 
@@ -10,7 +10,7 @@ X, y = load_iris(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 # Instantiate an object from a given class
-fcm = fcm.FCM(data=X_train, c=3, m=2, num_iter=100, epsilon=0.00001,
+fcm = FCM(data=X_train, c=3, m=2, num_iter=100, epsilon=0.00001,
               ord='fro', set_U_matrix=None, plot_steps=False)
 # fit the model
 fcm.fit()

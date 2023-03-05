@@ -11,6 +11,7 @@ from collections import Counter
 import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
+
 # matplotlib.use('QtAgg')
 from .fcm import FCM
 

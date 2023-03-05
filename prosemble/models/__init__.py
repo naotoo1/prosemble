@@ -13,6 +13,7 @@ from .knn import *
 from .pcm import *
 from .pfcm import *
 from .npc import *
+from .som import *
 
 
 

@@ -17,6 +17,8 @@ from .fcm import FCM
 
 from prosemble.core.distance import euclidean_distance
 
+np.seterr(all='ignore')
+
 
 class BGPC:
     """
@@ -131,7 +133,7 @@ class BGPC:
         initial_v_matrix = v_matrix
         for i in range(len(self.data)):
             for j in range(self.num_clusters):
-                exponent = np.exp(-(euclidean_distance(centroids[j], self.data[i]) / b))
+                exponent = np.exp((-euclidean_distance(centroids[j], self.data[i]) / b))
                 vik_new = exponent
                 initial_v_matrix[i][j] = vik_new
         return initial_v_matrix
@@ -154,8 +156,11 @@ class BGPC:
         initial_u_matrix = v_matrix
         for i in range(len(self.data)):
             for j in range(self.num_clusters):
-                uik_new = v_matrix[i][j] / z_list[i]
-                initial_u_matrix[i][j] = uik_new
+                try:
+                    uik_new = v_matrix[i][j] / z_list[i]
+                    initial_u_matrix[i][j] = uik_new
+                except IndexError:
+                    pass
         return initial_u_matrix
 
     def _select_fuzzy_U_matrix(self):
@@ -308,8 +313,11 @@ class BGPC:
         z = self.compute_z_list(v_matrix=v_matrix, a=self.a[0])
         for i in range(len(x)):
             for j in range(self.num_clusters):
-                uik_new = v_matrix[i][j] / z[i]
-                v_matrix[i][j] = uik_new
+                try:
+                    uik_new = v_matrix[i][j] / z[i]
+                    v_matrix[i][j] = uik_new
+                except IndexError:
+                    pass
         return v_matrix
 
     # Classification aspect

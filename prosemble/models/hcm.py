@@ -2,7 +2,7 @@
 Implementation of Hard c Means alternating optimisation algorithm
 """
 
-# Author: Nana Abeka Otoo <abekaotoo@gmial.com>
+# Author: Nana Abeka Otoo <abekaotoo@gmail.com>
 # License: MIT
 
 

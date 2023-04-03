@@ -2,7 +2,7 @@
 Implementation of Improved Possibilistic c-Means 2 Alternating Optimization Algorithm
 """
 
-# Author: Nana Abeka Otoo <abekaotoo@gmial.com>
+# Author: Nana Abeka Otoo <abekaotoo@gmail.com>
 # License: MIT
 
 

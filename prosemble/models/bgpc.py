@@ -2,7 +2,7 @@
 Implementation of Basic Graded Possibilistic alternating optimisation algorithm
 """
 
-# Author: Nana Abeka Otoo <abekaotoo@gmial.com>
+# Author: Nana Abeka Otoo <abekaotoo@gmail.com>
 # License: MIT
 
 
@@ -20,7 +20,6 @@ from prosemble.core.distance import euclidean_distance
 np.seterr(all='ignore')
 
 
-
 class BGPC:
     """
     params:
@@ -33,6 +32,11 @@ class BGPC:
 
     num_iter: int:
         number of iterations
+    a_f: float:
+        alpha parameter
+
+    b_f: float
+        beta parameter
 
     epsilon: float:
         small difference for termination of algorithm

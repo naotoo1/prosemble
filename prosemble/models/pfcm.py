@@ -2,7 +2,7 @@
 Implementation of Possibilistic Fuzzy c-Means Alternating Optimization Algorithm
 """
 
-# Author: Nana Abeka Otoo <abekaotoo@gmial.com>
+# Author: Nana Abeka Otoo <abekaotoo@gmail.com>
 # License: MIT
 
 

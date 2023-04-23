@@ -1,5 +1,5 @@
 """
-Implementation of Possibilistic c Means Alternating Optimisation Algorithm
+Implementation of Kernel Possibilistic c Means Alternative Optimisation Algorithm
 """
 
 # Author: Nana Abeka Otoo <abekaotoo@gmail.com>
@@ -7,20 +7,17 @@ Implementation of Possibilistic c Means Alternating Optimisation Algorithm
 
 
 from collections import Counter
-
-import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
-from .fcm import FCM
 from prosemble.core.distance import (
     euclidean_distance,
     squared_euclidean_distance
 )
+from .fcm import FCM
+from .kfcm import KFCM
 
 
-# matplotlib.use('QtAgg')
-
-class PCM:
+class KPCM:
     """
     params:
 
@@ -35,6 +32,9 @@ class PCM:
 
     k: float:
         parameter for gamma
+
+    sigma: int:
+        sigma parameter
 
     num_iter: int:
         number of iterations
@@ -53,7 +53,7 @@ class PCM:
 
     """
 
-    def __init__(self, data, c, m, k, num_iter, epsilon, ord, set_centroids=None,
+    def __init__(self, data, c, m, k, num_iter, epsilon, ord, sigma, set_centroids=None,
                  set_U_matrix=None,
                  plot_steps=False):
         self.data = data
@@ -64,8 +64,10 @@ class PCM:
         self.epsilon = epsilon
         self.set_U_matrix = set_U_matrix
         self.set_centroids = set_centroids
+        self.set_prototypes = []
         self.plot_steps = plot_steps
         self.ord = ord
+        self.sigma = sigma
         self.objective_function = []
         self.fit_cent = []
         self.fit_clus = []
@@ -74,13 +76,28 @@ class PCM:
             self.model1 = FCM(
                 data=self.data,
                 c=self.num_clusters,
-                m=2,
+                m=self.fuzzifier,
                 num_iter=self.num_iter,
                 epsilon=self.epsilon,
-                ord=self.ord)
+                ord=self.ord
+            )
             self.model1.fit()
             self.set_U_matrix = self.model1.predict_proba_(self.data)
-            self.set_centroids = self.model1.final_centroids()
+            self.set_prototypes.append(self.model1.final_centroids())
+
+        if self.set_U_matrix == 'kfcm':
+            self.model2 = KFCM(
+                data=self.data,
+                c=self.num_clusters,
+                m=self.fuzzifier,
+                num_iter=self.num_iter,
+                epsilon=self.epsilon,
+                sigma=self.sigma,
+                ord=self.ord
+            )
+            self.model2.fit()
+            self.set_U_matrix = self.model2.predict_proba_(self.data)
+            self.set_prototypes.append(self.model2.final_centroids())
 
         if not isinstance(self.data, np.ndarray):
             self.data = np.array(self.data)
@@ -105,26 +122,34 @@ class PCM:
         )
         return [self.data[index] for index in random_samples_feature_space]
 
-    def compute_centroids(self, fuzzy_matrix):
+    def compute_centroids(self, fuzzy_matrix, centroids):
 
         fuzzified_assignments = [
             np.power([u_ik[i] for _, u_ik in enumerate(fuzzy_matrix)], self.fuzzifier)
             for i in range(self.num_clusters)
         ]
 
-        sum_fuzzified_assigments = [np.sum(i) for i in fuzzified_assignments]
-
         centroid_numerator = [
-            [np.multiply(fuzzified_assignments[cluster_index][index], sample) for
-             index, sample in enumerate(self.data)] for cluster_index in range(self.num_clusters)
+            [np.multiply(fuzzified_assignments[cluster_index][index], sample) *
+             self.gaussian_kernel(sample, centroids[cluster_index])
+             for index, sample in enumerate(self.data)]
+            for cluster_index in range(self.num_clusters)
         ]
 
-        centroids = np.array(
-            [np.sum(v, axis=0) / sum_fuzzified_assigments[i]
-             for i, v in enumerate(centroid_numerator)]
-        )
+        centroid_denomenator = [
+            [np.multiply(fuzzified_assignments[cluster_index][index],
+                         self.gaussian_kernel(sample, centroids[cluster_index]))
+             for index, sample in enumerate(self.data)]
+            for cluster_index in range(self.num_clusters)
+        ]
 
-        return centroids
+        sum_centroid_denomenator = [np.sum(i) for i in centroid_denomenator]
+
+        centroid = np.array([
+            np.sum(v, axis=0) / sum_centroid_denomenator[i]
+            for i, v in enumerate(centroid_numerator)
+        ])
+        return centroid
 
     def compute_gamma(self, fuzzy_matrix, centroids):
 
@@ -137,7 +162,7 @@ class PCM:
 
         centroid_numerator = [
             [np.multiply(fuzzified_assignments[cluster_index][index],
-                         squared_euclidean_distance(sample, centroids[cluster_index])) for
+                         2 * (1 - self.gaussian_kernel(sample, centroids[cluster_index]))) for
              index, sample in enumerate(self.data)] for cluster_index in range(self.num_clusters)
         ]
 
@@ -153,7 +178,7 @@ class PCM:
         for i in range(len(self.data)):
             for j in range(self.num_clusters):
                 denomenator = np.power(
-                    (squared_euclidean_distance(centroids[j], self.data[i]) / g_matrix[j]),
+                    (2 * (1 - (self.gaussian_kernel(centroids[j], self.data[i]))) / g_matrix[j]),
                     1 / (self.fuzzifier - 1))
                 tik_new = 1 / (1 + denomenator)
                 initial_t_matrix[i][j] = tik_new
@@ -165,10 +190,11 @@ class PCM:
             denomenator = 0
             for j in range(self.num_clusters):
                 denomenator += np.power(
-                    1 / euclidean_distance(centroids[j], self.data[i]), 2 / (self.fuzzifier - 1))
+                    1 / (1 - self.gaussian_kernel(centroids[j], self.data[i])),
+                    1 / (self.fuzzifier - 1))
             for j in range(self.num_clusters):
-                uik_new = np.power(1 / euclidean_distance(centroids[j], self.data[i]),
-                                   2 / (self.fuzzifier - 1)) / denomenator
+                uik_new = np.power(1 / (1 - self.gaussian_kernel(centroids[j], self.data[i])),
+                                   1 / (self.fuzzifier - 1)) / denomenator
                 initial_u_matrix[i][j] = uik_new
         return initial_u_matrix
 
@@ -177,9 +203,17 @@ class PCM:
             return self.randomly_initialised_fuzzy_matrix()
         return self.set_U_matrix
 
+    def _select_prototypes(self):
+        if self.set_centroids is None:
+            return self._select_centroids_randomly()
+        if self.set_centroids == 'fcm':
+            return self.set_prototypes[0]
+        if self.set_centroids == 'kfcm':
+            return self.set_prototypes[0]
+
     def compute_objective_function_0(self, centroids, t_matrix):
         objective_function = np.sum(
-            [[squared_euclidean_distance(self.data[i], centroids[j]) *
+            [[2 * (1 - self.gaussian_kernel(self.data[i], centroids[j])) *
               np.power(t_matrix[i][j], self.fuzzifier)
               for i in range(len(self.data))] for j in range(self.num_clusters)]
         )
@@ -197,13 +231,14 @@ class PCM:
 
     def compute_objective_function(self, centroids, gamma, t_matrix):
         return self.compute_objective_function_0(centroids=centroids, t_matrix=t_matrix) + \
-               self.compute_objective_function_1(t_matrix=t_matrix, gamma=gamma)
+            self.compute_objective_function_1(t_matrix=t_matrix, gamma=gamma)
 
     @staticmethod
     def _distance_(samples, centroid):
-        return np.sum(
-            [euclidean_distance(sample, centroid) for index, sample in enumerate(samples)]
-        )
+        return np.sum([euclidean_distance(sample, centroid) for index, sample in enumerate(samples)])
+
+    def gaussian_kernel(self, x, y):
+        return np.exp(-squared_euclidean_distance(x, y) / (self.sigma ** 2))
 
     @staticmethod
     def _nearest_centroids(sample, centroids):
@@ -242,7 +277,7 @@ class PCM:
 
     def get_centroids(self):
         u_matrix = self._select_fuzzy_U_matrix()
-        centroids = self.set_centroids
+        centroids = self._select_prototypes()
         t_matrix = self.randomly_initialised_fuzzy_matrix()
         for num in range(self.num_iter):
             centroids_old = centroids
@@ -252,7 +287,7 @@ class PCM:
             t_matrix = self.update_tipicality_matrix(centroids_old, gamma, t_matrix)
             obj = self.compute_objective_function(centroids, gamma, t_matrix)
             self.objective_function.append(obj)
-            centroids = self.compute_centroids(t_matrix)
+            centroids = self.compute_centroids(t_matrix, centroids)
             self.get_plot(clusters, centroids)
             if self._centroid_stability(centroids_old, centroids) or num == self.num_iter - 1:
                 self.fit_clus.append(clusters)
@@ -261,7 +296,7 @@ class PCM:
 
     def get_centroids_(self):
         u_matrix = self._select_fuzzy_U_matrix()
-        centroids = self.compute_centroids(u_matrix)
+        centroids = self.compute_centroids(u_matrix, self._select_prototypes())
         t_matrix = self.randomly_initialised_fuzzy_matrix()
         optimize = True
         while optimize:
@@ -271,9 +306,9 @@ class PCM:
             centroid_num = centroids
             gamma = self.compute_gamma(u_matrix, centroids)
             t_matrix = self.update_tipicality_matrix(centroids, gamma, t_matrix)
-            centroids = self.compute_centroids(t_matrix)
+            centroids = self.compute_centroids(t_matrix, centroids)
             self.objective_function.append(
-                self.compute_objective_function(centroids, t_matrix, gamma))
+                self.compute_objective_function(centroids, gamma, t_matrix))
             self.get_plot(clusters, centroids)
             if self._centroid_stability(centroid_num, centroids):
                 self.fit_clus.append(clusters)
@@ -350,10 +385,11 @@ class PCM:
             denomenator = 0
             for j in range(self.num_clusters):
                 denomenator += np.power(
-                    1 / euclidean_distance(self.fit_cent[0][j], x[i]), 2 / (self.fuzzifier - 1))
+                    1 / (1 - self.gaussian_kernel(self.fit_cent[0][j], x[i])),
+                    1 / (self.fuzzifier - 1))
             for j in range(self.num_clusters):
-                uik_new = np.power((1 / euclidean_distance(self.fit_cent[0][j], x[i])),
-                                   2 / (self.fuzzifier - 1)) / denomenator
+                uik_new = np.power((1 / (1 - self.gaussian_kernel(self.fit_cent[0][j], x[i]))),
+                                   1 / (self.fuzzifier - 1)) / denomenator
                 final_matrix[i][j] = uik_new
         return final_matrix
 
@@ -377,18 +413,3 @@ class PCM:
         :return: learned centroids
         """
         return self.fit_cent[0]
-
-
-if __name__ =="__main__":
-    from sklearn.datasets import load_iris
-    from sklearn.model_selection import train_test_split
-
-    X, y = load_iris(return_X_y=True)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-    fcm = PCM(data=X_train, c=3, m=2, num_iter=100,k=0.0001, epsilon=0.00001, ord='fro', set_U_matrix='fcm', plot_steps=True)
-    print(fcm.fit())
-    print(fcm.get_objective_function())
-    print(fcm.predict())
-    print(fcm.predict_new(x=X_test))
-    print(fcm.get_prototypes(labels=y_train))

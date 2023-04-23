@@ -4,5 +4,5 @@ Prosemble package
 from . import models
 from . import core
 
-__version__ = "0.0.9"
+__version__ = "0.5.0"
 __author__ = 'Nana Abeka Otoo'

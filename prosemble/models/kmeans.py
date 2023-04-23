@@ -181,7 +181,7 @@ class kmeans_plusplus:
         """
 
         :param labels: array-like: labels of the input data set
-        :return: component initiatlizer for GNPC classifier designs
+        :return: component initializer for GNPC classifier designs
         """
         return self.model.get_prototypes(labels)
 

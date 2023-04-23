@@ -46,7 +46,7 @@ class FCM:
         initial U matrix to  begin with. default is None
 
     plot_steps: bool:
-        True for visulisation of training and False otherwise
+        True for visualisation of training and False otherwise
 
     """
 
@@ -241,7 +241,7 @@ class FCM:
         """
 
         :param x:array-like: input vector
-        :return: cluster label of intput vector
+        :return: cluster label of input vector
         """
         return [self._nearest_centroids(sample, self.fit_cent[0]) for index, sample in enumerate(x)]
 
@@ -251,7 +251,7 @@ class FCM:
     def fit(self):
         """
 
-        :return: fits the model to the imput data set
+        :return: fits the model to the input data set
         """
         if self.num_iter is None:
             return self.get_centroids_()

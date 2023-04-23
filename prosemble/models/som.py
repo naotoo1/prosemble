@@ -46,7 +46,7 @@ class SOM:
     def fit(self):
         for step in range(self.num_iter):
             learning_rate, neighbourhood_range = self.lr_decay(num_iter=step, distance_n=4)
-            rand_sample_index = np.random.randint(0, high=self.data.shape[0])  # random index of traing data
+            rand_sample_index = np.random.randint(0, high=self.data.shape[0])  # random index of training data
             winner = self.winning_neuron(data=self.data, t=rand_sample_index)
             for row in range(self.grid):
                 for col in range(self.grid):

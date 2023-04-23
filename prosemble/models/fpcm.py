@@ -302,7 +302,7 @@ class FPCM:
     def get_prototypes(self, labels):
         """
 
-        :param labels: array-like: labels of the imput data set
+        :param labels: array-like: labels of the input data set
         :return: prototypes for the GNPC classifier design
         """
         self.fit()

@@ -41,7 +41,7 @@ class Kmeans:
         initial prototypes to  begin with. default is None
 
     plot_steps: bool:
-        True for visulisation of training and False otherwise
+        True for visualisation of training and False otherwise
 
     """
 
@@ -241,7 +241,7 @@ class Kmeans:
         """
 
         :param labels: array-like
-        :return: prototypes used as component initiatializer  for GNPC classifier design
+        :return: prototypes used as component initializer  for GNPC classifier design
         """
         self.fit()
         clusters_indices, centroids = self.fit_clus[0], self.fit_cent[0]

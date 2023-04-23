@@ -113,7 +113,7 @@ class BGPC:
             for i in range(self.num_clusters)
         ]
 
-        sum_fuzzified_assigments = [np.sum(i) for i in fuzzified_assignments]
+        sum_fuzzified_assignments = [np.sum(i) for i in fuzzified_assignments]
 
         centroid_numerator = [
             [np.multiply(fuzzified_assignments[cluster_index][index], sample)
@@ -122,7 +122,7 @@ class BGPC:
         ]
 
         centroids = np.array(
-            [np.sum(v, axis=0) / sum_fuzzified_assigments[i]
+            [np.sum(v, axis=0) / sum_fuzzified_assignments[i]
              for i, v in enumerate(centroid_numerator)]
         )
 
@@ -261,7 +261,7 @@ class BGPC:
         """
 
         :param x: array-like: input vector
-        :return: cluster label of intput vector
+        :return: cluster label of input vector
         """
         return [
             self._nearest_centroids(sample, self.fit_cent[0])

@@ -1,5 +1,7 @@
+"""Kernel Fuzzy C-Means clustering example using Iris Data."""
+
 # import prosemble package
-from prosemble.models.fcm import FCM
+import prosemble as ps
 from sklearn.model_selection import train_test_split
 import pickle as pkl
 
@@ -8,12 +10,22 @@ PATH = open(r'Path to Pickle file', 'rb')
 X = pkl.load(PATH)
 
 print(X.shape)
+
 # Get data split
 X_train, X_test = train_test_split(X, test_size=0.2)
 
-# Instantiate an object from a given class
-fcm = fcm.FCM(data=X_train, c=3, m=2, num_iter=100, epsilon=0.00001,
-              ord=None, set_U_matrix=None, plot_steps=True)
+# Setup the model
+fcm = ps.models.KFCM(
+    data=X_train,
+    c=3, num_iter=1000,
+    epsilon=0.001,
+    ord='fro',
+    set_prototypes=None,
+    m=2,
+    sigma=1,
+    set_U_matrix=None,
+    plot_steps=True
+)
 
 # fit the model
 fcm.fit()

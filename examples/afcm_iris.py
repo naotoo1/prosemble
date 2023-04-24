@@ -10,7 +10,7 @@ X, y = load_iris(return_X_y=True)
 print(X.shape[0])
 
 # Get data split
-X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_size=10)
+X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_size=30)
 
 # Setup the model
 afcm = ps.models.AFCM(

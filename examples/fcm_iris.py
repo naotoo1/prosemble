@@ -2,7 +2,6 @@
 
 # import prosemble package
 import prosemble as ps
-from prosemble.models.fcm import FCM
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 

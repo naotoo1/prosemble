@@ -8,7 +8,6 @@ Implementation of Improved Possibilistic c-Means Alternating Optimization Algori
 
 from collections import Counter
 
-import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
 # matplotlib.use('QtAgg')
@@ -208,14 +207,14 @@ class IPCM1:
             denomenator = 0
             for j in range(self.num_clusters):
                 denomenator += np.power(
-                    (1 / euclidean_distance(centroids[j], self.data[i])) *
+                    (1 / squared_euclidean_distance(centroids[j], self.data[i])) *
                     np.power(t_matrix[i][j], (self.tipifier - 1)),
-                    2 / (self.fuzzifier - 1)
+                    1 / (self.fuzzifier - 1)
                 )
             for j in range(self.num_clusters):
-                uik_new = np.power((1 / euclidean_distance(centroids[j], self.data[i])) *
+                uik_new = np.power((1 / squared_euclidean_distance(centroids[j], self.data[i])) *
                                    (np.power(t_matrix[i][j], (self.tipifier - 1))),
-                                   2 / (self.fuzzifier - 1)) / denomenator
+                                   1 / (self.fuzzifier - 1)) / denomenator
                 initial_u_matrix[i][j] = uik_new
         return initial_u_matrix
 
@@ -296,7 +295,7 @@ class IPCM1:
         gamma = self.compute_gamma_0(u_matrix, centroids)
         for num in range(self.num_iter):
             centroids_old = centroids
-            obj = self.compute_objective_function(centroids, t_matrix, gamma, u_matrix)
+            obj = self.compute_objective_function(centroids, gamma, t_matrix, u_matrix)
             self.objective_function.append(obj)
             clusters = self.initialise_cluster(centroids_old)
             self.get_plot(clusters, centroids_old)
@@ -306,7 +305,6 @@ class IPCM1:
             self.get_plot(clusters, centroids)
             if self._centroid_stability(centroids_old, centroids) or num == self.num_iter - 1:
                 return u_matrix, t_matrix, centroids
-        return None
 
     def get_centroids_1(self):
         u_matrix, t_matrix, centroids = self.get_centroids_0()
@@ -366,7 +364,6 @@ class IPCM1:
                 self.fit_cent.append(centroids)
                 self.eta.append(gamma)
                 optimize = False
-        return u_matrix, t_matrix, centroids
 
     def get_plot(self, cluster, centroids):
         if self.plot_steps:
@@ -440,14 +437,14 @@ class IPCM1:
             denomenator = 0
             for j in range(self.num_clusters):
                 denomenator += np.power(
-                    (1 / euclidean_distance(self.fit_cent[0][j], x[i])) *
+                    (1 / squared_euclidean_distance(self.fit_cent[0][j], x[i])) *
                     np.power(t_matrix[i][j], (self.tipifier - 1)),
-                    2 / (self.fuzzifier - 1)
+                    1 / (self.fuzzifier - 1)
                 )
             for j in range(self.num_clusters):
-                uik_new = np.power((1 / euclidean_distance(self.fit_cent[0][j], x[i])) *
+                uik_new = np.power((1 / squared_euclidean_distance(self.fit_cent[0][j], x[i])) *
                                    (np.power(t_matrix[i][j], (self.tipifier - 1))),
-                                   2 / (self.fuzzifier - 1)) / denomenator
+                                   1 / (self.fuzzifier - 1)) / denomenator
                 initial_u_matrix[i][j] = uik_new
         return initial_u_matrix
 

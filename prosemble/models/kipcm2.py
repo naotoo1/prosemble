@@ -11,7 +11,7 @@ from collections import Counter
 import numpy as np
 from matplotlib import pyplot as plt
 
-from fcm import FCM
+from .fcm import FCM
 
 from prosemble.core.distance import (
     euclidean_distance,

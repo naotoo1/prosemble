@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 
-ML package for both prototype and non-prototype-based classifiers
+ML package for both prototype and non-prototype-based models
 
 
 

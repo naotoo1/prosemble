@@ -19,7 +19,7 @@ from prosemble.core.distance import (
 )
 
 
-class KIPCM1:
+class KIPCM:
     """
     params:
 
@@ -93,7 +93,7 @@ class KIPCM1:
             self.model1 = FCM(
                 data=self.data,
                 c=self.num_clusters,
-                m=2,
+                m=self.fuzzifier,
                 num_iter=self.num_iter,
                 epsilon=self.epsilon,
                 ord=self.ord

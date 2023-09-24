@@ -27,14 +27,14 @@ test_requirements = [ ]
 setup(
     author="Nana Abeka Otoo",
     author_email='abekaotoo@gmail.com',
-    python_requires='>=3.8',
+    python_requires='>=3.6',
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     description="A python project for prototype-based machine learning models",
     install_requires=install_requires,

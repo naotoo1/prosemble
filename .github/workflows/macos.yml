@@ -14,12 +14,8 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-              # os: ["macOS-latest"]
-              # python-version: ["3.8"]
-              config:
-                    - { os: "macOS-latest", py: "3.6" }
-                    - { os: "macOS-latest", py: "3.7" }
-                    - { os: "macOS-latest", py: "3.8" }
+              os: ["macOS-latest"]
+              python-version: ["3.7","3.8"]
         steps:
           - name: Checkout code
             uses: actions/checkout@v3

@@ -5,7 +5,7 @@
 
 import unittest
 
-from prosemble import prosemble
+# from prosemble import prosemble
 
 
 class TestProsemble(unittest.TestCase):

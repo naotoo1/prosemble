@@ -3,7 +3,7 @@
 
 [![image](https://img.shields.io/pypi/v/prosemble.svg)](https://pypi.python.org/pypi/prosemble)
 [![python: 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
-[![github](https://img.shields.io/badge/version-0.7.0-yellow.svg)](https://github.com/naotoo1/Prosemble)
+[![github](https://img.shields.io/badge/version-0.8.0-yellow.svg)](https://github.com/naotoo1/Prosemble)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 

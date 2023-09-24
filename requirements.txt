@@ -3,3 +3,4 @@ scikit-learn
 scipy
 matplotlib
 pandas
+neupy

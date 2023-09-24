@@ -1,8 +1,10 @@
 # Welcome to prosemble
 
+
 [![image](https://img.shields.io/pypi/v/prosemble.svg)](https://pypi.python.org/pypi/prosemble)
-[![python: 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
+[![python: 3.8](https://img.shields.io/badge/python-3.8-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![github](https://img.shields.io/badge/version-0.8.0-yellow.svg)](https://github.com/naotoo1/Prosemble)
+[![pypi](https://img.shields.io/badge/pypi-0.8.0-orange.svg)](https://pypi.org/project/nafes)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 

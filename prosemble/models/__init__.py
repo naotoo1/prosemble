@@ -18,6 +18,8 @@ from .kfcm import *
 from .kpcm import *
 from .kfpcm import *
 from .kpfcm import *
+from .kipcm import *
+from .kipcm2 import *
 from .npc import *
 from .som import *
 from .spectralclustering import *

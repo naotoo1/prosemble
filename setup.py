@@ -27,7 +27,7 @@ test_requirements = [ ]
 setup(
     author="Nana Abeka Otoo",
     author_email='abekaotoo@gmail.com',
-    python_requires='>=3.9',
+    python_requires='>=3.8',
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',

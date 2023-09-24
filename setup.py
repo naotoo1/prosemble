@@ -27,13 +27,11 @@ test_requirements = [ ]
 setup(
     author="Nana Abeka Otoo",
     author_email='abekaotoo@gmail.com',
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
@@ -52,6 +50,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/naotoo1/prosemble',
-    version='0.0.1',
+    version='0.7.0',
     zip_safe=False,
 )

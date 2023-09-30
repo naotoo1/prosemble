@@ -3,6 +3,7 @@ Prosemble package
 """
 from . import models
 from . import core
+from . import datasets
 
 
 __author__ = """Nana Abeka Otoo"""

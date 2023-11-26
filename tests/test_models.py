@@ -24,6 +24,8 @@ input_data = np.array(
 )
 
 
+
+
 def test_hcm_model_build():
     model = ps.Kmeans(
     data=input_data,
@@ -166,30 +168,80 @@ def test_kpfcm_model_build():
 
 
 def test_kipcm_model_build():
-    pass
+    model = ps.KIPCM(
+    data=input_data,
+    c=3,
+    num_iter=1000,
+    epsilon=0.001,
+    ord='fro',
+    m_f=2,
+    m_p=2,
+    k=1,
+    sigma=10,
+    set_centroids='fcm',
+    set_U_matrix='fcm',
+    plot_steps=True
+)
+
+
 
 def test_kipcm2_model_build():
-    pass
-
-def test_kpfcm_model_build():
-    pass
+    model = ps.KIPCM2(
+    data=input_data,
+    c=3,
+    num_iter=100,
+    epsilon=0.0001,
+    ord='fro',
+    m=2,
+    k=2,
+    sigma=10,
+    set_centroids='fcm',
+    set_U_matrix='fcm',
+    plot_steps=True
+)   
 
 def test_kpcm_model_build():
-    pass
+    model = ps.KPCM(
+    data=input_data,
+    c=3,
+    num_iter=100,
+    epsilon=0.001,
+    ord='fro',
+    m=2,
+    k=0.06,
+    sigma=1,
+    set_centroids=None,
+    set_U_matrix='kfcm',
+    plot_steps=True
+)
+
 
 def test_pcm_model_build():
-    pass
+    model= ps.PCM(
+    data=input_data,
+    c=3,
+    m=2,
+    k=0.001,
+    num_iter=1000,
+    epsilon=0.00001,
+    ord='fro',
+    set_U_matrix='fcm',
+    plot_steps=True
+)
 
 def test_pfcm_model_buidl():
-    pass
-
-def test_kfcm_model_build():
-    pass
-
-def test_knn_model_build():
-    pass
-
-
-def test_som_model_build():
-    pass
+    model= ps.PFCM(
+    data=input_data,
+    c=3,
+    m=2,
+    eta=2,
+    k=1,
+    a=2,
+    b=2,
+    num_iter=1000,
+    epsilon=0.00001,
+    ord='fro',
+    set_U_matrix='fcm',
+    plot_steps=True
+)
 

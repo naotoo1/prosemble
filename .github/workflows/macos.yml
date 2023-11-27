@@ -42,4 +42,4 @@ jobs:
                 pip install torchvision
           - name: Test with pytest
             run: |
-                pytest
+                python -m pytest

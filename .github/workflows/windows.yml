@@ -41,7 +41,9 @@ jobs:
                 pip install --no-cache-dir Cython
                 pip install -r requirements.txt
                 pip install .
-
+          - name: Test with pytest
+            run: |
+                pytest
         # steps:
         #     - uses: actions/checkout@v3
         #     - name: Install miniconda

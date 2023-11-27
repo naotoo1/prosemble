@@ -36,3 +36,6 @@ jobs:
                 pip install --no-cache-dir Cython
                 pip install -r requirements.txt
                 pip install .
+          - name: Test with pytest
+            run: |
+                pytest

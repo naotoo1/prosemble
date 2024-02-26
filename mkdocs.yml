@@ -81,5 +81,5 @@ nav:
     - Report Issues: https://github.com/naotoo1/prosemble/issues
     - Examples:
         - examples/intro.ipynb
-    - API Reference:
-          - prosemble module: prosemble.md
+    # - API Reference:
+    #       - prosemble module: prosemble.md

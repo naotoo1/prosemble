@@ -83,4 +83,3 @@ nav:
         - examples/intro.ipynb
     - API Reference:
           - prosemble module: prosemble.md
-          - common module: common.md

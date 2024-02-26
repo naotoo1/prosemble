@@ -7,9 +7,7 @@ on:
             - main
 
 name: Windows build
-# jobs:
-#     test-windows:
-#         runs-on: windows-latest
+
 jobs:
     test-windows:
         runs-on: ${{ matrix.os }}

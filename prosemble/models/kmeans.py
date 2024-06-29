@@ -5,14 +5,10 @@ Implementation of Kmeans++ Alternating Optimisation Algorithm
 # Author: Nana Abeka Otoo <abekaotoo@gmail.com>
 # License: MIT
 
-from .hcm import Kmeans
-from prosemble.core.distance import euclidean_distance
-
-import matplotlib
-
 import numpy as np
+from prosemble.core.distance import euclidean_distance
+from .hcm import Kmeans
 
-# matplotlib.use('QtAgg')
 
 
 def softmin_funct(x):

@@ -5,14 +5,10 @@ Implementation of KNN Algorithm
 # Author: Nana Abeka Otoo <abekaotoo@gmail.com>
 # License: MIT
 
-
-import numpy as np
 from collections import Counter
+import numpy as np
 
 from prosemble.core.distance import euclidean_distance
-
-# def euclidean_distance(x, y):
-#     return np.sqrt(np.sum((x - y) ** 2))
 
 
 def get_mode(x):

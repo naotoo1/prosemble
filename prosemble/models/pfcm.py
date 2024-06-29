@@ -8,7 +8,6 @@ Implementation of Possibilistic Fuzzy c-Means Alternating Optimization Algorithm
 
 from collections import Counter
 
-import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -18,7 +17,6 @@ from prosemble.core.distance import (
 )
 from .fcm import FCM
 
-# matplotlib.use('QtAgg')
 
 
 class PFCM:

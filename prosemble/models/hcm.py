@@ -8,9 +8,7 @@ Implementation of Hard c Means alternating optimisation algorithm
 
 from collections import Counter
 
-import matplotlib
 import numpy as np
-# matplotlib.use('QtAgg')
 from matplotlib import pyplot as plt
 from prosemble.core.distance import (
     euclidean_distance,

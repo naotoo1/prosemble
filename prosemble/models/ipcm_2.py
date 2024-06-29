@@ -8,10 +8,8 @@ Implementation of Improved Possibilistic c-Means 2 Alternating Optimization Algo
 
 from collections import Counter
 
-import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
-# matplotlib.use('QtAgg')
 from prosemble.core.distance import (
     euclidean_distance,
     squared_euclidean_distance
@@ -482,5 +480,3 @@ class IPCM2:
         :return: learned centroids
         """
         return self.fit_cent[0]
-
-

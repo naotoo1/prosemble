@@ -9,10 +9,10 @@ Implementation of npc1
 from sklearn.metrics import accuracy_score
 
 import numpy as np
-
+from prosemble.core.distance import euclidean_distance
 from .kmeans import kmeans_plusplus
 
-from prosemble.core.distance import euclidean_distance
+
 
 
 def softmin_funct(x):

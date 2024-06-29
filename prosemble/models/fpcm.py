@@ -7,17 +7,13 @@ Implementation of Fuzzy Possibilistic c-Means Alternating Optimization Algorithm
 
 
 from collections import Counter
-
-import matplotlib
-
-# matplotlib.use('QtAgg')
 import numpy as np
 from matplotlib import pyplot as plt
-from .fcm import FCM
 from prosemble.core.distance import (
     euclidean_distance,
     squared_euclidean_distance
 )
+from .fcm import FCM
 
 
 class FPCM:

@@ -8,7 +8,6 @@ Implementation of Fuzzy c-Means Alternating Optimisation Algorithm
 
 from collections import Counter
 
-import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
 from prosemble.core.distance import (
@@ -16,9 +15,6 @@ from prosemble.core.distance import (
     squared_euclidean_distance
 )
 from .kmeans import kmeans_plusplus
-
-
-# matplotlib.use('QtAgg')
 
 
 class FCM:

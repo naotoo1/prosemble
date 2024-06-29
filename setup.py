@@ -4,6 +4,7 @@
 
 import io
 from os import path as op
+
 from setuptools import setup, find_packages
 
 with open('README.md') as readme_file:
@@ -46,6 +47,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
     description="A python project for prototype-based machine learning models",
     install_requires=install_requires,
@@ -61,6 +63,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/naotoo1/prosemble',
-    version='0.9.1',
+    version='0.9.2',
     zip_safe=False,
 )

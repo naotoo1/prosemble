@@ -8,14 +8,14 @@ Implementation of Basic Graded Possibilistic alternating optimisation algorithm
 
 from collections import Counter
 
-import matplotlib
+# import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
 
 # matplotlib.use('QtAgg')
+from prosemble.core.distance import euclidean_distance
 from .fcm import FCM
 
-from prosemble.core.distance import euclidean_distance
 
 np.seterr(all='ignore')
 

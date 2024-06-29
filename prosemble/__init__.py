@@ -8,4 +8,4 @@ from . import datasets
 
 __author__ = """Nana Abeka Otoo"""
 __email__ = 'nanaabekaotoo@gmail.com'
-__version__ = '0.9.1'
+__version__ = '0.9.2'

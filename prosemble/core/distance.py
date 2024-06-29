@@ -14,9 +14,9 @@ def squared_euclidean_distance(x, y):
 
 
 def manhattan_distance(point1, point2):
-    sum = 0
+    sum_ = 0
     for x1, x2 in zip(point1, point2):
         difference = x2 - x1
         absolute_difference = abs(difference)
-        sum += absolute_difference
-    return sum
+        sum_ += absolute_difference
+    return sum_

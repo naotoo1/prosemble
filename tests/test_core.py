@@ -63,19 +63,102 @@ class TestDistances(unittest.TestCase):
         desired = actual.copy()
         for i in range(self.nx):
             for j in range(self.ny):
-                actual[i][j] = (ps.core.squared_euclidean_distance(
+                actual[i][j] = ps.core.squared_euclidean_distance(
                     self.x[i],
                     self.y[j],
-                )**2)
-                
-                desired[i][j] = (pairwise_distances(
+                )                
+                desired[i][j] = pairwise_distances(
                     self.x[i].reshape(1, -1),
                     self.y[j].reshape(1, -1),
                     metric="sqeuclidean",
-                )**2)
+                )
         mismatch = np.testing.assert_array_almost_equal(actual,
                                                         desired,
                                                         decimal=2)
-        self.assertIsNone(mismatch)       
+        self.assertIsNone(mismatch)
+
+
+    def test_lpnorm_p1(self):
+        actual = np.empty([self.nx, self.ny])
+        desired = actual.copy()
+        for i in range(self.nx):
+            for j in range(self.ny):
+                actual[i][j] = ps.core.lpnorm_distance(
+                    self.x[i],
+                    self.y[j],
+                    1,
+                )
+                desired[i][j] = pairwise_distances(
+                    self.x[i].reshape(1, -1),
+                    self.y[j].reshape(1, -1),
+                    metric="l1",
+                )
+        mismatch = np.testing.assert_array_almost_equal(actual,
+                                                        desired,
+                                                        decimal=2)
+        self.assertIsNone(mismatch)
+
+    def test_lpnorm_p2(self):
+        actual = np.empty([self.nx, self.ny])
+        desired = actual.copy()
+        for i in range(self.nx):
+            for j in range(self.ny):
+                actual[i][j] = ps.core.lpnorm_distance(
+                    self.x[i],
+                    self.y[j],
+                    2,
+                )
+                desired[i][j] = pairwise_distances(
+                    self.x[i].reshape(1, -1),
+                    self.y[j].reshape(1, -1),
+                    metric="l2",
+                )
+        mismatch = np.testing.assert_array_almost_equal(actual,
+                                                        desired,
+                                                        decimal=2)
+        self.assertIsNone(mismatch)
+
+    def test_omega_distance(self):
+        omega = np.eye(self.mx, self.my)
+        actual = np.empty([self.nx, self.ny])
+        desired = actual.copy()
+        for i in range(self.nx):
+            for j in range(self.ny):
+                actual[i][j] = ps.core.omega_distance(
+                    self.x[i],
+                    self.y[j],
+                    omega,
+                )
+                desired[i][j] = pairwise_distances(
+                    self.x[i].reshape(1, -1),
+                    self.y[j].reshape(1, -1),
+                    metric="l2",
+                )**2
+        mismatch = np.testing.assert_array_almost_equal(actual,
+                                                        desired,
+                                                        decimal=2)
+        self.assertIsNone(mismatch) 
+         
+    def test_lomega_identity(self):
+        omega = np.eye(self.mx, self.my)
+        omegas = np.stack([omega for _ in range(self.ny)],axis=0)
+        actual = ps.core.lomega_distance(
+                    self.x,
+                    self.y,
+                    omegas,
+                )
+        desired = np.empty([self.nx, self.ny])
+        for i in range(self.nx):
+            for j in range(self.ny):
+                desired[i][j] = pairwise_distances(
+                    self.x[i].reshape(1, -1),
+                    self.y[j].reshape(1, -1),
+                    metric="l2",
+                )**2
+        mismatch = np.testing.assert_array_almost_equal(actual,
+                                                        desired,
+                                                        decimal=2)
+        self.assertIsNone(mismatch)
+   
     def tearDown(self):
         del self.x, self.y

@@ -13,7 +13,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Nix (Recommended Method)
+      - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
           nix_path: nixpkgs=channel:nixos-unstable
@@ -35,27 +35,28 @@ jobs:
             ~/.devenv
             .direnv
             .env_cache
-          key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
+          key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'flake.nix', 'flake.lock') }}
           restore-keys: |
             nix-${{ runner.os }}-
 
-      - name: Install devenv
+      - name: Ensure devenv Is Installed
         run: |
           nix profile install nixpkgs#devenv || nix-env -iA nixpkgs.devenv
           devenv --version
 
       - name: Setup devenv Environment
         run: |
+          if [ ! -f devenv.nix ]; then
+            echo "Error: devenv.nix not found. Make sure the file is committed."
+            exit 1
+          fi
+
           if [ -f .env_cache ] && [ -s .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
             echo "Using cached environment"
             source .env_cache
           else
-            echo "Setting up environment from scratch"
-            devenv init || { echo "Failed to initialize devenv"; exit 1; }
-            direnv allow . && eval "$(direnv export bash)"
-            python --version || { echo "Python setup failed"; exit 1; }
-            echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
-            echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
+            echo "Setting up environment from devenv.nix"
+            nix develop --command bash -c "python --version"
             env >> .env_cache
           fi
 

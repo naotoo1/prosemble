@@ -2,8 +2,8 @@ name: examples
 on:
   push:
     paths:
-      - "examples/**.py"
-  workflow_dispatch:  # Adding manual trigger option
+      - "examples/**/*.py"  # Fixes glob pattern to include subdirectories
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   linux:
@@ -17,12 +17,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         
-      # Add this step after checkout
-      - name: Set executable permissions
+      - name: Verify test script exists & set permissions
         run: |
-          chmod +x tests/test_examples.sh
-          
-      - name: Restore Nix environment
+          if [ -f tests/test_examples.sh ]; then
+            chmod +x tests/test_examples.sh
+          else
+            echo "ERROR: tests/test_examples.sh not found!"
+            exit 1
+          fi
+
+      - name: Restore Nix environment cache
         uses: actions/cache@v4
         id: nix-cache
         with:
@@ -34,46 +38,58 @@ jobs:
           key: ${{ runner.os }}-nix-python312-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
           restore-keys: |
             ${{ runner.os }}-nix-python312-
-            
+
+      - name: Ensure Nix and devenv are installed
+        run: |
+          if ! command -v nix &> /dev/null; then
+            echo "ERROR: Nix is not installed!"
+            exit 1
+          fi
+
+          if ! command -v devenv &> /dev/null; then
+            echo "Installing devenv..."
+            nix profile install --accept-flake-config "nixpkgs#devenv"
+          fi
+
       - name: Setup devenv Environment
         run: |
-          if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
+          if [ -f .env_cache ] && [ -s .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
             echo "Using cached environment"
             source .env_cache
           else
             echo "Setting up environment from scratch"
-            if ! command -v devenv &> /dev/null; then
-              echo "Installing devenv..."
-              nix profile install --accept-flake-config "nixpkgs#devenv"
-            fi
-            
-            # Initialize devenv with Python 3.12 from the default configuration
-            echo "Initializing devenv with Python 3.12 configuration..."
-            devenv init
+
+            # Initialize devenv
+            devenv init || { echo "Failed to initialize devenv"; exit 1; }
+
+            # Ensure we use the correct Python from devenv.nix
+            direnv allow . && eval "$(direnv export bash)"
+
+            # Verify Python version
+            python --version || { echo "Python setup failed"; exit 1; }
+
+            # Export important environment variables
+            echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
+            echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
+            env >> .env_cache
           fi
-          
-          # Ensure we use the correct Python from devenv.nix
-          direnv allow . && eval "$(direnv export bash)"
-          
-          # Verify Python version
-          python --version
-          
-          # Export important environment variables for future jobs
-          echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
-          echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
-          env >> .env_cache
-          
+
+      - name: Verify UV installation
+        run: |
+          if ! command -v uv &> /dev/null; then
+            echo "ERROR: UV is not installed!"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: |
-          # Using UV from devenv.nix instead of pip
-          echo "Installing dependencies with UV from devenv..."
-          
-          # Install Cython first
+          echo "Installing dependencies with UV..."
           uv pip install --no-cache-dir Cython
-          
-          # Install the package in development mode
           uv pip install -e .[all]
-          
+
+      - name: Debug Environment Variables
+        run: env | sort  # Helps diagnose missing env variables
+
       - name: Run Tests
         run: |
           ./tests/test_examples.sh examples/

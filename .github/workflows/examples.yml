@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: notoo1/ubuntu-nix:24.04-8
+    defaults:
+      run:
+        shell: bash  # Ensure we use bash instead of sh
 
     steps:
       - name: Checkout Code
@@ -38,15 +41,17 @@ jobs:
           restore-keys: |
             nix-${{ runner.os }}-
 
-      - name: Ensure Nix is installed
+      - name: Ensure Nix is installed and initialized
         run: |
           if ! command -v nix &> /dev/null; then
-            echo "Nix not found! Attempting installation..."
-            curl -L https://nixos.org/nix/install | sh
-            source ~/.nix-profile/etc/profile.d/nix.sh
-          else
-            echo "Nix is already installed at: $(command -v nix)"
+            echo "ERROR: Nix should be preinstalled in the container but is missing!"
+            exit 1
           fi
+          echo "Nix is installed at: $(command -v nix)"
+
+          # Ensure Nix environment is loaded
+          . /etc/profile || { echo "Failed to load Nix environment"; exit 1; }
+          echo "Nix environment initialized."
 
       - name: Setup devenv Environment
         run: |

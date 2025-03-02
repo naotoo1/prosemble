@@ -8,37 +8,22 @@ on:
 jobs:
   linux:
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:20.04  # Use official Ubuntu image
-
-    defaults:
-      run:
-        shell: bash
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install curl, xz-utils, and sudo
-        run: |
-          echo "Installing curl, xz-utils, and sudo..."
-          apt-get update && apt-get install -y curl xz-utils sudo
+      - name: Install Nix (Recommended Method)
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            build-users-group =
 
-      - name: Install Nix (Clean Installation)
+      - name: Verify Nix Installation
         run: |
-          echo "Installing Nix..."
-          curl -L https://nixos.org/nix/install | sh
-          
-          # Ensure Nix is available after installation
-          . $HOME/.nix-profile/etc/profile.d/nix.sh
-          echo "Nix Version:"
           nix --version
-
-      - name: Create /nix directory and adjust permissions
-        run: |
-          echo "Creating /nix directory and setting permissions..."
-          sudo mkdir -m 0755 /nix
-          sudo chown root /nix
+          nix-channel --list
 
       - name: Restore Nix environment cache
         uses: actions/cache@v4
@@ -54,14 +39,10 @@ jobs:
           restore-keys: |
             nix-${{ runner.os }}-
 
-      - name: Install devenv (Safe Method)
+      - name: Install devenv
         run: |
-          if ! command -v devenv &> /dev/null; then
-            echo "Installing devenv using nix-env..."
-            nix-env -iA nixpkgs.devenv || { echo "devenv installation failed!"; exit 1; }
-          else
-            echo "devenv is already installed"
-          fi
+          nix profile install nixpkgs#devenv || nix-env -iA nixpkgs.devenv
+          devenv --version
 
       - name: Setup devenv Environment
         run: |

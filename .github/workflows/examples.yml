@@ -19,10 +19,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install curl
+      - name: Install curl and xz-utils
         run: |
-          echo "Installing curl..."
-          apt-get update && apt-get install -y curl
+          echo "Installing curl and xz-utils..."
+          apt-get update && apt-get install -y curl xz-utils
 
       - name: Install Nix (Clean Installation)
         run: |

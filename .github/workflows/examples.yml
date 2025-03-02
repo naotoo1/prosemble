@@ -33,17 +33,17 @@ jobs:
 
       - name: Setup devenv Environment
         run: |
-          if ! command -v devenv &> /dev/null; then
-            echo "Installing devenv..."
-            nix profile install --accept-flake-config "nixpkgs#devenv"
-          fi
-
+          # If the environment is cached, use it
           if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
             echo "Using cached environment"
             source .env_cache
           else
             echo "Setting up environment from scratch using devenv"
+            
+            # Initialize the devenv environment from devenv.nix and devenv.lock
             devenv init
+
+            # Ensure the environment variables are cached for future use
             devenv shell --no-status --impure bash -c "
               echo \"PYTHONPATH=\${PYTHONPATH}\" >> .env_cache
               echo \"PROJECT_DIR=\${PROJECT_DIR}\" >> .env_cache
@@ -51,13 +51,24 @@ jobs:
             "
           fi
 
+          # Debugging the environment
+          echo "Environment Variables:"
+          echo "PYTHONPATH=$PYTHONPATH"
+          echo "PROJECT_DIR=$PROJECT_DIR"
+
+          # Load the cached environment
           source .env_cache
 
       - name: Install dependencies
         run: |
           devenv shell --no-status --impure bash -c "
+            # Print Python version
             python --version
+
+            # Install Cython first (using uv as specified)
             uv pip install --no-cache-dir Cython
+
+            # Install the package in development mode
             uv pip install -e .[all]
           "
 

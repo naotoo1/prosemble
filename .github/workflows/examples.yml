@@ -52,14 +52,9 @@ jobs:
             exit 1
           fi
 
-          if [ -f .env_cache ] && [ -s .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
-            echo "Using cached environment"
-            source .env_cache
-          else
-            echo "Setting up environment from flake.nix"
-            nix develop .  # Correct way to use nix develop with a flake
-            env >> .env_cache
-          fi
+          # Using nix develop to set up environment based on flake.nix
+          echo "Setting up environment from flake.nix"
+          nix develop .  # This will read and set up the environment from the flake.nix
 
       - name: Install Dependencies
         run: |

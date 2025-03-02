@@ -13,6 +13,7 @@
     in {
       devShells.${system}.default = devenv.lib.mkShell {
         inherit pkgs;
+        inputs = { inherit nixpkgs devenv; }; # Pass the required inputs
         modules = [ ./devenv.nix ]; # Use your devenv.nix for configuration
       };
     };

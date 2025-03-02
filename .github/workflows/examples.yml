@@ -18,10 +18,10 @@ jobs:
       <<: *container_config
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       - name: Restore Nix environment
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: nix-cache
         with:
           path: |

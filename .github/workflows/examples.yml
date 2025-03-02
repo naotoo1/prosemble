@@ -9,7 +9,8 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     container:
-      image: notoo1/ubuntu-nix:24.04-8
+      image: ubuntu:20.04  # Use official Ubuntu image
+
     defaults:
       run:
         shell: bash
@@ -17,6 +18,17 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Install Nix (Clean Installation)
+        run: |
+          # Clean Nix installation
+          echo "Installing Nix..."
+          curl -L https://nixos.org/nix/install | sh
+          
+          # Ensure Nix is available after installation
+          . $HOME/.nix-profile/etc/profile.d/nix.sh
+          echo "Nix Version:"
+          nix --version
 
       - name: Restore Nix environment cache
         uses: actions/cache@v4
@@ -31,18 +43,6 @@ jobs:
           key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
           restore-keys: |
             nix-${{ runner.os }}-
-
-      - name: Ensure Nix is Installed and Working
-        run: |
-          if ! command -v nix &> /dev/null; then
-            echo "ERROR: Nix should be preinstalled but is missing!"
-            exit 1
-          fi
-          echo "Nix Version:"
-          nix --version
-          
-          # Ensure Nix environment is properly sourced
-          . /etc/profile || { echo "Failed to load Nix environment"; exit 1; }
 
       - name: Install devenv (Safe Method)
         run: |

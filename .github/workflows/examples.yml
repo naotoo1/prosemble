@@ -18,7 +18,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y curl xz-utils
           curl -L https://nixos.org/nix/install | sh -s -- --daemon
-          echo "::add-path::$HOME/.nix-profile/bin"
+          echo "PATH=$HOME/.nix-profile/bin:$PATH" >> $GITHUB_ENV
           sudo systemctl restart nix-daemon
           . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 

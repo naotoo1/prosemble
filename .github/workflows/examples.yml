@@ -3,13 +3,13 @@ on:
   push:
     paths:
       - "examples/**.py"
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch:
 
 jobs:
   linux:
     runs-on: ubuntu-latest
     container:
-      image: notoo1/ubuntu-nix:24.04-8  # Public container
+      image: notoo1/ubuntu-nix:24.04-8
 
     steps:
       - name: Checkout Code
@@ -31,21 +31,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-devenv-python312-
 
-      - name: Ensure Nix environment is loaded
-        run: |
-          # Use the correct way to source files in sh
-          . /etc/profile
-          echo "Nix environment sourced"
-          echo "PATH=$PATH"
+      - name: Update Nixpkgs
+        run: nix-channel --update
 
-      - name: Ensure devenv is in PATH
+      - name: Clear Nix Cache
         run: |
-          # Explicitly source devenv if necessary
-          if ! command -v devenv &> /dev/null; then
-            echo "Devenv not found, installing..."
-            nix-env -iA nixpkgs.devenv
-          fi
-          echo "Devenv installed? $(command -v devenv)"
+          sudo rm -rf /nix/var/nix/db/
+          sudo systemctl restart nix-daemon
+
+      - name: Ensure Nix environment is loaded
+        run: . /etc/profile
+
+      - name: Install devenv
+        run: nix profile install nixpkgs#devenv
+
+      - name: check nix health
+        run: nix-store --verify --check-contents --repair
 
       - name: Setup devenv Environment
         run: |
@@ -54,19 +55,13 @@ jobs:
             . .env_cache
           else
             echo "Setting up environment from scratch using devenv"
-            
-            # Initialize the devenv environment from devenv.nix and devenv.lock
             devenv init
-
-            # Ensure the environment variables are cached for future use
             devenv shell --no-status --impure bash -c "
               echo \"PYTHONPATH=\${PYTHONPATH}\" >> .env_cache
               echo \"PROJECT_DIR=\${PROJECT_DIR}\" >> .env_cache
               env >> .env_cache
             "
           fi
-
-          # Load the cached environment
           . .env_cache
 
       - name: Install dependencies

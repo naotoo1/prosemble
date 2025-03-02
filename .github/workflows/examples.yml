@@ -1,10 +1,7 @@
 name: examples
 on:
-  push:
-    paths:
-      - "examples/**/*.py"  # Fixes glob pattern to include subdirectories
-  workflow_dispatch:  # Allows manual triggering
-
+  [workflow_dispatch]
+  
 jobs:
   linux:
     runs-on: ubuntu-latest

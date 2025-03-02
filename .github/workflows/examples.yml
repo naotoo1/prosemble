@@ -31,15 +31,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-devenv-python312-
 
+      - name: Ensure Nix environment is loaded
+        run: |
+          # Source Nix environment variables
+          source /etc/profile
+          echo "Nix environment sourced"
+          echo "PATH=$PATH"
+
       - name: Ensure devenv is in PATH
         run: |
-          # Make sure the Nix profile and devenv are in the PATH
-          echo "export PATH=$PATH:/root/.nix-profile/bin/" >> $GITHUB_ENV
+          # Explicitly source devenv if necessary
+          if ! command -v devenv &> /dev/null; then
+            echo "Devenv not found, installing..."
+            nix-env -iA nixpkgs.devenv
+          fi
           echo "Devenv installed? $(command -v devenv)"
 
       - name: Setup devenv Environment
         run: |
-          # If the environment is cached, use it
           if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
             echo "Using cached environment"
             source .env_cache
@@ -63,13 +72,8 @@ jobs:
       - name: Install dependencies
         run: |
           devenv shell --no-status --impure bash -c "
-            # Print Python version
             python --version
-
-            # Install Cython first (using uv as specified)
             uv pip install --no-cache-dir Cython
-
-            # Install the package in development mode
             uv pip install -e .[all]
           "
 

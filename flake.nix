@@ -1,20 +1,23 @@
 {
-  description = "Reproducible Python development environment with devenv and Nix flakes";
+  description = "Development environment for Prosemble project";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable"; # Latest Nixpkgs
-    devenv.url = "github:cachix/devenv/latest"; # devenv for environment management
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+    devenv.url = "github:cachix/devenv";
   };
 
-  outputs = { self, nixpkgs, devenv, ... }:
-    let
-      system = "x86_64-linux"; # Adjust for your system (e.g., "aarch64-linux" for ARM)
-      pkgs = import nixpkgs { inherit system; };
-    in {
-      devShells.${system}.default = devenv.lib.mkShell {
-        inherit pkgs;
-        inputs = { inherit nixpkgs devenv; }; # Pass the required inputs
-        modules = [ ./devenv.nix ]; # Use your devenv.nix for configuration
-      };
-    };
+  outputs = { self, nixpkgs, flake-utils, devenv, ... }:
+    flake-utils.lib.eachSystem ["x86_64-linux"] (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+      in {
+        devShells.${system}.default = devenv.lib.mkShell {
+          pkgs = pkgs;
+          shell = pkgs.bashInteractive;  # Explicitly set shell to bash
+          env = {
+            # Add any environment variables needed
+            ENV_VAR = "value";
+          };
+        };
+      });
 }

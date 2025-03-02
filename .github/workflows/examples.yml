@@ -16,12 +16,23 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y curl xz-utils
-          # Install Nix with multi-user support
+          # Install Nix with multi-user support and flake support
           curl -L https://nixos.org/nix/install | sh -s -- --daemon --accept-flake-config
           # Add Nix to PATH
           echo "PATH=$HOME/.nix-profile/bin:$PATH" >> $GITHUB_ENV
-          # Restart nix-daemon
-          sudo systemctl restart nix-daemon
+
+          # Ensure correct permissions for /nix directory
+          sudo chown -R runner:runner /nix
+
+          # Check nix-daemon status
+          systemctl status nix-daemon.service
+
+          # Enable and start nix-daemon service if not running
+          if ! systemctl is-active --quiet nix-daemon.service; then
+            sudo systemctl enable nix-daemon.service
+            sudo systemctl start nix-daemon.service
+          fi
+
           # Source nix.sh
           . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 

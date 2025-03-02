@@ -1,54 +1,47 @@
 {
   description = "Development environment for Prosemble project";
-  
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     devenv.url = "github:cachix/devenv";
     flake-utils.url = "github:numtide/flake-utils";
   };
-  
-  outputs = { self, nixpkgs, devenv, flake-utils, ... }:
+
+  nixConfig = {
+    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=";
+    extra-substituters = "https://devenv.cachix.org";
+  };
+
+  outputs = { self, nixpkgs, devenv, flake-utils, ... } @ inputs:
     flake-utils.lib.eachSystem ["x86_64-linux"] (system: let
-      pkgs = import nixpkgs { inherit system; };
-    in {
+      pkgs = nixpkgs.legacyPackages.${system};
+    in
+    {
       devShells.${system}.default = devenv.lib.mkShell {
         pkgs = pkgs;
-        shell = pkgs.bashInteractive;
+        shell = pkgs.bashInteractive;  # Explicitly set shell to bash
         modules = [
-          {
-            # Project configuration
-            packages = with pkgs; [
-              git
-              git-lfs
-              nixpkgs-fmt
-              docker
-              docker-compose
-              
-              # Python packages
-              (python312.withPackages (ps: with ps; [
-                numpy
-                matplotlib
-                scikit-learn
-                pandas
-                scipy
-                pip
-              ]))
+          ({ pkgs, ... }: {
+            # Project-specific packages
+            packages = [
+              pkgs.git
+              pkgs.git-lfs
+              pkgs.docker
+              pkgs.docker-compose
+              pkgs.nixpkgs-fmt
             ];
 
+            # Python environment setup
             languages.python = {
               enable = true;
-              package = pkgs.python312;
+              package = pkgs.python3;
               version = "3.12";
-              uv.enable = true;
               venv.enable = true;
             };
-            
-            # Environment variables
-            env.PYTHONPATH = "${pkgs.python312.sitePackages}";
-            
-            # Shell configuration
-            starship.enable = true;
-          }
+
+            # Other environment variables
+            env.PYTHONPATH = "${pkgs.python3.sitePackages}";
+          })
         ];
       };
     });

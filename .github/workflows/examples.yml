@@ -3,7 +3,7 @@ on:
   push:
     paths:
       - "examples/**.py"
-  workflow_dispatch:  # Adding manual trigger option
+  workflow_dispatch:
 
 jobs:
   linux:
@@ -18,8 +18,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Set executable permissions
-        run: |
-          chmod +x tests/test_examples.sh
+        run: chmod +x tests/test_examples.sh
           
       - name: Restore Nix environment
         uses: actions/cache@v4
@@ -38,44 +37,22 @@ jobs:
         run: |
           # Ensure devenv is installed
           if ! command -v devenv &> /dev/null; then
-            echo "Installing devenv..."
             nix profile install --accept-flake-config "nixpkgs#devenv"
           fi
           
           if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
-            echo "Using cached environment"
             source .env_cache
           else
-            echo "Setting up environment from scratch using devenv"
-            
-            # Initialize and enter the devenv shell
             devenv init
-            devenv shell --no-status --impure bash -c "
-              # Export important environment variables
-              echo \"PYTHONPATH=\${PYTHONPATH}\" >> .env_cache
-              echo \"PROJECT_DIR=\${PROJECT_DIR}\" >> .env_cache
-              env >> .env_cache
-            "
+            devenv shell --no-status --impure bash -c "env > .env_cache"
           fi
           
-          # Load the environment variables
           source .env_cache
           
       - name: Install dependencies
         run: |
-          # Use devenv shell for installing dependencies
-          devenv shell --no-status --impure bash -c "
-            # Verify Python version
-            python --version
-            
-            # Install Cython first (using uv as specified in your devenv.nix)
-            uv pip install --no-cache-dir Cython
-            
-            # Install the package in development mode
-            uv pip install -e .[all]
-          "
+          devenv shell --no-status --impure bash -c "python --version && uv pip install --no-cache-dir Cython && uv pip install -e .[all]"
           
       - name: Run Tests
         run: |
-          # Run tests within the devenv shell
           devenv shell --no-status --impure bash -c "./tests/test_examples.sh examples/"

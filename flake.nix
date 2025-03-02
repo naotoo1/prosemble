@@ -10,14 +10,16 @@
   outputs = { self, nixpkgs, flake-utils, devenv, ... }:
     flake-utils.lib.eachSystem ["x86_64-linux"] (system: let
       pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        devShells.${system}.default = devenv.lib.mkShell {
-          pkgs = pkgs;
-          shell = pkgs.bashInteractive;  # Explicitly set shell to bash
-          env = {
-            # Add any environment variables needed
-            ENV_VAR = "value";
-          };
-        };
-      });
+    in {
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          bashInteractive
+          # Add any other dependencies you need here
+        ];
+        shellHook = ''
+          # Set up environment variables or other settings
+          export ENV_VAR="value"
+        '';
+      };
+    });
 }

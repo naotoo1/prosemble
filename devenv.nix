@@ -67,8 +67,8 @@ in {
     pythonPackages.pandas
     pythonPackages.scipy
     pythonPackages.pip
-    docker
-    docker-compose
+    # docker
+    # docker-compose
   ];
 
   # Add Docker support

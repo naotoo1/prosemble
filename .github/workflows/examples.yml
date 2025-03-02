@@ -16,10 +16,11 @@ jobs:
       - name: Install Nix
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl
+          sudo apt-get install -y curl xz-utils
           curl -L https://nixos.org/nix/install | sh -s -- --daemon
-          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+          echo "::add-path::$HOME/.nix-profile/bin"
           sudo systemctl restart nix-daemon
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 
       - name: Update Nixpkgs
         run: nix-channel --update

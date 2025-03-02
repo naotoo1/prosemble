@@ -13,15 +13,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Nix (Debug)
+      - name: Install Nix
         run: |
           sudo apt-get update
           sudo apt-get install -y curl xz-utils
           curl -L https://nixos.org/nix/install | sh -s -- --daemon
           echo "PATH=$HOME/.nix-profile/bin:$PATH" >> $GITHUB_ENV
           sudo systemctl restart nix-daemon
-          ls -l $HOME/.nix-profile/etc/profile.d/
-          cat $HOME/.nix-profile/nix-version
           . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 
       - name: Update Nixpkgs
@@ -43,7 +41,7 @@ jobs:
           "
           . .env_cache
 
-      - name: Install dependencies
+      - name: Install dependencies from devenv.nix and devenv.lock
         run: |
           devenv shell --no-status --impure bash -c "
             python --version

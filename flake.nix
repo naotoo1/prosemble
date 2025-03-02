@@ -25,6 +25,16 @@
                 nixpkgs-fmt
                 docker
                 docker-compose
+                
+                # Python packages
+                (python312.withPackages (ps: with ps; [
+                  numpy
+                  matplotlib
+                  scikit-learn
+                  pandas
+                  scipy
+                  pip
+                ]))
               ];
 
               languages.python = {
@@ -34,19 +44,9 @@
                 uv.enable = true;
                 venv.enable = true;
               };
-
-              # Python packages
-              packages = with pkgs.python312Packages; [
-                numpy
-                matplotlib
-                scikit-learn
-                pandas
-                scipy
-                pip
-              ];
               
               # Environment variables
-              env.PYTHONPATH = "${pkgs.python312Packages.python.sitePackages}";
+              env.PYTHONPATH = "${pkgs.python312.sitePackages}";
               
               # Shell configuration
               starship.enable = true;

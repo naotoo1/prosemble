@@ -19,6 +19,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      # Add this step after checkout
+      - name: Set executable permissions
+        run: |
+          chmod +x tests/test_examples.sh
         
       - name: Restore Nix environment
         uses: actions/cache@v4

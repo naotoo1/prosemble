@@ -10,10 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: notoo1/ubuntu-nix:24.04-8
-      credentials:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
     steps:
+      - name: Log in to DockerHub
+        env:
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+        run: |
+          echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+
       - name: Checkout Code
         uses: actions/checkout@v4
         

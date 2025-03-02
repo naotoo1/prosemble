@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        
+
       - name: Verify test script exists & set permissions
         run: |
           if [ -f tests/test_examples.sh ]; then
@@ -29,24 +29,23 @@ jobs:
         id: nix-cache
         with:
           path: |
+            /nix
             ~/.nix-profile
             ~/.devenv
             .direnv
             .env_cache
-          key: ${{ runner.os }}-nix-python312-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
+          key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
           restore-keys: |
-            ${{ runner.os }}-nix-python312-
+            nix-${{ runner.os }}-
 
-      - name: Ensure Nix and devenv are installed
+      - name: Ensure Nix is installed
         run: |
           if ! command -v nix &> /dev/null; then
-            echo "ERROR: Nix is not installed!"
-            exit 1
-          fi
-
-          if ! command -v devenv &> /dev/null; then
-            echo "Installing devenv..."
-            nix profile install --accept-flake-config "nixpkgs#devenv"
+            echo "Nix not found! Attempting installation..."
+            curl -L https://nixos.org/nix/install | sh
+            source ~/.nix-profile/etc/profile.d/nix.sh
+          else
+            echo "Nix is already installed at: $(command -v nix)"
           fi
 
       - name: Setup devenv Environment
@@ -57,16 +56,17 @@ jobs:
           else
             echo "Setting up environment from scratch"
 
-            # Initialize devenv
+            if ! command -v devenv &> /dev/null; then
+              echo "Installing devenv..."
+              nix profile install --accept-flake-config "nixpkgs#devenv"
+            fi
+
             devenv init || { echo "Failed to initialize devenv"; exit 1; }
 
-            # Ensure we use the correct Python from devenv.nix
             direnv allow . && eval "$(direnv export bash)"
 
-            # Verify Python version
             python --version || { echo "Python setup failed"; exit 1; }
 
-            # Export important environment variables
             echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
             echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
             env >> .env_cache

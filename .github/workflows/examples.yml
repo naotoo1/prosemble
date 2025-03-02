@@ -31,6 +31,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-devenv-python312-
 
+      - name: Ensure devenv is in PATH
+        run: |
+          # Make sure the Nix profile and devenv are in the PATH
+          echo "export PATH=$PATH:/root/.nix-profile/bin/" >> $GITHUB_ENV
+          echo "Devenv installed? $(command -v devenv)"
+
       - name: Setup devenv Environment
         run: |
           # If the environment is cached, use it
@@ -50,11 +56,6 @@ jobs:
               env >> .env_cache
             "
           fi
-
-          # Debugging the environment
-          echo "Environment Variables:"
-          echo "PYTHONPATH=$PYTHONPATH"
-          echo "PROJECT_DIR=$PROJECT_DIR"
 
           # Load the cached environment
           source .env_cache

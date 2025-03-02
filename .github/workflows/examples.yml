@@ -2,8 +2,8 @@ name: examples
 on:
   push:
     paths:
-      - "examples/**/*.py"  # Fixes glob pattern to include subdirectories
-  workflow_dispatch:  # Allows manual triggering
+      - "examples/**/*.py"
+  workflow_dispatch:
 
 jobs:
   linux:
@@ -12,20 +12,11 @@ jobs:
       image: notoo1/ubuntu-nix:24.04-8
     defaults:
       run:
-        shell: bash  # Ensure we use bash instead of sh
+        shell: bash
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Verify test script exists & set permissions
-        run: |
-          if [ -f tests/test_examples.sh ]; then
-            chmod +x tests/test_examples.sh
-          else
-            echo "ERROR: tests/test_examples.sh not found!"
-            exit 1
-          fi
 
       - name: Restore Nix environment cache
         uses: actions/cache@v4
@@ -41,17 +32,26 @@ jobs:
           restore-keys: |
             nix-${{ runner.os }}-
 
-      - name: Ensure Nix is installed and initialized
+      - name: Ensure Nix is Installed and Working
         run: |
           if ! command -v nix &> /dev/null; then
-            echo "ERROR: Nix should be preinstalled in the container but is missing!"
+            echo "ERROR: Nix should be preinstalled but is missing!"
             exit 1
           fi
-          echo "Nix is installed at: $(command -v nix)"
-
-          # Ensure Nix environment is loaded
+          echo "Nix Version:"
+          nix --version
+          
+          # Ensure Nix environment is properly sourced
           . /etc/profile || { echo "Failed to load Nix environment"; exit 1; }
-          echo "Nix environment initialized."
+
+      - name: Install devenv (Safe Method)
+        run: |
+          if ! command -v devenv &> /dev/null; then
+            echo "Installing devenv using nix-env..."
+            nix-env -iA nixpkgs.devenv || { echo "devenv installation failed!"; exit 1; }
+          else
+            echo "devenv is already installed"
+          fi
 
       - name: Setup devenv Environment
         run: |
@@ -60,38 +60,18 @@ jobs:
             source .env_cache
           else
             echo "Setting up environment from scratch"
-
-            if ! command -v devenv &> /dev/null; then
-              echo "Installing devenv..."
-              nix profile install --accept-flake-config "nixpkgs#devenv"
-            fi
-
             devenv init || { echo "Failed to initialize devenv"; exit 1; }
-
             direnv allow . && eval "$(direnv export bash)"
-
             python --version || { echo "Python setup failed"; exit 1; }
-
             echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
             echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
             env >> .env_cache
           fi
 
-      - name: Verify UV installation
+      - name: Install Dependencies
         run: |
-          if ! command -v uv &> /dev/null; then
-            echo "ERROR: UV is not installed!"
-            exit 1
-          fi
-
-      - name: Install dependencies
-        run: |
-          echo "Installing dependencies with UV..."
           uv pip install --no-cache-dir Cython
           uv pip install -e .[all]
-
-      - name: Debug Environment Variables
-        run: env | sort  # Helps diagnose missing env variables
 
       - name: Run Tests
         run: |

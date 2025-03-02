@@ -19,6 +19,8 @@ in {
     pythonPackages.pandas
     pythonPackages.scipy
     pythonPackages.pip
+    docker
+    docker-compose
 
   ];
 

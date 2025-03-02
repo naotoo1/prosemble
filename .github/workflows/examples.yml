@@ -33,8 +33,8 @@ jobs:
 
       - name: Ensure Nix environment is loaded
         run: |
-          # Source Nix environment variables
-          source /etc/profile
+          # Use the correct way to source files in sh
+          . /etc/profile
           echo "Nix environment sourced"
           echo "PATH=$PATH"
 
@@ -51,7 +51,7 @@ jobs:
         run: |
           if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
             echo "Using cached environment"
-            source .env_cache
+            . .env_cache
           else
             echo "Setting up environment from scratch using devenv"
             
@@ -67,7 +67,7 @@ jobs:
           fi
 
           # Load the cached environment
-          source .env_cache
+          . .env_cache
 
       - name: Install dependencies
         run: |

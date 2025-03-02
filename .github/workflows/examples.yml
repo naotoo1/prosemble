@@ -57,7 +57,7 @@ jobs:
             source .env_cache
           else
             echo "Setting up environment from flake.nix"
-            nix develop --impure --shell-file ./flake.nix
+            nix develop .  # Correct way to use nix develop with a flake
             env >> .env_cache
           fi
 

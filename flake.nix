@@ -12,7 +12,13 @@
       in devenv.lib.mkShell {
         inherit inputs pkgs;
         modules = [
-          ./devenv.nix
+          {
+            # Set the project root directory explicitly
+            env.DEVENV_ROOT = builtins.toString ./.;
+            
+            # Import the devenv.nix file
+            imports = [ ./devenv.nix ];
+          }
         ];
       };
     });

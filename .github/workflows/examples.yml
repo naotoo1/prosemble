@@ -1,39 +1,83 @@
 name: examples
+
 on:
   push:
     paths:
       - "examples/**.py"
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual triggering of workflow
 
 jobs:
   linux:
     runs-on: ubuntu-latest
     container:
       image: notoo1/ubuntu-nix:24.04-8
-      credentials:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        
+
+      - name: Docker Login
+        run: |
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+
       - name: Set executable permissions
         run: chmod +x tests/test_examples.sh
           
-      - name: Setup devenv
+      - name: Restore Nix environment
+        uses: actions/cache@v4
+        id: nix-cache
+        with:
+          path: |
+            ~/.nix-profile
+            /nix/store
+            .direnv
+            .env_cache
+          key: ${{ runner.os }}-devenv-python312-${{ hashFiles('devenv.nix', 'devenv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-devenv-python312-
+            
+      - name: Setup devenv Environment
         run: |
           # Ensure devenv is installed
           if ! command -v devenv &> /dev/null; then
-            nix profile install --accept-flake-config nixpkgs#devenv
+            echo "Installing devenv..."
+            nix profile install --accept-flake-config "nixpkgs#devenv"
           fi
           
-          # Initialize devenv
-          devenv init
+          if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
+            echo "Using cached environment"
+            source .env_cache
+          else
+            echo "Setting up environment from scratch using devenv"
+            
+            # Initialize and enter the devenv shell
+            devenv init
+            devenv shell --no-status --impure bash -c "
+              # Export important environment variables
+              echo \"PYTHONPATH=\${PYTHONPATH}\" >> .env_cache
+              echo \"PROJECT_DIR=\${PROJECT_DIR}\" >> .env_cache
+              env >> .env_cache
+            "
+          fi
+          
+          # Load the environment variables
+          source .env_cache
           
       - name: Install dependencies
         run: |
-          devenv shell --no-status --impure bash -c "python --version && uv pip install --no-cache-dir Cython && uv pip install -e .[all]"
+          # Use devenv shell for installing dependencies
+          devenv shell --no-status --impure bash -c "
+            # Verify Python version
+            python --version
+            
+            # Install Cython first (using uv as specified in your devenv.nix)
+            uv pip install --no-cache-dir Cython
+            
+            # Install the package in development mode
+            uv pip install -e .[all]
+          "
           
       - name: Run Tests
         run: |
+          # Run tests within the devenv shell
           devenv shell --no-status --impure bash -c "./tests/test_examples.sh examples/"

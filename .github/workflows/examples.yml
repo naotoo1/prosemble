@@ -3,19 +3,16 @@ on:
   push:
     paths:
       - "examples/**.py"
-
-# Define container configuration
-.container: &container_config
-  image: notoo1/ubuntu-nix:24.04-8
-  credentials:
-    username: ${{ secrets.DOCKER_HUB_USERNAME }}
-    password: ${{ secrets.DOCKER_HUB_TOKEN }}
+  workflow_dispatch:  # Adding manual trigger option
 
 jobs:
   linux:
     runs-on: ubuntu-latest
     container:
-      <<: *container_config
+      image: notoo1/ubuntu-nix:24.04-8
+      credentials:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

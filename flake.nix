@@ -8,18 +8,12 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, devenv, ... }:
-    flake-utils.lib.eachSystem ["x86_64-linux"] (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-    in {
-      devShells.${system}.default = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          bashInteractive
-          # Add any other dependencies you need here
+    flake-utils.lib.eachSystem ["x86_64-linux"] (system: {
+      devShells.default = devenv.lib.mkShell {
+        inherit inputs pkgs;
+        modules = [
+          ./devenv.nix
         ];
-        shellHook = ''
-          # Set up environment variables or other settings
-          export ENV_VAR="value"
-        '';
       };
     });
 }

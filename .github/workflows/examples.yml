@@ -1,4 +1,5 @@
 name: examples
+
 on:
   push:
     paths:
@@ -44,10 +45,10 @@ jobs:
           nix profile install nixpkgs#devenv || nix-env -iA nixpkgs.devenv
           devenv --version
 
-      - name: Setup devenv Environment
+      - name: Setup environment from flake.nix
         run: |
-          if [ ! -f devenv.nix ]; then
-            echo "Error: devenv.nix not found. Make sure the file is committed."
+          if [ ! -f flake.nix ]; then
+            echo "Error: flake.nix not found. Make sure the file is committed."
             exit 1
           fi
 
@@ -55,8 +56,8 @@ jobs:
             echo "Using cached environment"
             source .env_cache
           else
-            echo "Setting up environment from devenv.nix"
-            nix develop --command bash -c "python --version"
+            echo "Setting up environment from flake.nix"
+            nix develop --impure --shell-file ./flake.nix
             env >> .env_cache
           fi
 

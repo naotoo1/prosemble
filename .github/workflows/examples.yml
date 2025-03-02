@@ -16,28 +16,45 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y curl xz-utils
-          curl -L https://nixos.org/nix/install | sh -s -- --daemon
+          # Install Nix with multi-user support
+          curl -L https://nixos.org/nix/install | sh -s -- --daemon --accept-flake-config
+          # Add Nix to PATH
           echo "PATH=$HOME/.nix-profile/bin:$PATH" >> $GITHUB_ENV
+          # Restart nix-daemon
           sudo systemctl restart nix-daemon
+          # Source nix.sh
           . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 
-      - name: Setup Python Environment
-        uses: cachix/install-nix-action@v18
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Configure Nix Channels
+        run: |
+          # Add the nixos-unstable channel
+          nix-channel --add https://nixos.org/channels/nixos-unstable
+          # Update channels
+          nix-channel --update
+
+      - name: Install devenv
+        run: |
+          # Install the devenv package
+          nix profile install nixpkgs#devenv
 
       - name: Setup devenv Environment
         run: |
+          # Initialize devenv using the devenv.nix file
           devenv init -f devenv.nix
+
+          # Run devenv shell to capture environment variables
           devenv shell --no-status --impure bash -c "
             echo \"PYTHONPATH=\${PYTHONPATH}\" >> .env_cache
             echo \"PROJECT_DIR=\${PROJECT_DIR}\" >> .env_cache
             env >> .env_cache
           "
+
+          # Source the captured environment variables
           . .env_cache
 
-      - name: Install dependencies from devenv.nix and devenv.lock
+      - name: Install Project Dependencies
         run: |
+          # Use devenv shell to install dependencies
           devenv shell --no-status --impure bash -c "
             python --version
             uv pip install --no-cache-dir Cython
@@ -49,4 +66,5 @@ jobs:
 
       - name: Run Tests
         run: |
+          # Use devenv shell to run tests
           devenv shell --no-status --impure bash -c "./tests/test_examples.sh examples/"

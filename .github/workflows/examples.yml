@@ -51,16 +51,16 @@ jobs:
             echo "Error: flake.nix not found. Make sure the file is committed."
             exit 1
           fi
-          
+
+          # Using nix develop to set up environment based on flake.nix
           echo "Setting up environment from flake.nix"
-          # Use devenv shell directly to ensure proper environment setup
-          devenv shell --impure --command "echo 'Environment activated'"
+          nix develop .  # This will read and set up the environment from the flake.nix
 
       - name: Install Dependencies
         run: |
-          devenv shell --impure --command "uv pip install --no-cache-dir Cython"
-          devenv shell --impure --command "uv pip install -e .[all]"
+          uv pip install --no-cache-dir Cython
+          uv pip install -e .[all]
 
       - name: Run Tests
         run: |
-          devenv shell --impure --command "./tests/test_examples.sh examples/"
+          ./tests/test_examples.sh examples/

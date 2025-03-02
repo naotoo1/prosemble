@@ -33,7 +33,7 @@ jobs:
 
       - name: Setup devenv Environment
         run: |
-          devenv init
+          devenv init -f devenv.nix
           devenv shell --no-status --impure bash -c "
             echo \"PYTHONPATH=\${PYTHONPATH}\" >> .env_cache
             echo \"PROJECT_DIR=\${PROJECT_DIR}\" >> .env_cache

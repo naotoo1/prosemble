@@ -1,14 +1,14 @@
 [project]
 name = "prosemble"
 version = "0.9.2"
-description = "A python project for prototype-based feature selection"
+description = "A python project for prototype-based machine learning models"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
     { name = "Nana Abeka Otoo", email = "nanaabekaotoo@gmail.com" }
 ]
-keywords = ["prosemble", "feature selection", "machine learning", "AI"]
+keywords = ["prosemble", "machine learning", "AI"]
 classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",

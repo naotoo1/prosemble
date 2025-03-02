@@ -8,60 +8,36 @@ on:
 jobs:
   linux:
     runs-on: ubuntu-latest
-    container:
-      image: notoo1/ubuntu-nix:24.04-8
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set executable permissions
-        run: chmod +x tests/test_examples.sh
-
-      - name: Restore Nix environment
-        uses: actions/cache@v4
-        id: nix-cache
-        with:
-          path: |
-            ~/.nix-profile
-            /nix/store
-            .direnv
-            .env_cache
-          key: ${{ runner.os }}-devenv-python312-${{ hashFiles('devenv.nix', 'devenv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-devenv-python312-
+      - name: Install Nix
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl
+          curl -L https://nixos.org/nix/install | sh -s -- --daemon
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+          sudo systemctl restart nix-daemon
 
       - name: Update Nixpkgs
         run: nix-channel --update
 
-      - name: Clear Nix Cache
-        run: |
-          sudo rm -rf /nix/var/nix/db/
-          sudo systemctl restart nix-daemon
-
-      - name: Ensure Nix environment is loaded
-        run: . /etc/profile
+      - name: check nix health
+        run: nix-store --verify --check-contents --repair
 
       - name: Install devenv
         run: nix profile install nixpkgs#devenv
 
-      - name: check nix health
-        run: nix-store --verify --check-contents --repair
-
       - name: Setup devenv Environment
         run: |
-          if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
-            echo "Using cached environment"
-            . .env_cache
-          else
-            echo "Setting up environment from scratch using devenv"
-            devenv init
-            devenv shell --no-status --impure bash -c "
-              echo \"PYTHONPATH=\${PYTHONPATH}\" >> .env_cache
-              echo \"PROJECT_DIR=\${PROJECT_DIR}\" >> .env_cache
-              env >> .env_cache
-            "
-          fi
+          devenv init
+          devenv shell --no-status --impure bash -c "
+            echo \"PYTHONPATH=\${PYTHONPATH}\" >> .env_cache
+            echo \"PROJECT_DIR=\${PROJECT_DIR}\" >> .env_cache
+            env >> .env_cache
+          "
           . .env_cache
 
       - name: Install dependencies
@@ -71,6 +47,9 @@ jobs:
             uv pip install --no-cache-dir Cython
             uv pip install -e .[all]
           "
+
+      - name: Set executable permissions
+        run: chmod +x tests/test_examples.sh
 
       - name: Run Tests
         run: |

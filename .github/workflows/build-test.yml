@@ -61,16 +61,16 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
       
-      # Install devenv
+      # Install devenv using the recommended method
       - name: Install devenv
         run: |
-          nix-env -iA nixpkgs.devenv
+          curl -L https://raw.githubusercontent.com/cachix/devenv/main/scripts/install-nix-action | bash
           echo "devenv version: $(devenv --version)"
 
       - name: Run installation and tests
         run: |
           # Install direnv if needed
-          nix-env -iA nixpkgs.direnv
+          nix-shell -p direnv --run "echo 'direnv installed'"
           eval "$(direnv hook bash)"
           direnv allow
           
@@ -96,4 +96,4 @@ jobs:
           
           # List installed packages
           echo "=== Installed packages ==="
-          devenv shell -- pip list
+          devenv shell -- pip lis

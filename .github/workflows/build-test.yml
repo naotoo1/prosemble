@@ -1,288 +1,351 @@
-name: CI Build
+name: Update Devenv Python Versions and Run Tests
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+    paths:
+      - 'devenv.nix'
+      - 'devenv.lock'
+      - 'Dockerfile'
+      - '.github/workflows/**'
   pull_request:
-    branches:
-      - main
-
-# Define container configuration once to be reused for Linux jobs
-.container: &container_config
-  image: notoo1/ubuntu-nix:24.04-8
-  credentials:
-    username: ${{ secrets.DOCKER_HUB_USERNAME }}
-    password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
-# Define reusable setup steps for Nix environment based on devenv.nix
-.setup_nix: &setup_nix_steps
-  - name: Checkout Code
-    uses: actions/checkout@v4
-    
-  - name: Restore Nix environment
-    uses: actions/cache@v4
-    id: nix-cache
-    with:
-      path: |
-        ~/.nix-profile
-        ~/.devenv
-        .direnv
-        .env_cache
-      key: ${{ runner.os }}-nix-python${{ matrix.python-version }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
-      restore-keys: |
-        ${{ runner.os }}-nix-python${{ matrix.python-version }}-
-        
-  - name: Modify devenv.nix for Python ${{ matrix.python-version }}
-    run: |
-      # Create a backup of the original devenv.nix
-      cp devenv.nix devenv.nix.backup
-      
-      # Replace Python 3.12 with the matrix Python version
-      sed -i "s/python312/python${matrix.python-version/./}/g" devenv.nix
-      
-      # Display the modified file for debugging
-      echo "Modified devenv.nix:"
-      cat devenv.nix
-        
-  - name: Setup devenv Environment
-    run: |
-      if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
-        echo "Using cached environment"
-        source .env_cache
-      else
-        echo "Setting up environment from scratch"
-        if ! command -v devenv &> /dev/null; then
-          echo "Installing devenv..."
-          nix profile install --accept-flake-config "nixpkgs#devenv"
-        fi
-        
-        # Explicitly using the modified devenv.nix configuration
-        echo "Initializing devenv with Python ${{ matrix.python-version }} configuration..."
-        devenv init
-      fi
-      
-      # Ensure we use the correct Python from modified devenv.nix
-      direnv allow . && eval "$(direnv export bash)"
-      
-      # Verify Python version
-      python --version
-      
-      # Export important environment variables for future jobs
-      echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
-      echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
-      env >> .env_cache
-
-# Define macOS setup steps that mirror the Linux environment as closely as possible
-.setup_macos: &setup_macos_steps
-  - name: Checkout code
-    uses: actions/checkout@v4
-    
-  - name: Install Nix
-    uses: DeterminateSystems/nix-installer-action@v4
-    
-  - name: Setup Nix Cache
-    uses: DeterminateSystems/magic-nix-cache-action@v2
-    
-  - name: Restore Nix environment
-    uses: actions/cache@v4
-    id: nix-macos-cache
-    with:
-      path: |
-        ~/.nix-profile
-        ~/.devenv
-        .direnv
-        .env_cache
-      key: macos-nix-python${{ matrix.python-version }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
-      restore-keys: |
-        macos-nix-python${{ matrix.python-version }}-
-        
-  - name: Modify devenv.nix for Python ${{ matrix.python-version }}
-    run: |
-      # Create a backup of the original devenv.nix
-      cp devenv.nix devenv.nix.backup
-      
-      # Replace Python 3.12 with the matrix Python version
-      sed -i.bak "s/python312/python${matrix.python-version/./}/g" devenv.nix
-      
-      # Display the modified file for debugging
-      echo "Modified devenv.nix:"
-      cat devenv.nix
-        
-  - name: Install and setup devenv
-    run: |
-      if ! command -v devenv &> /dev/null; then
-        echo "Installing devenv..."
-        nix profile install --accept-flake-config "nixpkgs#devenv"
-      fi
-      
-      # Initialize devenv using the modified configuration
-      echo "Initializing devenv with Python ${{ matrix.python-version }}..."
-      devenv init
-      
-      # Install direnv if not available
-      if ! command -v direnv &> /dev/null; then
-        brew install direnv
-      fi
-      
-      # Load the environment
-      direnv allow .
-      eval "$(direnv export bash)"
-      
-      # Verify Python version
-      python --version
-      
-      # Export environment variables
-      echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
-      echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
-      env >> .env_cache
-
-# Define Windows setup steps with Nix similar to macOS
-.setup_windows_nix: &setup_windows_nix_steps
-  - name: Checkout code
-    uses: actions/checkout@v4
-    
-  - name: Install Nix
-    uses: DeterminateSystems/nix-installer-action@v4
-    
-  - name: Setup Nix Cache
-    uses: DeterminateSystems/magic-nix-cache-action@v2
-    
-  - name: Restore Nix environment
-    uses: actions/cache@v4
-    id: nix-windows-cache
-    with:
-      path: |
-        ~/.nix-profile
-        ~/.devenv
-        .direnv
-        .env_cache
-      key: windows-nix-python${{ matrix.python-version }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
-      restore-keys: |
-        windows-nix-python${{ matrix.python-version }}-
-        
-  - name: Modify devenv.nix for Python ${{ matrix.python-version }}
-    shell: bash
-    run: |
-      # Create a backup of the original devenv.nix
-      cp devenv.nix devenv.nix.backup
-      
-      # Replace Python 3.12 with the matrix Python version (using sed with different syntax for Windows)
-      sed -i.bak "s/python312/python${matrix.python-version/./}/g" devenv.nix
-      
-      # Display the modified file for debugging
-      echo "Modified devenv.nix:"
-      cat devenv.nix
-        
-  - name: Install and setup devenv
-    shell: bash
-    run: |
-      if ! command -v devenv &> /dev/null; then
-        echo "Installing devenv..."
-        nix profile install --accept-flake-config "nixpkgs#devenv"
-      fi
-      
-      # Initialize devenv using the modified configuration
-      echo "Initializing devenv with Python ${{ matrix.python-version }}..."
-      devenv init
-      
-      # Load the environment using modern GitHub Actions approach
-      direnv_path=$(dirname $(which direnv))
-      echo "$direnv_path" >> $GITHUB_PATH
-      
-      direnv allow .
-      eval "$(direnv export bash)"
-      
-      # Verify Python version
-      python --version
-      
-      # Export environment variables
-      echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
-      echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
-      env >> .env_cache
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      python_version:
+        description: 'Python version to use in devenv'
+        required: true
+        default: '312'
+        type: choice
+        options:
+          - '310'
+          - '311'
+          - '312'
 
 jobs:
-  # Main Linux jobs with Python matrix
-  linux_matrix:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['39', '310', '311', '312']
+  create-base-image:
+    name: Create/Update Base Image
     runs-on: ubuntu-latest
-    container: 
-      <<: *container_config
+    # Only run this job when the Dockerfile changes or when manually triggered
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.modified, 'Dockerfile') }}
+    
     steps:
-      - *setup_nix_steps
-      
-      - name: Install dependencies
-        run: |
-          # Using UV from devenv.nix instead of pip
-          echo "Installing dependencies with UV from devenv..."
-          
-          # Install Cython first
-          uv pip install --no-cache-dir Cython
-                    
-          # Install the package in development mode
-          uv pip install -e .[all]
-          
-      - name: Run Tests
-        run: |
-          # Use Python from the devenv.nix environment
-          python -m unittest discover tests/
-          python -m pytest tests/
-          
-  # macOS jobs with Python matrix
-  macos_matrix:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push base Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/devenv-base:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  update-python-versions:
+    name: Test Python ${{ matrix.python_version }}
+    runs-on: ubuntu-latest
+    needs: [create-base-image]
+    if: always() # Run even if base image job is skipped
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ['311', '312']
-    runs-on: macOS-latest
+        python_version: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["' + github.event.inputs.python_version + '"]') || ['310', '311', '312', '313'] }}
+      fail-fast: false # Continue with other versions if one fails
+    
     steps:
-      - *setup_macos_steps
-          
-      - name: Install dependencies
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Update devenv.nix with Python version
         run: |
-          # Using UV from devenv.nix instead of pip
-          echo "Installing dependencies with UV from devenv..."
+          echo "Updating devenv.nix with Python ${{ matrix.python_version }}"
+          # Create a backup of the original file
+          cp devenv.nix devenv.nix.backup
           
-          # Install Cython first
-          uv pip install --no-cache-dir Cython
+          # Use sed to replace all instances of pythonXXX references
+          sed -i "s/python3[0-9][0-9]/python${{ matrix.python_version }}/g" devenv.nix
           
-          # Install with all extras
-          uv pip install -e .[all]
+          # Make sure uv is enabled in the languages.python section if not already
+          if grep -q "languages = {" devenv.nix && grep -q "python = {" devenv.nix; then
+            if ! grep -q "uv.enable = true" devenv.nix; then
+              sed -i '/languages = {/,/python = {/ s/python = {/python = {\n      uv.enable = true;/' devenv.nix
+            fi
+          fi
           
-      - name: Run Tests
+          # Show diff of changes
+          diff devenv.nix.backup devenv.nix || true
+          echo "Updated devenv.nix:"
+          cat devenv.nix
+
+      - name: Pull base Docker image
         run: |
-          python -m unittest discover tests/
-          python -m pytest tests/
-  
-  # Windows jobs with Python matrix using Nix
-  windows_matrix:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['311', '312']
-        os: ['windows-latest']
-    name: ${{ matrix.os }} (${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
+          echo "Pulling base Docker image"
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/devenv-base:latest || docker pull ubuntu:22.04
+          docker images
+
+      - name: Generate new devenv.lock file
+        run: |
+          # Create a temp directory to share files with container
+          mkdir -p ./tmp
+          cp devenv.nix ./tmp/
+          
+          echo "Running container to generate lock file"
+          docker run --rm \
+            -v $(pwd)/tmp:/workspace \
+            -w /workspace \
+            ${{ secrets.DOCKERHUB_USERNAME }}/devenv-base:latest \
+            bash -c "cp devenv.nix /app/ && cd /app && ls -la && direnv allow && devenv lock && cp devenv.lock /workspace/"
+          
+          # Copy generated lock file to project root
+          cp ./tmp/devenv.lock ./
+          
+          echo "Generated new devenv.lock with Python ${{ matrix.python_version }}:"
+          cat devenv.lock
+
+      # Create a test folder to save this Python version's files
+      - name: Save devenv files for this Python version
+        run: |
+          # Create test directory if it doesn't exist yet
+          mkdir -p ./test/python-versions
+          
+          # Copy the files with Python version in filename
+          cp devenv.nix ./test/python-versions/devenv-py${{ matrix.python_version }}.nix
+          cp devenv.lock ./test/python-versions/devenv-py${{ matrix.python_version }}.lock
+
+      - name: Run installation and tests in container
+        run: |
+          # Create test directory for artifacts
+          mkdir -p ./test-results
+          
+          echo "Running tests in container"
+          # Run the container with mounted project files
+          docker run --rm \
+            -v $(pwd):/project \
+            -w /project \
+            ${{ secrets.DOCKERHUB_USERNAME }}/devenv-base:latest \
+            bash -c "
+              # Copy project files to container's working directory
+              mkdir -p /app
+              cp -r /project/* /app/
+              cd /app
+              ls -la
+              
+              # Allow direnv in this directory
+              direnv allow
+              
+              # Run tests with the Python version from devenv
+              echo '=== Testing Python version ==='
+              devenv shell -- python --version > /project/test-results/python-version.txt
+              
+              # Check if uv is available
+              echo '=== Checking uv installation ==='
+              devenv shell -- uv --version > /project/test-results/uv-version.txt
+              
+              # Install package with uv
+              echo '=== Installing package with uv ==='
+              devenv shell -- uv pip install .[all] | tee /project/test-results/install-log.txt
+              
+              # Run unittest tests
+              echo '=== Running unittest tests ==='
+              devenv shell -- python -m unittest discover tests/ | tee /project/test-results/unittest-output.txt
+              UNITTEST_EXIT_CODE=\${PIPESTATUS[0]}
+              echo \$UNITTEST_EXIT_CODE > /project/test-results/unittest-exit-code.txt
+              
+              # Run pytest tests
+              echo '=== Running pytest tests ==='
+              devenv shell -- pytest tests/ | tee /project/test-results/pytest-output.txt
+              PYTEST_EXIT_CODE=\${PIPESTATUS[0]}
+              echo \$PYTEST_EXIT_CODE > /project/test-results/pytest-exit-code.txt
+              
+              # Calculate overall test result
+              if [ \$UNITTEST_EXIT_CODE -eq 0 ] && [ \$PYTEST_EXIT_CODE -eq 0 ]; then
+                echo 0 > /project/test-results/test-exit-code.txt
+              else
+                echo 1 > /project/test-results/test-exit-code.txt
+              fi
+              
+              # List installed packages
+              devenv shell -- pip list > /project/test-results/pip-packages.txt
+            "
+
+      - name: Check test results
+        run: |
+          echo "Test Results for Python ${{ matrix.python_version }}:"
+          echo "=== Python Version ==="
+          cat ./test-results/python-version.txt || echo "Python version file not found"
+          echo "=== UV Version ==="
+          cat ./test-results/uv-version.txt || echo "UV version file not found"
+          echo "=== Installation Log ==="
+          cat ./test-results/install-log.txt || echo "Installation log not found"
+          echo "=== Unittest Output ==="
+          cat ./test-results/unittest-output.txt || echo "Unittest output not found"
+          echo "=== Pytest Output ==="
+          cat ./test-results/pytest-output.txt || echo "Pytest output not found"
+          
+          # Check if tests passed
+          if [ -f "./test-results/test-exit-code.txt" ]; then
+            TEST_EXIT_CODE=$(cat ./test-results/test-exit-code.txt)
+            if [ "$TEST_EXIT_CODE" != "0" ]; then
+              echo "::error::Tests failed with exit code $TEST_EXIT_CODE"
+              exit 1
+            fi
+          else
+            echo "::error::Test exit code file not found"
+            exit 1
+          fi
+          
+          # Verify Python version is correct
+          if [ -f "./test-results/python-version.txt" ]; then
+            if ! grep -q "Python 3.${{ matrix.python_version | replace: '3', '' }}" ./test-results/python-version.txt; then
+              echo "::error::Python version verification failed"
+              exit 1
+            fi
+          else
+            echo "::error::Python version file not found"
+            exit 1
+          fi
+          
+          # Save test results to the test folder
+          mkdir -p ./test/python-versions/py${{ matrix.python_version }}-results
+          cp -r ./test-results/* ./test/python-versions/py${{ matrix.python_version }}-results/
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-python-${{ matrix.python_version }}
+          path: ./test-results
+          retention-days: 7
+          
+      # Upload the test folder with devenv files to share between jobs
+      - name: Upload devenv files
+        uses: actions/upload-artifact@v3
+        with:
+          name: devenv-files-python-${{ matrix.python_version }}
+          path: ./test/python-versions/
+          retention-days: 1
+
+  # New job to collect all versions and commit them
+  commit-all-versions:
+    name: Collect and Commit All Python Versions
+    needs: update-python-versions
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && success()
+    
     steps:
-      - *setup_windows_nix_steps
-          
-      - name: Install dependencies
-        shell: bash
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      # Select which Python version to use for main devenv.nix/devenv.lock
+      # (Using the manually selected version if workflow_dispatch was used)
+      - name: Set target Python version
         run: |
-          # Using UV from devenv.nix instead of pip
-          echo "Installing dependencies with UV from devenv..."
-          
-          # Install Cython first
-          uv pip install --no-cache-dir Cython
-          
-          # Install with all extras
-          uv pip install -e .[all]
-          
-      - name: Run Tests
-        shell: bash
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "TARGET_PYTHON_VERSION=${{ github.event.inputs.python_version }}" >> $GITHUB_ENV
+          else
+            echo "TARGET_PYTHON_VERSION=312" >> $GITHUB_ENV # Default to 3.12
+          fi
+
+      # Download all the devenv files from all Python versions
+      - name: Download all devenv files
+        uses: actions/download-artifact@v3
+        with:
+          path: ./downloads/
+
+      - name: Prepare all files for commit
         run: |
-          python -m unittest discover tests/
-          python -m pytest tests/
+          # Create test directory if it doesn't exist
+          mkdir -p ./test/python-versions
+          
+          # Copy all files from downloads to test directory
+          find ./downloads -name "devenv-files-python-*" -type d | while read dir; do
+            cp -r $dir/* ./test/python-versions/ || true
+          done
+          
+          # Display all files collected
+          ls -la ./test/python-versions/ || echo "No files found in test directory"
+          
+          # Copy the target Python version files to root for the main devenv setup
+          if [ -f "./test/python-versions/devenv-py${TARGET_PYTHON_VERSION}.nix" ]; then
+            cp ./test/python-versions/devenv-py${TARGET_PYTHON_VERSION}.nix ./devenv.nix
+          else
+            echo "::warning::Target Python version devenv.nix not found"
+          fi
+          
+          if [ -f "./test/python-versions/devenv-py${TARGET_PYTHON_VERSION}.lock" ]; then
+            cp ./test/python-versions/devenv-py${TARGET_PYTHON_VERSION}.lock ./devenv.lock
+          else
+            echo "::warning::Target Python version devenv.lock not found"
+          fi
+          
+          # Create a summary file with test results
+          echo "# Python Version Test Results" > ./test/python-versions/README.md
+          echo "" >> ./test/python-versions/README.md
+          echo "Main devenv is configured with Python ${TARGET_PYTHON_VERSION}" >> ./test/python-versions/README.md
+          echo "" >> ./test/python-versions/README.md
+          echo "## Available Configurations" >> ./test/python-versions/README.md
+          
+          # List all versions that were tested
+          for version in 310 311 312 313; do
+            if [ -f "./test/python-versions/devenv-py${version}.nix" ]; then
+              echo "- Python ${version}: [devenv-py${version}.nix](devenv-py${version}.nix) | [devenv-py${version}.lock](devenv-py${version}.lock)" >> ./test/python-versions/README.md
+              
+              # Add test results summary if available
+              if [ -d "./test/python-versions/py${version}-results" ]; then
+                if [ -f "./test/python-versions/py${version}-results/python-version.txt" ]; then
+                  PYTHON_VERSION=$(cat "./test/python-versions/py${version}-results/python-version.txt")
+                  echo "  - Tested with: ${PYTHON_VERSION}" >> ./test/python-versions/README.md
+                fi
+                
+                if [ -f "./test/python-versions/py${version}-results/test-exit-code.txt" ]; then
+                  TEST_CODE=$(cat "./test/python-versions/py${version}-results/test-exit-code.txt")
+                  if [ "$TEST_CODE" == "0" ]; then
+                    echo "  - Tests: ✅ Passed" >> ./test/python-versions/README.md
+                  else
+                    echo "  - Tests: ❌ Failed (exit code ${TEST_CODE})" >> ./test/python-versions/README.md
+                  fi
+                fi
+              fi
+            fi
+          done
+          
+          # Add instructions for using different Python versions
+          echo "" >> ./test/python-versions/README.md
+          echo "## How to Use" >> ./test/python-versions/README.md
+          echo "To switch to a different Python version:" >> ./test/python-versions/README.md
+          echo "1. Copy the desired version files to the project root:" >> ./test/python-versions/README.md
+          echo "   bash" >> ./test/python-versions/README.md
+          echo "   cp test/python-versions/devenv-py311.nix ./devenv.nix" >> ./test/python-versions/README.md
+          echo "   cp test/python-versions/devenv-py311.lock ./devenv.lock" >> ./test/python-versions/README.md
+          echo "   " >> ./test/python-versions/README.md
+          echo "2. Run \direnv allow\ to reload the environment" >> ./test/python-versions/README.md
+
+      - name: Commit and push all files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Check if there are changes to commit
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          # Add all the files
+          git add devenv.nix devenv.lock test/
+          
+          # Commit with information about which Python version is active
+          git commit -m "Update to Python ${TARGET_PYTHON_VERSION} with all tested versions in test/python-versions"
+          
+          # Push changes
+          git push

@@ -28,9 +28,13 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
       
-      # Install devenv using cachix's GitHub Action
+      # Install devenv manually with Nix
       - name: Install devenv
-        uses: cachix/devenv-install-action@v1
+        run: |
+          # Install devenv using nix command
+          nix profile install --accept-flake-config "github:cachix/devenv/latest"
+          # Check version
+          devenv --version
       
       - name: Run tests with devenv
         run: |

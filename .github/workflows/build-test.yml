@@ -6,48 +6,15 @@ on:
     paths:
       - 'devenv.nix'
       - 'devenv.lock'
-      - 'Dockerfile'
       - '.github/workflows/**'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  create-base-image:
-    name: Create/Update Base Image
-    runs-on: ubuntu-latest
-    # Only run this job when the Dockerfile changes or when manually triggered
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.modified, 'Dockerfile') }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push base Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/devenv-base:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   test-devenv:
     name: Test Devenv Setup
     runs-on: ubuntu-latest
-    needs: [create-base-image]
-    if: always() # Run even if base image job is skipped
     
     steps:
       - name: Checkout code
@@ -61,19 +28,12 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
       
-      # Install devenv using the recommended method
+      # Install devenv using cachix's GitHub Action
       - name: Install devenv
+        uses: cachix/devenv-install-action@v1
+      
+      - name: Run tests with devenv
         run: |
-          curl -L https://raw.githubusercontent.com/cachix/devenv/main/scripts/install-nix-action | bash
-          echo "devenv version: $(devenv --version)"
-
-      - name: Run installation and tests
-        run: |
-          # Install direnv if needed
-          nix-shell -p direnv --run "echo 'direnv installed'"
-          eval "$(direnv hook bash)"
-          direnv allow
-          
           # Run tests with the Python version from devenv
           echo "=== Testing Python version ==="
           devenv shell -- python --version
@@ -96,4 +56,4 @@ jobs:
           
           # List installed packages
           echo "=== Installed packages ==="
-          devenv shell -- pip lis
+          devenv shell -- pip list

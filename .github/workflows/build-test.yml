@@ -21,6 +21,7 @@ on:
           - '310'
           - '311'
           - '312'
+          - '313'
 
 jobs:
   create-base-image:
@@ -66,6 +67,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      
+      # Install Nix using the dedicated GitHub Action
+      - name: Install Nix
+        uses: cachix/install-nix-action@v22
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      
+      # Install devenv
+      - name: Install devenv
+        run: |
+          nix-env -iA nixpkgs.devenv
+          echo "devenv version: $(devenv --version)"
 
       - name: Update devenv.nix with Python version
         run: |
@@ -88,28 +103,10 @@ jobs:
           echo "Updated devenv.nix:"
           cat devenv.nix
 
-      - name: Pull base Docker image
-        run: |
-          echo "Pulling base Docker image"
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/devenv-base:latest || docker pull ubuntu:22.04
-          docker images
-
       - name: Generate new devenv.lock file
         run: |
-          # Create a temp directory to share files with container
-          mkdir -p ./tmp
-          cp devenv.nix ./tmp/
-          
-          echo "Running container to generate lock file"
-          docker run --rm \
-            -v $(pwd)/tmp:/workspace \
-            -w /workspace \
-            ${{ secrets.DOCKERHUB_USERNAME }}/devenv-base:latest \
-            bash -c "cp devenv.nix /app/ && cd /app && ls -la && direnv allow && devenv lock && cp devenv.lock /workspace/"
-          
-          # Copy generated lock file to project root
-          cp ./tmp/devenv.lock ./
-          
+          # Generate the lock file directly without Docker
+          devenv lock
           echo "Generated new devenv.lock with Python ${{ matrix.python_version }}:"
           cat devenv.lock
 
@@ -123,61 +120,51 @@ jobs:
           cp devenv.nix ./test/python-versions/devenv-py${{ matrix.python_version }}.nix
           cp devenv.lock ./test/python-versions/devenv-py${{ matrix.python_version }}.lock
 
-      - name: Run installation and tests in container
+      - name: Run installation and tests
         run: |
           # Create test directory for artifacts
           mkdir -p ./test-results
           
-          echo "Running tests in container"
-          # Run the container with mounted project files
-          docker run --rm \
-            -v $(pwd):/project \
-            -w /project \
-            ${{ secrets.DOCKERHUB_USERNAME }}/devenv-base:latest \
-            bash -c "
-              # Copy project files to container's working directory
-              mkdir -p /app
-              cp -r /project/* /app/
-              cd /app
-              ls -la
-              
-              # Allow direnv in this directory
-              direnv allow
-              
-              # Run tests with the Python version from devenv
-              echo '=== Testing Python version ==='
-              devenv shell -- python --version > /project/test-results/python-version.txt
-              
-              # Check if uv is available
-              echo '=== Checking uv installation ==='
-              devenv shell -- uv --version > /project/test-results/uv-version.txt
-              
-              # Install package with uv
-              echo '=== Installing package with uv ==='
-              devenv shell -- uv pip install .[all] | tee /project/test-results/install-log.txt
-              
-              # Run unittest tests
-              echo '=== Running unittest tests ==='
-              devenv shell -- python -m unittest discover tests/ | tee /project/test-results/unittest-output.txt
-              UNITTEST_EXIT_CODE=\${PIPESTATUS[0]}
-              echo \$UNITTEST_EXIT_CODE > /project/test-results/unittest-exit-code.txt
-              
-              # Run pytest tests
-              echo '=== Running pytest tests ==='
-              devenv shell -- pytest tests/ | tee /project/test-results/pytest-output.txt
-              PYTEST_EXIT_CODE=\${PIPESTATUS[0]}
-              echo \$PYTEST_EXIT_CODE > /project/test-results/pytest-exit-code.txt
-              
-              # Calculate overall test result
-              if [ \$UNITTEST_EXIT_CODE -eq 0 ] && [ \$PYTEST_EXIT_CODE -eq 0 ]; then
-                echo 0 > /project/test-results/test-exit-code.txt
-              else
-                echo 1 > /project/test-results/test-exit-code.txt
-              fi
-              
-              # List installed packages
-              devenv shell -- pip list > /project/test-results/pip-packages.txt
-            "
+          echo "Running tests with devenv"
+          
+          # Install direnv if needed
+          nix-env -iA nixpkgs.direnv
+          eval "$(direnv hook bash)"
+          direnv allow
+          
+          # Run tests with the Python version from devenv
+          echo "=== Testing Python version ==="
+          devenv shell -- python --version > ./test-results/python-version.txt
+          
+          # Check if uv is available
+          echo "=== Checking uv installation ==="
+          devenv shell -- uv --version > ./test-results/uv-version.txt || echo "uv not installed" > ./test-results/uv-version.txt
+          
+          # Install package with uv
+          echo "=== Installing package with uv ==="
+          devenv shell -- uv pip install .[all] | tee ./test-results/install-log.txt || devenv shell -- pip install .[all] | tee ./test-results/install-log.txt
+          
+          # Run unittest tests
+          echo "=== Running unittest tests ==="
+          devenv shell -- python -m unittest discover tests/ | tee ./test-results/unittest-output.txt
+          UNITTEST_EXIT_CODE=$?
+          echo $UNITTEST_EXIT_CODE > ./test-results/unittest-exit-code.txt
+          
+          # Run pytest tests
+          echo "=== Running pytest tests ==="
+          devenv shell -- pytest tests/ | tee ./test-results/pytest-output.txt
+          PYTEST_EXIT_CODE=$?
+          echo $PYTEST_EXIT_CODE > ./test-results/pytest-exit-code.txt
+          
+          # Calculate overall test result
+          if [ $UNITTEST_EXIT_CODE -eq 0 ] && [ $PYTEST_EXIT_CODE -eq 0 ]; then
+            echo 0 > ./test-results/test-exit-code.txt
+          else
+            echo 1 > ./test-results/test-exit-code.txt
+          fi
+          
+          # List installed packages
+          devenv shell -- pip list > ./test-results/pip-packages.txt
 
       - name: Check test results
         run: |

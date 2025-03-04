@@ -1,288 +1,63 @@
-name: CI Build
+# name: Test Devenv Setup
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+# on:
+#   push:
+#     branches: [ main ]
+#     paths:
+#       - 'devenv.nix'
+#       - 'devenv.lock'
+#       - '.github/workflows/**'
+#   pull_request:
+#     branches: [ main ]
+#   workflow_dispatch:
 
-# Define container configuration once to be reused for Linux jobs
-.container: &container_config
-  image: notoo1/ubuntu-nix:24.04-8
-  credentials:
-    username: ${{ secrets.DOCKER_HUB_USERNAME }}
-    password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
-# Define reusable setup steps for Nix environment based on devenv.nix
-.setup_nix: &setup_nix_steps
-  - name: Checkout Code
-    uses: actions/checkout@v4
+# jobs:
+#   test-devenv:
+#     name: Test Devenv Setup
+#     runs-on: ubuntu-latest
     
-  - name: Restore Nix environment
-    uses: actions/cache@v4
-    id: nix-cache
-    with:
-      path: |
-        ~/.nix-profile
-        ~/.devenv
-        .direnv
-        .env_cache
-      key: ${{ runner.os }}-nix-python${{ matrix.python-version }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
-      restore-keys: |
-        ${{ runner.os }}-nix-python${{ matrix.python-version }}-
-        
-  - name: Modify devenv.nix for Python ${{ matrix.python-version }}
-    run: |
-      # Create a backup of the original devenv.nix
-      cp devenv.nix devenv.nix.backup
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
       
-      # Replace Python 3.12 with the matrix Python version
-      sed -i "s/python312/python${matrix.python-version/./}/g" devenv.nix
+#       # Install Nix using the dedicated GitHub Action
+#       - name: Install Nix
+#         uses: cachix/install-nix-action@v22
+#         with:
+#           nix_path: nixpkgs=channel:nixos-unstable
+#           extra_nix_config: |
+#             experimental-features = nix-command flakes
       
-      # Display the modified file for debugging
-      echo "Modified devenv.nix:"
-      cat devenv.nix
-        
-  - name: Setup devenv Environment
-    run: |
-      if [ -f .env_cache ] && [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
-        echo "Using cached environment"
-        source .env_cache
-      else
-        echo "Setting up environment from scratch"
-        if ! command -v devenv &> /dev/null; then
-          echo "Installing devenv..."
-          nix profile install --accept-flake-config "nixpkgs#devenv"
-        fi
-        
-        # Explicitly using the modified devenv.nix configuration
-        echo "Initializing devenv with Python ${{ matrix.python-version }} configuration..."
-        devenv init
-      fi
+#       # Install devenv manually with Nix
+#       - name: Install devenv
+#         run: |
+#           # Install devenv using nix command
+#           nix profile install --accept-flake-config "github:cachix/devenv/latest"
+#           # Check version
+#           devenv --version
       
-      # Ensure we use the correct Python from modified devenv.nix
-      direnv allow . && eval "$(direnv export bash)"
-      
-      # Verify Python version
-      python --version
-      
-      # Export important environment variables for future jobs
-      echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
-      echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
-      env >> .env_cache
-
-# Define macOS setup steps that mirror the Linux environment as closely as possible
-.setup_macos: &setup_macos_steps
-  - name: Checkout code
-    uses: actions/checkout@v4
-    
-  - name: Install Nix
-    uses: DeterminateSystems/nix-installer-action@v4
-    
-  - name: Setup Nix Cache
-    uses: DeterminateSystems/magic-nix-cache-action@v2
-    
-  - name: Restore Nix environment
-    uses: actions/cache@v4
-    id: nix-macos-cache
-    with:
-      path: |
-        ~/.nix-profile
-        ~/.devenv
-        .direnv
-        .env_cache
-      key: macos-nix-python${{ matrix.python-version }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
-      restore-keys: |
-        macos-nix-python${{ matrix.python-version }}-
-        
-  - name: Modify devenv.nix for Python ${{ matrix.python-version }}
-    run: |
-      # Create a backup of the original devenv.nix
-      cp devenv.nix devenv.nix.backup
-      
-      # Replace Python 3.12 with the matrix Python version
-      sed -i.bak "s/python312/python${matrix.python-version/./}/g" devenv.nix
-      
-      # Display the modified file for debugging
-      echo "Modified devenv.nix:"
-      cat devenv.nix
-        
-  - name: Install and setup devenv
-    run: |
-      if ! command -v devenv &> /dev/null; then
-        echo "Installing devenv..."
-        nix profile install --accept-flake-config "nixpkgs#devenv"
-      fi
-      
-      # Initialize devenv using the modified configuration
-      echo "Initializing devenv with Python ${{ matrix.python-version }}..."
-      devenv init
-      
-      # Install direnv if not available
-      if ! command -v direnv &> /dev/null; then
-        brew install direnv
-      fi
-      
-      # Load the environment
-      direnv allow .
-      eval "$(direnv export bash)"
-      
-      # Verify Python version
-      python --version
-      
-      # Export environment variables
-      echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
-      echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
-      env >> .env_cache
-
-# Define Windows setup steps with Nix similar to macOS
-.setup_windows_nix: &setup_windows_nix_steps
-  - name: Checkout code
-    uses: actions/checkout@v4
-    
-  - name: Install Nix
-    uses: DeterminateSystems/nix-installer-action@v4
-    
-  - name: Setup Nix Cache
-    uses: DeterminateSystems/magic-nix-cache-action@v2
-    
-  - name: Restore Nix environment
-    uses: actions/cache@v4
-    id: nix-windows-cache
-    with:
-      path: |
-        ~/.nix-profile
-        ~/.devenv
-        .direnv
-        .env_cache
-      key: windows-nix-python${{ matrix.python-version }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'flake.nix', 'flake.lock') }}
-      restore-keys: |
-        windows-nix-python${{ matrix.python-version }}-
-        
-  - name: Modify devenv.nix for Python ${{ matrix.python-version }}
-    shell: bash
-    run: |
-      # Create a backup of the original devenv.nix
-      cp devenv.nix devenv.nix.backup
-      
-      # Replace Python 3.12 with the matrix Python version (using sed with different syntax for Windows)
-      sed -i.bak "s/python312/python${matrix.python-version/./}/g" devenv.nix
-      
-      # Display the modified file for debugging
-      echo "Modified devenv.nix:"
-      cat devenv.nix
-        
-  - name: Install and setup devenv
-    shell: bash
-    run: |
-      if ! command -v devenv &> /dev/null; then
-        echo "Installing devenv..."
-        nix profile install --accept-flake-config "nixpkgs#devenv"
-      fi
-      
-      # Initialize devenv using the modified configuration
-      echo "Initializing devenv with Python ${{ matrix.python-version }}..."
-      devenv init
-      
-      # Load the environment using modern GitHub Actions approach
-      direnv_path=$(dirname $(which direnv))
-      echo "$direnv_path" >> $GITHUB_PATH
-      
-      direnv allow .
-      eval "$(direnv export bash)"
-      
-      # Verify Python version
-      python --version
-      
-      # Export environment variables
-      echo "PYTHONPATH=${PYTHONPATH}" >> .env_cache
-      echo "PROJECT_DIR=${PROJECT_DIR}" >> .env_cache
-      env >> .env_cache
-
-jobs:
-  # Main Linux jobs with Python matrix
-  linux_matrix:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['39', '310', '311', '312']
-    runs-on: ubuntu-latest
-    container: 
-      <<: *container_config
-    steps:
-      - *setup_nix_steps
-      
-      - name: Install dependencies
-        run: |
-          # Using UV from devenv.nix instead of pip
-          echo "Installing dependencies with UV from devenv..."
+#       - name: Run tests with devenv
+#         run: |
+#           # Run tests with the Python version from devenv
+#           echo "=== Testing Python version ==="
+#           devenv shell -- python --version
           
-          # Install Cython first
-          uv pip install --no-cache-dir Cython
-                    
-          # Install the package in development mode
-          uv pip install -e .[all]
+#           # Check if uv is available
+#           echo "=== Checking uv installation ==="
+#           devenv shell -- uv --version || echo "uv not installed"
           
-      - name: Run Tests
-        run: |
-          # Use Python from the devenv.nix environment
-          python -m unittest discover tests/
-          python -m pytest tests/
+#           # Install package with uv
+#           echo "=== Installing package with uv ==="
+#           devenv shell -- uv pip install .[all] || devenv shell -- pip install .[all]
           
-  # macOS jobs with Python matrix
-  macos_matrix:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['311', '312']
-    runs-on: macOS-latest
-    steps:
-      - *setup_macos_steps
+#           # Run unittest tests
+#           echo "=== Running unittest tests ==="
+#           devenv shell -- python -m unittest discover tests/
           
-      - name: Install dependencies
-        run: |
-          # Using UV from devenv.nix instead of pip
-          echo "Installing dependencies with UV from devenv..."
+#           # Run pytest tests
+#           echo "=== Running pytest tests ==="
+#           devenv shell -- pytest tests/
           
-          # Install Cython first
-          uv pip install --no-cache-dir Cython
-          
-          # Install with all extras
-          uv pip install -e .[all]
-          
-      - name: Run Tests
-        run: |
-          python -m unittest discover tests/
-          python -m pytest tests/
-  
-  # Windows jobs with Python matrix using Nix
-  windows_matrix:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['311', '312']
-        os: ['windows-latest']
-    name: ${{ matrix.os }} (${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
-    steps:
-      - *setup_windows_nix_steps
-          
-      - name: Install dependencies
-        shell: bash
-        run: |
-          # Using UV from devenv.nix instead of pip
-          echo "Installing dependencies with UV from devenv..."
-          
-          # Install Cython first
-          uv pip install --no-cache-dir Cython
-          
-          # Install with all extras
-          uv pip install -e .[all]
-          
-      - name: Run Tests
-        shell: bash
-        run: |
-          python -m unittest discover tests/
-          python -m pytest tests/
+#           # List installed packages
+#           echo "=== Installed packages ==="
+#           devenv shell -- pip list

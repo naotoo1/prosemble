@@ -60,7 +60,7 @@ jobs:
       - name: Generate new devenv.lock file
         run: |
           # Generate the lock file
-          devenv lock
+          devenv update
           
           echo "Generated new devenv.lock with Python ${{ matrix.python_version }}:"
           cat devenv.lock

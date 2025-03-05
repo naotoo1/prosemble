@@ -37,7 +37,7 @@ Prosemble provides a fully reproducible development environment using Nix and [d
    nix profile install --accept-flake-config "github:cachix/devenv/latest"
    ```
 
-Activate the reproducible development envirnment with:
+Activate the reproducible development environment with:
    ```bash
    devenv shell
    ```

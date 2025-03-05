@@ -1,4 +1,3 @@
-# one with the docker container
 { pkgs, lib, config, inputs, ... }:
 
 let
@@ -19,18 +18,8 @@ in {
     pythonPackages.pandas
     pythonPackages.scipy
     pythonPackages.pip
-    docker
-    docker-compose
-
   ];
 
-  # Add Docker support
-  # containers.docker = {
-  #   isSystemd = true;
-  #   ephemeral = true;
-  #   privateUsers = true;
-  #   extraOptions = ["--network=host"];
-  # };
 
   languages = {
     python = {

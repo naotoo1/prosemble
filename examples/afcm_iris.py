@@ -16,7 +16,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_siz
 afcm = ps.models.AFCM(
     data=X_train,
     c=3,
-    num_iter=1000,
+    num_iter=10000,
     epsilon=0.00001,
     ord='fro',
     m=2,

@@ -28,7 +28,7 @@ To install the latest development version directly from the GitHub repository:
 ```bash
 pip install git+https://github.com/naotoo1/prosemble
 ```
-
+## Development Environment
 Prosemble provides a fully reproducible development environment using Nix and [devenv](https://devenv.sh/getting-started/). Once you have installed Nix and devenv, you can do the following:
 
    ```bash
@@ -36,6 +36,13 @@ Prosemble provides a fully reproducible development environment using Nix and [d
    echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
    nix profile install --accept-flake-config "github:cachix/devenv/latest"
    ```
+
+Then clone and enter the project directory:
+
+```bash
+git clone https://github.com/naotoo1/prosemble.git
+cd prosemble
+```
 
 Activate the reproducible development environment with:
    ```bash
@@ -48,6 +55,7 @@ Install Prosemble in develop mode with:
    ```
 
 You may optionally consider using [direnv](https://direnv.net/) for automatic shell activation when entering the project directory.
+
 
 
 ## Citation

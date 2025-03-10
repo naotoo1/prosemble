@@ -95,7 +95,7 @@ EOL
       
       # Step 1: Generate requirements.in
       echo "STEP 1: Generating requirements.in..."
-      $PROJECT_DIR/generate-requirements
+      generate-requirements
       
       # Step 2: Update lock files
       echo ""

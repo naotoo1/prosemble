@@ -114,3 +114,12 @@ devenv.local.nix
 
 # pre-commit
 .pre-commit-config.yaml
+
+#dockerfile
+Dockerfile.cpu
+
+#auto-generated requirements
+requirements-docker.in
+requirements-frozen-docker.txt
+requirements.in
+

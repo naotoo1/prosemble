@@ -50,19 +50,8 @@ Activate the reproducible development environment with:
    ```
 You may optionally consider using [direnv](https://direnv.net/) for automatic shell activation when entering the project directory.
 
-To install Prosemble in development mode, follow these steps to set up your environment with all the necessary dependencies while ensuring the package is installed with live code editing capabilities. To run the local reproducible development environment, execute the following lock file commands:
+To install Prosemble in development mode, follow these steps to set up your environment with all the necessary dependencies while ensuring the package is installed with live code editing capabilities. To run the local reproducible development environment, execute the command:
 
-```bash
-# Generate requirements file
-generate-requirements
-
-# Update lock files
-update-lock-files
-
-# Install dependencies from lock file
-install-from-lock
-```
-Alternatively, use this one-liner:
 
 ```bash
 setup-python-env

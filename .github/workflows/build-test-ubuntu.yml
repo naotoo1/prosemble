@@ -1,4 +1,4 @@
-name: Test Multiple Python Versions
+name: Test Python Versions and Container Builds
 
 on:
   push:
@@ -24,7 +24,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # Install Nix using the dedicated GitHub Action
       - name: Install Nix
         uses: cachix/install-nix-action@v22
         with:
@@ -32,12 +31,9 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
       
-      # Install devenv manually with Nix
       - name: Install devenv
         run: |
-          # Install devenv using nix command
           nix profile install --accept-flake-config "github:cachix/devenv/latest"
-          # Check version
           devenv --version
       
       # Update Python version in devenv.nix
@@ -56,7 +52,6 @@ jobs:
           echo "Updated devenv.nix:"
           cat devenv.nix
       
-      # Generate new devenv.lock file
       - name: Generate new devenv.lock file
         run: |
           # Generate the lock file
@@ -65,20 +60,45 @@ jobs:
           echo "Generated new devenv.lock with Python ${{ matrix.python_version }}:"
           cat devenv.lock
       
-      - name: Run tests with devenv
+      - name: Setup Python environment
         run: |
-          # Run tests with the Python version from devenv
-          echo "=== Testing Python version ==="
+          # Generate requirements.in file
+          devenv shell -- generate-requirements
+          
+          # Update lock files using uv
+          devenv shell -- update-lock-files
+          
+          # Show generated files
+          echo "=== Generated requirements.in ==="
+          cat requirements.in
+          
+          echo "=== Generated uv.lock ==="
+          cat uv.lock
+      
+      - name: Install Python packages
+        run: |
+          # Install packages from lock file
+          devenv shell -- install-from-lock
+          
+          # Install package in editable mode
+          devenv shell -- uv pip install -e .[all]
+      
+      - name: Verify Python environment
+        run: |
+          # Check Python version
+          echo "=== Python version ==="
           devenv shell -- python --version
           
-          # Check if uv is available
-          echo "=== Checking uv installation ==="
-          devenv shell -- uv --version || echo "uv not installed"
+          # Check UV version
+          echo "=== UV version ==="
+          devenv shell -- uv --version
           
-          # Install package with uv
-          echo "=== Installing package with uv ==="
-          devenv shell -- uv pip install .[all] || devenv shell -- pip install .[all]
-          
+          # List installed packages
+          echo "=== Installed packages ==="
+          devenv shell -- pip list
+      
+      - name: Run tests
+        run: |
           # Run unittest tests
           echo "=== Running unittest tests ==="
           devenv shell -- python -m unittest discover tests/
@@ -86,11 +106,7 @@ jobs:
           # Run pytest tests
           echo "=== Running pytest tests ==="
           devenv shell -- pytest tests/
-          
-          # List installed packages
-          echo "=== Installed packages ==="
-          devenv shell -- pip list
-          
+      
       # Save the working devenv files for this Python version
       - name: Save working devenv files
         if: success()
@@ -101,6 +117,8 @@ jobs:
           # Save the working files with Python version in the name
           cp devenv.nix ./python-versions/devenv-py${{ matrix.python_version }}.nix
           cp devenv.lock ./python-versions/devenv-py${{ matrix.python_version }}.lock
+          cp requirements.in ./python-versions/requirements-py${{ matrix.python_version }}.in
+          cp uv.lock ./python-versions/uv-py${{ matrix.python_version }}.lock
       
       # Upload the Python version-specific files as artifacts
       - name: Upload devenv files
@@ -110,3 +128,165 @@ jobs:
           name: devenv-python-${{ matrix.python_version }}
           path: ./python-versions/
           retention-days: 7
+
+  verify-container-builds:
+    name: Verify CPU Container Build
+    runs-on: ubuntu-latest
+    needs: test-python-versions
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Nix
+        uses: cachix/install-nix-action@v22
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      
+      - name: Install devenv
+        run: |
+          nix profile install --accept-flake-config "github:cachix/devenv/latest"
+          devenv --version
+      
+      - name: Generate requirements
+        run: |
+          # Generate requirements.in
+          devenv shell -- generate-requirements
+          
+          # Create direct requirements file for container
+          grep -v "^#" requirements.in | grep -v "^-e" | tr -d ' ' > requirements-direct.txt
+          
+          echo "=== Generated requirements-direct.txt ==="
+          cat requirements-direct.txt
+      
+      - name: Create verification script
+        run: |
+          cat > verify_packages.py << 'EOF'
+          #!/usr/bin/env python3
+          import importlib.util
+          import sys
+          import os
+
+          def main():
+              # Get packages from environment variables
+              nix_packages = os.environ.get('NIX_PACKAGES', '').split()
+              non_nix_packages = os.environ.get('NON_NIX_PACKAGES', '').split()
+              
+              # Fix package naming for imports if needed
+              package_name_map = {
+                  'scikit-learn': 'sklearn',
+                  'pytorch-lightning': 'pytorch_lightning',
+                  'torchvision': 'torchvision',
+              }
+              
+              # Packages to skip (non-importable tools)
+              skip_packages = ['pip', 'python']
+              
+              # Combined list of all packages to check
+              all_packages = []
+              for pkg in nix_packages:
+                  if pkg not in skip_packages:  # Skip non-importable tools
+                      all_packages.append(package_name_map.get(pkg, pkg))
+                      
+              for pkg in non_nix_packages:
+                  if pkg and pkg not in skip_packages:  # Skip empty strings and non-importable tools
+                      all_packages.append(pkg)
+              
+              # Check each package
+              all_passed = True
+              print("== Package Verification Results ==")
+              
+              for package in all_packages:
+                  try:
+                      spec = importlib.util.find_spec(package)
+                      if spec is None:
+                          raise ImportError(f"Module {package} not found")
+                          
+                      # Try to import the module to verify it's properly installed
+                      module = importlib.import_module(package)
+                      version = getattr(module, "__version__", "unknown version")
+                      print(f"✅ {package} - {version}")
+                  except Exception as e:
+                      print(f"❌ {package} - FAILED: {str(e)}")
+                      all_passed = False
+              
+              # Exit with error if any package failed
+              return 0 if all_passed else 1
+
+          if __name__ == "__main__":
+              sys.exit(main())
+          EOF
+          
+          chmod +x verify_packages.py
+      
+      - name: Create CPU container build script
+        run: |
+          cat > create-cpu-container.sh << 'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          # Create a temporary Dockerfile
+          DOCKERFILE=$(mktemp)
+          
+          # Build the CPU container with Python 3 installed
+          cat > "$DOCKERFILE" << 'INNEREOF'
+          FROM python:3.12-slim
+          
+          # System dependencies
+          RUN apt-get update && apt-get install -y \
+              git \
+              git-lfs \
+              && rm -rf /var/lib/apt/lists/*
+          
+          # Set up working directory
+          WORKDIR /app
+          
+          # Copy requirements file
+          COPY requirements-direct.txt ./requirements.txt
+          
+          # Install packages directly with pip
+          RUN pip install --no-cache-dir -r requirements.txt
+          
+          # Create entrypoint
+          ENTRYPOINT ["/bin/bash", "-c"]
+          CMD ["python"]
+          INNEREOF
+          
+          # Build the Docker image
+          echo "Building CPU container..."
+          docker build -t cpu-env-locked -f "$DOCKERFILE" .
+          
+          # Clean up
+          rm "$DOCKERFILE"
+          echo "CPU container built successfully as cpu-env-locked"
+          EOF
+          
+          chmod +x create-cpu-container.sh
+      
+      - name: Build and verify CPU Container
+        run: |
+          echo "Building CPU container with script"
+          ./create-cpu-container.sh
+          
+          # Verify container starts and Python is available
+          echo "Verifying container starts with Python available"
+          docker run --rm cpu-env-locked python --version
+          
+          # Extract Python packages from devenv.nix
+          echo "Extracting Python packages from devenv.nix"
+          NIX_PACKAGES=$(grep -o "pythonPackages\.[a-zA-Z0-9-]*" devenv.nix | sed 's/pythonPackages\.//g' | sort | uniq)
+          echo "Found Nix packages: $NIX_PACKAGES"
+          
+          # Extract non-Nix packages from requirements-direct.txt
+          NON_NIX_PACKAGES=$(cat requirements-direct.txt | tr '\n' ' ')
+          echo "Found non-Nix packages: $NON_NIX_PACKAGES"
+          
+          # Run verification script directly in container
+          echo "Verifying all required packages are installed properly"
+          docker run --rm -v "$(pwd)/verify_packages.py:/app/verify_packages.py:ro" \
+            -e NIX_PACKAGES="$NIX_PACKAGES" \
+            -e NON_NIX_PACKAGES="$NON_NIX_PACKAGES" \
+            cpu-env-locked python /app/verify_packages.py
+

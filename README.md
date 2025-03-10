@@ -48,14 +48,33 @@ Activate the reproducible development environment with:
    ```bash
    devenv shell
    ```
-
-Install Prosemble in develop mode with:
-   ```bash
-   devenv shell -- uv pip install -e .[all]
-   ```
-
 You may optionally consider using [direnv](https://direnv.net/) for automatic shell activation when entering the project directory.
 
+To install Prosemble in development mode, follow these steps to set up your environment with all the necessary dependencies while ensuring the package is installed with live code editing capabilities. To run the local reproducible development environment, execute the following lock file commands:
+
+```bash
+# Generate requirements file
+generate-requirements
+
+# Update lock files
+update-lock-files
+
+# Install dependencies from lock file
+install-from-lock
+```
+Alternatively, use this one-liner:
+
+```bash
+setup-python-env
+```
+To run Prosemble inside a reproducible Docker container, execute:
+```bash
+# Build the Docker container
+create-cpu-container
+# Run the container 
+run-cpu-container
+```
+When working with Prosemble in development mode, changes to the code take effect immediately without reinstallation. Use ```git pull``` to get the latest updates from the repository. Run tests after making changes to verify functionality
 
 
 ## Citation

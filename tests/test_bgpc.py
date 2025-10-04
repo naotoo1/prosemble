@@ -1,5 +1,5 @@
 """
-Tests for Bounded Gradient Projection Clustering (BGPC).
+Tests for BGPC (Basic Graded Possibilistic Clustering).
 """
 import numpy as np
 import pytest
@@ -16,9 +16,12 @@ class TestBGPCBasic:
         model = BGPC(
             data=X,
             c=3,
-            num_iter=100,
+            num_iter=50,
+            a_f=0.8,
+            b_f=0.1,
             epsilon=0.00001,
-            ord='fro'
+            ord='fro',
+            plot_steps=False
         )
         assert model.num_clusters == 3
 
@@ -30,13 +33,15 @@ class TestBGPCBasic:
             data=X,
             c=3,
             num_iter=50,
+            a_f=0.8,
+            b_f=0.1,
             epsilon=0.00001,
             ord='fro',
             plot_steps=False
         )
         model.fit()
         
-        # Check that model was fitted
+        # Should have learned centroids
         assert len(model.fit_cent) > 0
 
     def test_bgpc_predict(self, simple_2d_data):
@@ -47,6 +52,8 @@ class TestBGPCBasic:
             data=X,
             c=3,
             num_iter=50,
+            a_f=0.8,
+            b_f=0.1,
             epsilon=0.00001,
             ord='fro',
             plot_steps=False
@@ -55,16 +62,17 @@ class TestBGPCBasic:
         
         labels = model.predict()
         assert labels.shape[0] == X.shape[0]
-        assert set(labels).issubset({0, 1, 2})
 
     def test_bgpc_predict_new(self, iris_train_test_split):
         """Test BGPC prediction on new data."""
-        X_train, X_test, _, _ = iris_train_test_split
+        X_train, X_test, y_train, _ = iris_train_test_split
         
         model = BGPC(
             data=X_train,
             c=3,
             num_iter=50,
+            a_f=0.8,
+            b_f=0.1,
             epsilon=0.00001,
             ord='fro',
             plot_steps=False

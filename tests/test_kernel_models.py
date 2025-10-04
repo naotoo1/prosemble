@@ -22,11 +22,11 @@ class TestKFCM:
             num_iter=50,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
-            sigma=1.0
+            sigma=1.0,
+            plot_steps=False
         )
         assert model.num_clusters == 3
-        assert model.kernel == 'rbf'
+        assert model.sigma == 1.0
 
     def test_kfcm_fit_predict(self, simple_2d_data):
         """Test KFCM fit and predict."""
@@ -39,7 +39,6 @@ class TestKFCM:
             num_iter=50,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
             sigma=1.0,
             plot_steps=False
         )
@@ -60,7 +59,6 @@ class TestKFCM:
             num_iter=50,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
             sigma=1.0,
             plot_steps=False
         )
@@ -77,7 +75,7 @@ class TestKPCM:
         """Test KPCM initialization."""
         X, _ = simple_2d_data
         
-        # KPCM needs initial centroids
+        # KPCM needs initial centroids from KFCM
         from prosemble.models.kfcm import KFCM
         kfcm = KFCM(
             data=X,
@@ -86,7 +84,6 @@ class TestKPCM:
             num_iter=30,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
             sigma=1.0,
             plot_steps=False
         )
@@ -97,12 +94,13 @@ class TestKPCM:
             data=X,
             c=3,
             m=2,
+            k=0.01,
             num_iter=50,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
             sigma=1.0,
-            set_prototypes=init_centroids
+            set_centroids=init_centroids,
+            plot_steps=False
         )
         assert model.num_clusters == 3
 
@@ -118,7 +116,6 @@ class TestKPCM:
             num_iter=30,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
             sigma=1.0,
             plot_steps=False
         )
@@ -129,12 +126,12 @@ class TestKPCM:
             data=X,
             c=3,
             m=2,
+            k=0.01,
             num_iter=50,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
             sigma=1.0,
-            set_prototypes=init_centroids,
+            set_centroids=init_centroids,
             plot_steps=False
         )
         model.fit()
@@ -157,8 +154,8 @@ class TestKAFCM:
             num_iter=50,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
-            sigma=1.0
+            sigma=1.0,
+            plot_steps=False
         )
         assert model.num_clusters == 3
 
@@ -173,7 +170,6 @@ class TestKAFCM:
             num_iter=50,
             epsilon=0.00001,
             ord='fro',
-            kernel='rbf',
             sigma=1.0,
             plot_steps=False
         )

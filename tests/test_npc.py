@@ -19,8 +19,7 @@ class TestNPC1Basic:
             num_inter=50,
             epsilon=0.00001,
             ord='fro',
-            labels=y_train,
-            plot_steps=False
+            labels=y_train
         )
         assert model.num_clusters == 3
 
@@ -34,8 +33,7 @@ class TestNPC1Basic:
             num_inter=50,
             epsilon=0.00001,
             ord='fro',
-            labels=y_train,
-            plot_steps=False
+            labels=y_train
         )
         model.fit()
         
@@ -53,8 +51,7 @@ class TestNPC1Basic:
             num_inter=50,
             epsilon=0.00001,
             ord='fro',
-            labels=y_train,
-            plot_steps=False
+            labels=y_train
         )
         model.fit()
         
@@ -72,8 +69,7 @@ class TestNPC1Basic:
             num_inter=50,
             epsilon=0.00001,
             ord='fro',
-            labels=y_train,
-            plot_steps=False
+            labels=y_train
         )
         model.fit()
         
@@ -101,8 +97,7 @@ class TestNPC1Basic:
             epsilon=0.00001,
             ord='fro',
             labels=y_train,
-            set_prototypes_=custom_prototypes,
-            plot_steps=False
+            set_prototypes_=custom_prototypes
         )
         model.fit()
         
@@ -121,6 +116,5 @@ class TestNPC1Basic:
                 epsilon=0.00001,
                 ord='fro',
                 labels=y_train,
-                opt_metric="invalid",
-                plot_steps=False
+                opt_metric="invalid"
             )

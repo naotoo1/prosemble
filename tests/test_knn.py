@@ -1,26 +1,26 @@
 """
 Tests for K-Nearest Neighbors (KNN).
-Note: This tests sklearn's KNN as prosemble doesn't have a custom KNN implementation.
 """
 import numpy as np
 import pytest
-from sklearn.neighbors import KNeighborsClassifier
+from prosemble.models.knn import KNN
 
 
 class TestKNNBasic:
-    """Basic tests for KNN using sklearn."""
+    """Basic tests for KNN."""
 
-    def test_knn_initialization(self):
+    def test_knn_initialization(self, iris_train_test_split):
         """Test KNN initialization."""
-        model = KNeighborsClassifier(n_neighbors=3)
-        assert model.n_neighbors == 3
+        X_train, _, y_train, _ = iris_train_test_split
+        
+        model = KNN(dataset=X_train, labels=y_train, c=3)
+        assert model.neighbours == 3
 
     def test_knn_fit_predict(self, iris_train_test_split):
-        """Test KNN fit and predict."""
+        """Test KNN predict."""
         X_train, X_test, y_train, _ = iris_train_test_split
         
-        model = KNeighborsClassifier(n_neighbors=5)
-        model.fit(X_train, y_train)
+        model = KNN(dataset=X_train, labels=y_train, c=5)
         
         predictions = model.predict(X_test)
         assert len(predictions) == len(X_test)
@@ -33,8 +33,7 @@ class TestKNNBasic:
         k_values = [1, 3, 5, 7]
         
         for k in k_values:
-            model = KNeighborsClassifier(n_neighbors=k)
-            model.fit(X_train, y_train)
+            model = KNN(dataset=X_train, labels=y_train, c=k)
             predictions = model.predict(X_test)
             
             assert len(predictions) == len(X_test)
@@ -43,8 +42,32 @@ class TestKNNBasic:
         """Test KNN with k=1."""
         X_train, X_test, y_train, _ = iris_train_test_split
         
-        model = KNeighborsClassifier(n_neighbors=1)
-        model.fit(X_train, y_train)
+        model = KNN(dataset=X_train, labels=y_train, c=1)
         
         predictions = model.predict(X_test)
         assert len(predictions) == len(X_test)
+
+    def test_knn_get_proba(self, iris_train_test_split):
+        """Test KNN probability predictions."""
+        X_train, X_test, y_train, _ = iris_train_test_split
+        
+        model = KNN(dataset=X_train, labels=y_train, c=5)
+        
+        # Test on a few samples
+        probas = model.get_proba(X_test[:5])
+        assert len(probas) == 5
+        # All probabilities should be between 0 and 1
+        assert all(0 <= p <= 1 for p in probas)
+
+    def test_knn_distance_space(self, iris_train_test_split):
+        """Test KNN distance space computation."""
+        X_train, X_test, y_train, _ = iris_train_test_split
+        
+        model = KNN(dataset=X_train, labels=y_train, c=5)
+        
+        # Test distance space for single sample
+        distances = model.distance_space(X_test[0])
+        assert len(distances) == len(X_train)
+        assert np.all(distances >= 0)  # Distances should be non-negative
+        # Distances should be sorted
+        assert np.all(distances[:-1] <= distances[1:])

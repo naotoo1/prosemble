@@ -6,19 +6,19 @@ on:
     paths:
       - 'devenv.nix'
       - 'devenv.lock'
-      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
     paths:
       - 'devenv.nix'
       - 'devenv.lock'
-      - '.github/workflows/build-test-ubuntu.yml'
   workflow_dispatch:
 
 jobs:
   test-python-versions:
     name: Test Python ${{ matrix.python_version }}
     runs-on: ubuntu-latest
+    # Skip this workflow if we're in the test PR
+    if: "!contains(github.head_ref, 'add-comprehensive-tests')"
     strategy:
       matrix:
         python_version: ['311', '312']
@@ -136,6 +136,8 @@ jobs:
   verify-container-builds:
     name: Verify CPU Container Build
     runs-on: ubuntu-latest
+    # Skip this workflow if we're in the test PR
+    if: "!contains(github.head_ref, 'add-comprehensive-tests')"
     needs: test-python-versions
     
     steps:

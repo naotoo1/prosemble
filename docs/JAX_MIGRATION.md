@@ -41,8 +41,8 @@ pip install -e .[jax]
 
 ### Phase 2: Core Algorithms 🚧 In Progress
 - [x] **Fuzzy C-Means (FCM)** - Complete with tests and benchmarks
-- [ ] Possibilistic C-Means (PCM) - Next
-- [ ] Fuzzy Possibilistic C-Means (FPCM)
+- [x] **Possibilistic C-Means (PCM)** - Complete with tests and benchmarks
+- [ ] Fuzzy Possibilistic C-Means (FPCM) - Next
 - [ ] Kernel Fuzzy C-Means (KFCM)
 
 ---
@@ -266,15 +266,227 @@ python benchmarks/benchmark_fcm_jax.py
 # Results saved to benchmarks/results/
 ```
 
+## Phase 2.2: Possibilistic C-Means (PCM) - Completed
+
+### What's New
+
+The JAX PCM implementation (`prosemble.models.jax.PCM_JAX`) provides a fully vectorized, GPU-accelerated version of Possibilistic C-Means clustering.
+
+PCM extends FCM by introducing **typicality values** that represent the degree to which a data point belongs to a cluster, independent of other clusters. This makes PCM less sensitive to outliers and noise compared to FCM.
+
+### Key Improvements
+
+**Old Implementation (NumPy)**:
+- Triple nested loops in centroid computation
+- Double nested loops in typicality updates
+- Multiple distance computations
+- Sequential processing
+
+**New Implementation (JAX)**:
+- Single matrix multiplication for centroids
+- Vectorized typicality updates
+- Distance matrix computed once per iteration
+- Immutable functional state with JIT compilation
+
+### Mathematical Background
+
+PCM minimizes the objective function:
+
+```
+J = Σᵢ Σⱼ tᵢⱼᵐ ||xᵢ - vⱼ||² + Σⱼ γⱼ Σᵢ (1 - tᵢⱼ)ᵐ
+```
+
+where:
+- `tᵢⱼ` is the typicality of point `xᵢ` to cluster `j`
+- `vⱼ` is the centroid of cluster `j`
+- `m` is the fuzzifier (m > 1)
+- `γⱼ` is a scale parameter for cluster `j`
+
+Update equations:
+- **Centroids**: `vⱼ = (Σᵢ tᵢⱼᵐ xᵢ) / (Σᵢ tᵢⱼᵐ)`
+- **Gamma**: `γⱼ = k · (Σᵢ tᵢⱼᵐ ||xᵢ - vⱼ||²) / (Σᵢ tᵢⱼᵐ)`
+- **Typicality**: `tᵢⱼ = 1 / (1 + (||xᵢ - vⱼ||² / γⱼ)^(1/(m-1)))`
+
+### Usage Example
+
+```python
+import jax.numpy as jnp
+from prosemble.models.jax import PCM_JAX
+
+# Create data
+X = jnp.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8], [1, 0.6], [9, 11]])
+
+# Fit PCM model (with FCM initialization - recommended)
+model = PCM_JAX(
+    n_clusters=2,
+    fuzzifier=2.0,
+    k=1.0,  # Scale parameter for gamma
+    max_iter=100,
+    init_method='fcm'  # Initialize from FCM
+)
+model.fit(X)
+
+# Get results
+labels = model.predict(X)
+centroids = model.centroids_
+typicality = model.predict_proba(X)  # Typicality matrix
+
+# Unlike FCM, typicality rows don't sum to 1
+print(typicality.sum(axis=1))  # Not necessarily [1, 1, ..., 1]
+
+# Get training history
+objectives = model.get_objective_history()
+gamma_values = model.gamma_  # Scale parameters per cluster
+```
+
+### PCM vs FCM
+
+**Key Differences**:
+
+1. **Membership vs Typicality**:
+   - FCM: `Σⱼ uᵢⱼ = 1` (memberships sum to 1)
+   - PCM: No constraint on typicality sum (independent memberships)
+
+2. **Outlier Handling**:
+   - FCM: Outliers must belong to some cluster
+   - PCM: Outliers can have low typicality to all clusters
+
+3. **Initialization**:
+   - FCM: Can use random initialization
+   - PCM: Best initialized from FCM (recommended)
+
+4. **Parameters**:
+   - PCM has additional parameter `k` for gamma computation
+
+### API Comparison
+
+**NumPy PCM**:
+```python
+from prosemble.models import PCM
+
+model = PCM(
+    data=X,
+    c=3,
+    m=2,
+    k=1.0,
+    num_iter=100,
+    epsilon=1e-5,
+    ord='fro',
+    set_U_matrix='fcm'  # Initialize from FCM
+)
+model.fit()
+labels = model.predict()
+typicality = model.predict_proba_(X)
+```
+
+**JAX PCM**:
+```python
+from prosemble.models.jax import PCM_JAX
+
+model = PCM_JAX(
+    n_clusters=3,
+    fuzzifier=2.0,
+    k=1.0,
+    max_iter=100,
+    epsilon=1e-5,
+    init_method='fcm'  # Initialize from FCM
+)
+model.fit(X)
+labels = model.predict(X)
+typicality = model.predict_proba(X)
+```
+
+### Performance Improvements
+
+Expected speedups on real datasets:
+
+| Dataset Size | NumPy | JAX (CPU) | JAX (GPU) | GPU Speedup |
+|--------------|-------|-----------|-----------|-------------|
+| 100 × 10 | 0.08s | 0.03s | 0.015s | **5×** |
+| 1,000 × 20 | 1.2s | 0.2s | 0.04s | **30×** |
+| 5,000 × 50 | 25s | 3s | 0.3s | **83×** |
+
+*Note: PCM includes FCM initialization time*
+
+### Parameter Guidelines
+
+**Fuzzifier (m)**:
+- Typical range: `[1.5, 3.0]`
+- Lower values: More crisp clusters
+- Higher values: More fuzzy clusters
+
+**k Parameter**:
+- Typical range: `[0.01, 10.0]`
+- Lower values: More sensitive to outliers
+- Higher values: Less sensitive to outliers
+- Recommended starting point: `1.0`
+
+### Real Data Example: Iris Dataset
+
+```python
+from sklearn.datasets import load_iris
+import jax.numpy as jnp
+from prosemble.models.jax import PCM_JAX
+
+# Load data
+X, y = load_iris(return_X_y=True)
+X_jax = jnp.array(X)
+
+# Fit PCM
+model = PCM_JAX(
+    n_clusters=3,
+    fuzzifier=2.0,
+    k=1.0,
+    max_iter=100,
+    init_method='fcm',
+    random_seed=42
+)
+model.fit(X_jax)
+
+# Results
+print(f"Centroids shape: {model.centroids_.shape}")  # (3, 4)
+print(f"Typicality shape: {model.T_.shape}")  # (150, 3)
+print(f"Gamma values: {model.gamma_}")  # Scale per cluster
+print(f"Converged in {model.n_iter_} iterations")
+```
+
+### Running Tests
+
+```bash
+# Run PCM tests
+pytest tests/test_pcm_jax.py -v
+
+# Run specific test class
+pytest tests/test_pcm_jax.py::TestPCMJAXBasic -v
+
+# Run with coverage
+pytest tests/test_pcm_jax.py --cov=prosemble.models.jax.pcm_jax
+```
+
+### Running Benchmarks
+
+```bash
+# Run PCM benchmarks
+python benchmarks/benchmark_pcm_jax.py
+
+# Results include:
+# - Dataset size scaling
+# - Number of clusters impact
+# - Dimensionality impact
+# - k parameter sensitivity
+# - Convergence analysis
+
+# Results saved to benchmarks/results/
+```
+
 ## Next Steps
 
 ### Phase 2: Core Algorithms (Remaining)
 
 The following models will be migrated:
 - [x] Fuzzy C-Means (FCM) ✅
-- [ ] Possibilistic C-Means (PCM) - Next
-- [ ] Possibilistic C-Means (PCM)
-- [ ] Fuzzy Possibilistic C-Means (FPCM)
+- [x] Possibilistic C-Means (PCM) ✅
+- [ ] Fuzzy Possibilistic C-Means (FPCM) - Next
 - [ ] Kernel Fuzzy C-Means (KFCM)
 - [ ] Kernel Allied Fuzzy C-Means (KAFCM)
 - [ ] Improved Possibilistic C-Means (IPCM, IPCM_2)

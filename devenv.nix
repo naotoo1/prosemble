@@ -15,6 +15,10 @@ in {
       pythonPackages.scikit-learn
       pythonPackages.pandas
       pythonPackages.scipy
+      pythonPackages.pytest
+      pythonPackages.jax
+      pythonPackages.jaxlib
+      pythonPackages.chex
     ];
   };
 
@@ -28,6 +32,10 @@ in {
     pythonPackages.pandas
     pythonPackages.scipy
     pythonPackages.pip
+    pythonPackages.pytest
+    pythonPackages.jax
+    pythonPackages.jaxlib
+    pythonPackages.chex
     docker
     docker-compose
     nix-prefetch-git

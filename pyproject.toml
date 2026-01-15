@@ -80,6 +80,19 @@ dev = [
     "autopep8",
     "pytest"
 ]
+jax = [
+    "jax>=0.4.23",
+    "jaxlib>=0.4.23",
+    "chex>=0.1.85",
+]
+jax-cuda11 = [
+    "jax[cuda11_pip]>=0.4.23",
+    "chex>=0.1.85",
+]
+jax-cuda12 = [
+    "jax[cuda12_pip]>=0.4.23",
+    "chex>=0.1.85",
+]
 all = [
     "numpy",
     "scikit-learn",
@@ -98,7 +111,10 @@ all = [
     "Sphinx",
     "twine",
     "autopep8",
-    "pytest"
+    "pytest",
+    "jax>=0.4.23",
+    "jaxlib>=0.4.23",
+    "chex>=0.1.85",
 ]
 
 [build-system]

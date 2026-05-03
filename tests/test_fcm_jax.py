@@ -14,12 +14,11 @@ import numpy as np
 try:
     import jax
     import jax.numpy as jnp
-    from prosemble.models.jax import FCM_JAX
+    from prosemble.models import FCM
     JAX_AVAILABLE = True
 except ImportError:
     JAX_AVAILABLE = False
-
-from prosemble.models.fcm import FCM
+    FCM = None
 
 # Skip all tests if JAX is not available
 pytestmark = pytest.mark.skipif(not JAX_AVAILABLE, reason="JAX not installed")
@@ -47,7 +46,7 @@ class TestFCMBasicFunctionality:
             [5, 8], [8, 8], [9, 11]         # Cluster 2
         ])
 
-        model = FCM_JAX(n_clusters=2, fuzzifier=2.0, max_iter=100, random_seed=42)
+        model = FCM(n_clusters=2, fuzzifier=2.0, max_iter=100, random_seed=42)
         model.fit(X)
 
         assert model.centroids_ is not None
@@ -62,7 +61,7 @@ class TestFCMBasicFunctionality:
             [5, 8], [8, 8]
         ])
 
-        model = FCM_JAX(n_clusters=2, random_seed=42)
+        model = FCM(n_clusters=2, random_seed=42)
         model.fit(X)
 
         labels = model.predict(X)
@@ -75,7 +74,7 @@ class TestFCMBasicFunctionality:
         """Test fuzzy membership prediction."""
         X = jnp.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8]])
 
-        model = FCM_JAX(n_clusters=2, random_seed=42)
+        model = FCM(n_clusters=2, random_seed=42)
         model.fit(X)
 
         U = model.predict_proba(X)
@@ -91,7 +90,7 @@ class TestFCMBasicFunctionality:
         """Test getting final centroids."""
         X = jnp.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8]])
 
-        model = FCM_JAX(n_clusters=2, random_seed=42)
+        model = FCM(n_clusters=2, random_seed=42)
         model.fit(X)
 
         centroids = model.final_centroids()
@@ -103,7 +102,7 @@ class TestFCMBasicFunctionality:
         """Test distance computation."""
         X = jnp.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8]])
 
-        model = FCM_JAX(n_clusters=2, random_seed=42)
+        model = FCM(n_clusters=2, random_seed=42)
         model.fit(X)
 
         D = model.get_distance_space(X)
@@ -119,7 +118,7 @@ class TestFCMObjectiveFunction:
         """Test that objective function decreases during training."""
         X = jnp.array(np.random.randn(100, 10).astype(np.float32))
 
-        model = FCM_JAX(n_clusters=3, max_iter=50, random_seed=42)
+        model = FCM(n_clusters=3, max_iter=50, random_seed=42)
         model.fit(X)
 
         objectives = model.get_objective_history()
@@ -132,7 +131,7 @@ class TestFCMObjectiveFunction:
         """Test that objective function is always finite."""
         X = jnp.array(np.random.randn(50, 5).astype(np.float32))
 
-        model = FCM_JAX(n_clusters=3, random_seed=42)
+        model = FCM(n_clusters=3, random_seed=42)
         model.fit(X)
 
         objectives = model.get_objective_history()
@@ -146,28 +145,28 @@ class TestFCMParameterValidation:
     def test_invalid_n_clusters(self):
         """Test error for invalid n_clusters."""
         with pytest.raises(ValueError, match="n_clusters must be >= 2"):
-            FCM_JAX(n_clusters=1)
+            FCM(n_clusters=1)
 
     def test_invalid_fuzzifier(self):
         """Test error for invalid fuzzifier."""
         with pytest.raises(ValueError, match="fuzzifier must be > 1"):
-            FCM_JAX(n_clusters=2, fuzzifier=1.0)
+            FCM(n_clusters=2, fuzzifier=1.0)
 
     def test_invalid_max_iter(self):
         """Test error for invalid max_iter."""
         with pytest.raises(ValueError, match="max_iter must be >= 1"):
-            FCM_JAX(n_clusters=2, max_iter=0)
+            FCM(n_clusters=2, max_iter=0)
 
     def test_invalid_epsilon(self):
         """Test error for invalid epsilon."""
         with pytest.raises(ValueError, match="epsilon must be > 0"):
-            FCM_JAX(n_clusters=2, epsilon=0)
+            FCM(n_clusters=2, epsilon=0)
 
     def test_fit_wrong_shape(self):
         """Test error for wrong data shape."""
         X = jnp.array([1, 2, 3, 4])  # 1D array
 
-        model = FCM_JAX(n_clusters=2)
+        model = FCM(n_clusters=2)
         with pytest.raises(ValueError, match="X must be 2D"):
             model.fit(X)
 
@@ -175,7 +174,7 @@ class TestFCMParameterValidation:
         """Test error when n_samples < n_clusters."""
         X = jnp.array([[1, 2], [3, 4]])  # Only 2 samples
 
-        model = FCM_JAX(n_clusters=3)
+        model = FCM(n_clusters=3)
         with pytest.raises(ValueError, match="n_samples .* must be >= n_clusters"):
             model.fit(X)
 
@@ -183,7 +182,7 @@ class TestFCMParameterValidation:
         """Test error for NaN in data."""
         X = jnp.array([[1, 2], [3, jnp.nan], [5, 6]])
 
-        model = FCM_JAX(n_clusters=2)
+        model = FCM(n_clusters=2)
         with pytest.raises(ValueError, match="NaN or Inf"):
             model.fit(X)
 
@@ -191,7 +190,7 @@ class TestFCMParameterValidation:
         """Test error when predicting before fitting."""
         X = jnp.array([[1, 2], [3, 4]])
 
-        model = FCM_JAX(n_clusters=2)
+        model = FCM(n_clusters=2)
         with pytest.raises(RuntimeError, match="not fitted"):
             model.predict(X)
 
@@ -199,60 +198,64 @@ class TestFCMParameterValidation:
 class TestFCMNumPyParity:
     """Test parity between JAX and NumPy implementations."""
 
-    def test_simple_clustering_parity(self):
-        """Test that JAX and NumPy give similar results."""
-        # Use small simple dataset
-        np.random.seed(42)
-        X_np = np.concatenate([
-            np.random.randn(20, 2) + [0, 0],
-            np.random.randn(20, 2) + [5, 5],
-            np.random.randn(20, 2) + [0, 5]
-        ]).astype(np.float32)
-
-        # NumPy version
-        fcm_np = FCM(
-            data=X_np,
-            c=3,
-            m=2.0,
-            num_iter=100,
-            epsilon=1e-5,
-            ord='fro',
-            set_U_matrix=None
-        )
-        fcm_np.fit()
-        centroids_np = fcm_np.final_centroids()
-        labels_np = fcm_np.predict()
-
-        # JAX version
-        X_jax = jnp.array(X_np)
-        fcm_jax = FCM_JAX(
-            n_clusters=3,
-            fuzzifier=2.0,
-            max_iter=100,
-            epsilon=1e-5,
-            random_seed=42
-        )
-        fcm_jax.fit(X_jax)
-        centroids_jax = fcm_jax.final_centroids()
-        labels_jax = fcm_jax.predict(X_jax)
-
-        # Sort centroids for comparison (label switching doesn't matter)
-        centroids_np_sorted = sort_centroids(centroids_np)
-        centroids_jax_sorted = sort_centroids(np.array(centroids_jax))
-
-        # Centroids should be close
-        np.testing.assert_allclose(
-            centroids_np_sorted,
-            centroids_jax_sorted,
-            rtol=0.1,  # Allow 10% relative difference
-            atol=0.5    # Allow 0.5 absolute difference
-        )
+    # NOTE: This test has been commented out because the old NumPy FCM model
+    # is no longer available after the JAX migration. The FCM class now refers
+    # to the JAX implementation.
+    #
+    # def test_simple_clustering_parity(self):
+    #     """Test that JAX and NumPy give similar results."""
+    #     # Use small simple dataset
+    #     np.random.seed(42)
+    #     X_np = np.concatenate([
+    #         np.random.randn(20, 2) + [0, 0],
+    #         np.random.randn(20, 2) + [5, 5],
+    #         np.random.randn(20, 2) + [0, 5]
+    #     ]).astype(np.float32)
+    #
+    #     # NumPy version
+    #     fcm_np = FCM(
+    #         data=X_np,
+    #         c=3,
+    #         m=2.0,
+    #         num_iter=100,
+    #         epsilon=1e-5,
+    #         ord='fro',
+    #         set_U_matrix=None
+    #     )
+    #     fcm_np.fit()
+    #     centroids_np = fcm_np.final_centroids()
+    #     labels_np = fcm_np.predict()
+    #
+    #     # JAX version
+    #     X_jax = jnp.array(X_np)
+    #     fcm_jax = FCM(
+    #         n_clusters=3,
+    #         fuzzifier=2.0,
+    #         max_iter=100,
+    #         epsilon=1e-5,
+    #         random_seed=42
+    #     )
+    #     fcm_jax.fit(X_jax)
+    #     centroids_jax = fcm_jax.final_centroids()
+    #     labels_jax = fcm_jax.predict(X_jax)
+    #
+    #     # Sort centroids for comparison (label switching doesn't matter)
+    #     centroids_np_sorted = sort_centroids(centroids_np)
+    #     centroids_jax_sorted = sort_centroids(np.array(centroids_jax))
+    #
+    #     # Centroids should be close
+    #     np.testing.assert_allclose(
+    #         centroids_np_sorted,
+    #         centroids_jax_sorted,
+    #         rtol=0.1,  # Allow 10% relative difference
+    #         atol=0.5    # Allow 0.5 absolute difference
+    #     )
 
     def test_membership_matrix_properties(self):
         """Test that membership matrix satisfies FCM properties."""
         X = jnp.array(np.random.randn(50, 5).astype(np.float32))
 
-        model = FCM_JAX(n_clusters=3, random_seed=42)
+        model = FCM(n_clusters=3, random_seed=42)
         model.fit(X)
 
         U = model.U_
@@ -277,7 +280,7 @@ class TestFCMNumericalStability:
         """Test with identical data points."""
         X = jnp.array([[1, 2]] * 10)  # All same point
 
-        model = FCM_JAX(n_clusters=2, random_seed=42)
+        model = FCM(n_clusters=2, random_seed=42)
         model.fit(X)
 
         # Should not crash and produce finite results
@@ -288,7 +291,7 @@ class TestFCMNumericalStability:
         """Test with very close but not identical points."""
         X = jnp.array([[1, 2], [1 + 1e-8, 2 + 1e-8], [1 + 2e-8, 2 + 2e-8]])
 
-        model = FCM_JAX(n_clusters=2, random_seed=42)
+        model = FCM(n_clusters=2, random_seed=42)
         model.fit(X)
 
         assert jnp.all(jnp.isfinite(model.centroids_))
@@ -298,7 +301,7 @@ class TestFCMNumericalStability:
         """Test with large coordinate values."""
         X = jnp.array(np.random.randn(50, 5).astype(np.float32)) * 1e6
 
-        model = FCM_JAX(n_clusters=3, random_seed=42)
+        model = FCM(n_clusters=3, random_seed=42)
         model.fit(X)
 
         assert jnp.all(jnp.isfinite(model.centroids_))
@@ -308,7 +311,7 @@ class TestFCMNumericalStability:
         """Test with very small coordinate values."""
         X = jnp.array(np.random.randn(50, 5).astype(np.float32)) * 1e-6
 
-        model = FCM_JAX(n_clusters=3, random_seed=42)
+        model = FCM(n_clusters=3, random_seed=42)
         model.fit(X)
 
         assert jnp.all(jnp.isfinite(model.centroids_))
@@ -323,17 +326,17 @@ class TestFCMDifferentFuzzifiers:
         X = jnp.array(np.random.randn(50, 5).astype(np.float32))
 
         # m = 1.5 (less fuzzy)
-        model_15 = FCM_JAX(n_clusters=3, fuzzifier=1.5, random_seed=42)
+        model_15 = FCM(n_clusters=3, fuzzifier=1.5, random_seed=42)
         model_15.fit(X)
         U_15 = model_15.U_
 
         # m = 2.0 (standard)
-        model_20 = FCM_JAX(n_clusters=3, fuzzifier=2.0, random_seed=42)
+        model_20 = FCM(n_clusters=3, fuzzifier=2.0, random_seed=42)
         model_20.fit(X)
         U_20 = model_20.U_
 
         # m = 3.0 (more fuzzy)
-        model_30 = FCM_JAX(n_clusters=3, fuzzifier=3.0, random_seed=42)
+        model_30 = FCM(n_clusters=3, fuzzifier=3.0, random_seed=42)
         model_30.fit(X)
         U_30 = model_30.U_
 
@@ -360,12 +363,12 @@ class TestFCMReproducibility:
         X = jnp.array(np.random.randn(50, 5).astype(np.float32))
 
         # First run
-        model1 = FCM_JAX(n_clusters=3, random_seed=42)
+        model1 = FCM(n_clusters=3, random_seed=42)
         model1.fit(X)
         centroids1 = model1.centroids_
 
         # Second run with same seed
-        model2 = FCM_JAX(n_clusters=3, random_seed=42)
+        model2 = FCM(n_clusters=3, random_seed=42)
         model2.fit(X)
         centroids2 = model2.centroids_
 
@@ -376,12 +379,12 @@ class TestFCMReproducibility:
         X = jnp.array(np.random.randn(50, 5).astype(np.float32))
 
         # First run
-        model1 = FCM_JAX(n_clusters=3, random_seed=42)
+        model1 = FCM(n_clusters=3, random_seed=42)
         model1.fit(X)
         centroids1 = model1.centroids_
 
         # Second run with different seed
-        model2 = FCM_JAX(n_clusters=3, random_seed=123)
+        model2 = FCM(n_clusters=3, random_seed=123)
         model2.fit(X)
         centroids2 = model2.centroids_
 
@@ -403,7 +406,7 @@ class TestFCMPredictNewData:
         # New test data
         X_test = jnp.array([[1.2, 1.5], [7, 9]])
 
-        model = FCM_JAX(n_clusters=2, random_seed=42)
+        model = FCM(n_clusters=2, random_seed=42)
         model.fit(X_train)
 
         # Predict on new data
@@ -423,7 +426,7 @@ class TestFCMPerformance:
         """Test on large dataset to ensure it completes."""
         X = jnp.array(np.random.randn(10000, 50).astype(np.float32))
 
-        model = FCM_JAX(n_clusters=5, max_iter=50, random_seed=42)
+        model = FCM(n_clusters=5, max_iter=50, random_seed=42)
         model.fit(X)
 
         assert model.centroids_.shape == (5, 50)
@@ -434,7 +437,7 @@ class TestFCMPerformance:
         """Test on high-dimensional data."""
         X = jnp.array(np.random.randn(1000, 500).astype(np.float32))
 
-        model = FCM_JAX(n_clusters=3, max_iter=50, random_seed=42)
+        model = FCM(n_clusters=3, max_iter=50, random_seed=42)
         model.fit(X)
 
         assert model.centroids_.shape == (3, 500)
@@ -453,7 +456,7 @@ class TestFCMIrisDataset:
         X, y = load_iris(return_X_y=True)
         X = jnp.array(X.astype(np.float32))
 
-        model = FCM_JAX(n_clusters=3, random_seed=42)
+        model = FCM(n_clusters=3, random_seed=42)
         model.fit(X)
 
         labels = model.predict(X)

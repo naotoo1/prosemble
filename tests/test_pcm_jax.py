@@ -15,16 +15,15 @@ import numpy as np
 import jax.numpy as jnp
 import jax
 
-from prosemble.models.jax import PCM_JAX
-from prosemble.models.pcm import PCM
+from prosemble.models import PCM
 
 
 class TestPCMJAXBasic:
-    """Test basic PCM_JAX functionality."""
+    """Test basic PCM functionality."""
 
     def test_initialization(self):
-        """Test PCM_JAX initialization with valid parameters."""
-        model = PCM_JAX(n_clusters=3, fuzzifier=2.0, k=1.0)
+        """Test PCM initialization with valid parameters."""
+        model = PCM(n_clusters=3, fuzzifier=2.0, k=1.0)
         assert model.n_clusters == 3
         assert model.fuzzifier == 2.0
         assert model.k == 1.0
@@ -33,8 +32,8 @@ class TestPCMJAXBasic:
         assert model.init_method == 'fcm'
 
     def test_initialization_custom_params(self):
-        """Test PCM_JAX initialization with custom parameters."""
-        model = PCM_JAX(
+        """Test PCM initialization with custom parameters."""
+        model = PCM(
             n_clusters=5,
             fuzzifier=1.5,
             k=0.5,
@@ -53,36 +52,36 @@ class TestPCMJAXBasic:
     def test_invalid_n_clusters(self):
         """Test that invalid n_clusters raises ValueError."""
         with pytest.raises(ValueError, match="n_clusters must be >= 2"):
-            PCM_JAX(n_clusters=1)
+            PCM(n_clusters=1)
 
     def test_invalid_fuzzifier(self):
         """Test that invalid fuzzifier raises ValueError."""
         with pytest.raises(ValueError, match="fuzzifier must be > 1.0"):
-            PCM_JAX(n_clusters=3, fuzzifier=1.0)
+            PCM(n_clusters=3, fuzzifier=1.0)
 
     def test_invalid_k(self):
         """Test that invalid k raises ValueError."""
         with pytest.raises(ValueError, match="k must be > 0"):
-            PCM_JAX(n_clusters=3, k=0)
+            PCM(n_clusters=3, k=0)
 
     def test_invalid_max_iter(self):
         """Test that invalid max_iter raises ValueError."""
         with pytest.raises(ValueError, match="max_iter must be >= 1"):
-            PCM_JAX(n_clusters=3, max_iter=0)
+            PCM(n_clusters=3, max_iter=0)
 
     def test_invalid_epsilon(self):
         """Test that invalid epsilon raises ValueError."""
         with pytest.raises(ValueError, match="epsilon must be > 0"):
-            PCM_JAX(n_clusters=3, epsilon=0)
+            PCM(n_clusters=3, epsilon=0)
 
     def test_invalid_init_method(self):
         """Test that invalid init_method raises ValueError."""
         with pytest.raises(ValueError, match="init_method must be"):
-            PCM_JAX(n_clusters=3, init_method='invalid')
+            PCM(n_clusters=3, init_method='invalid')
 
 
 class TestPCMJAXFit:
-    """Test PCM_JAX fit method."""
+    """Test PCM fit method."""
 
     def test_fit_simple_data(self):
         """Test fitting on simple 2D data."""
@@ -96,7 +95,7 @@ class TestPCMJAXFit:
             [9.0, 11.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, fuzzifier=2.0, k=1.0, random_seed=42)
+        model = PCM(n_clusters=2, fuzzifier=2.0, k=1.0, random_seed=42)
         model.fit(X)
 
         # Check that attributes are set
@@ -114,21 +113,21 @@ class TestPCMJAXFit:
     def test_fit_returns_self(self):
         """Test that fit returns self for method chaining."""
         X = jnp.array([[1, 2], [3, 4], [5, 6], [7, 8]])
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         result = model.fit(X)
         assert result is model
 
     def test_fit_insufficient_samples(self):
         """Test that fitting with too few samples raises error."""
         X = jnp.array([[1, 2]])
-        model = PCM_JAX(n_clusters=2)
+        model = PCM(n_clusters=2)
         with pytest.raises(ValueError, match="n_samples.*must be >= n_clusters"):
             model.fit(X)
 
     def test_fit_updates_attributes(self):
         """Test that fit properly updates all model attributes."""
         X = jnp.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]])
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
 
         # Before fit
         assert model.centroids_ is None
@@ -152,7 +151,7 @@ class TestPCMJAXFit:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, init_method='fcm', random_seed=42)
+        model = PCM(n_clusters=2, init_method='fcm', random_seed=42)
         model.fit(X)
 
         assert model.centroids_ is not None
@@ -167,7 +166,7 @@ class TestPCMJAXFit:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, init_method='random', random_seed=42)
+        model = PCM(n_clusters=2, init_method='random', random_seed=42)
         model.fit(X)
 
         assert model.centroids_ is not None
@@ -175,13 +174,13 @@ class TestPCMJAXFit:
 
 
 class TestPCMJAXPredict:
-    """Test PCM_JAX predict method."""
+    """Test PCM predict method."""
 
     def test_predict_before_fit(self):
         """Test that predict before fit raises error."""
         X = jnp.array([[1, 2], [3, 4]])
-        model = PCM_JAX(n_clusters=2)
-        with pytest.raises(ValueError, match="Model has not been fitted"):
+        model = PCM(n_clusters=2)
+        with pytest.raises(ValueError, match="not fitted"):
             model.predict(X)
 
     def test_predict_returns_labels(self):
@@ -193,7 +192,7 @@ class TestPCMJAXPredict:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         model.fit(X)
         labels = model.predict(X)
 
@@ -209,7 +208,7 @@ class TestPCMJAXPredict:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         model.fit(X)
 
         labels1 = model.predict(X)
@@ -224,7 +223,7 @@ class TestPCMJAXPredict:
         cluster2 = jnp.array([[10, 10], [10.1, 10.1], [10.2, 10.2]])
         X = jnp.concatenate([cluster1, cluster2], axis=0)
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         model.fit(X)
         labels = model.predict(X)
 
@@ -236,13 +235,13 @@ class TestPCMJAXPredict:
 
 
 class TestPCMJAXPredictProba:
-    """Test PCM_JAX predict_proba method."""
+    """Test PCM predict_proba method."""
 
     def test_predict_proba_before_fit(self):
         """Test that predict_proba before fit raises error."""
         X = jnp.array([[1, 2], [3, 4]])
-        model = PCM_JAX(n_clusters=2)
-        with pytest.raises(ValueError, match="Model has not been fitted"):
+        model = PCM(n_clusters=2)
+        with pytest.raises(ValueError, match="not fitted"):
             model.predict_proba(X)
 
     def test_predict_proba_shape(self):
@@ -254,7 +253,7 @@ class TestPCMJAXPredictProba:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         model.fit(X)
         T = model.predict_proba(X)
 
@@ -269,7 +268,7 @@ class TestPCMJAXPredictProba:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         model.fit(X)
         T = model.predict_proba(X)
 
@@ -285,7 +284,7 @@ class TestPCMJAXPredictProba:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         model.fit(X)
 
         T1 = model.predict_proba(X)
@@ -302,7 +301,7 @@ class TestPCMJAXPredictProba:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         model.fit(X)
         T = model.predict_proba(X)
 
@@ -313,7 +312,7 @@ class TestPCMJAXPredictProba:
 
 
 class TestPCMJAXObjective:
-    """Test PCM_JAX objective function."""
+    """Test PCM objective function."""
 
     def test_objective_decreases(self):
         """Test that objective function generally decreases during training."""
@@ -326,7 +325,7 @@ class TestPCMJAXObjective:
             [9.0, 11.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, max_iter=20, random_seed=42)
+        model = PCM(n_clusters=2, max_iter=20, random_seed=42)
         model.fit(X)
 
         objectives = model.get_objective_history()
@@ -341,8 +340,8 @@ class TestPCMJAXObjective:
 
     def test_get_objective_history_before_fit(self):
         """Test that get_objective_history before fit raises error."""
-        model = PCM_JAX(n_clusters=2)
-        with pytest.raises(ValueError, match="Model has not been fitted"):
+        model = PCM(n_clusters=2)
+        with pytest.raises(ValueError, match="not fitted"):
             model.get_objective_history()
 
     def test_objective_history_length(self):
@@ -350,7 +349,7 @@ class TestPCMJAXObjective:
         X = jnp.array([[1, 2], [3, 4], [5, 6], [7, 8]])
         max_iter = 10
 
-        model = PCM_JAX(n_clusters=2, max_iter=max_iter, random_seed=42)
+        model = PCM(n_clusters=2, max_iter=max_iter, random_seed=42)
         model.fit(X)
 
         objectives = model.get_objective_history()
@@ -358,7 +357,7 @@ class TestPCMJAXObjective:
 
 
 class TestPCMJAXReproducibility:
-    """Test PCM_JAX reproducibility."""
+    """Test PCM reproducibility."""
 
     def test_reproducibility_with_seed(self):
         """Test that same seed produces same results."""
@@ -369,12 +368,12 @@ class TestPCMJAXReproducibility:
             [8.0, 8.0]
         ])
 
-        model1 = PCM_JAX(n_clusters=2, random_seed=42)
+        model1 = PCM(n_clusters=2, random_seed=42)
         model1.fit(X)
         labels1 = model1.predict(X)
         centroids1 = model1.centroids_
 
-        model2 = PCM_JAX(n_clusters=2, random_seed=42)
+        model2 = PCM(n_clusters=2, random_seed=42)
         model2.fit(X)
         labels2 = model2.predict(X)
         centroids2 = model2.centroids_
@@ -391,11 +390,11 @@ class TestPCMJAXReproducibility:
             [8.0, 8.0]
         ])
 
-        model1 = PCM_JAX(n_clusters=2, random_seed=42, init_method='random')
+        model1 = PCM(n_clusters=2, random_seed=42, init_method='random')
         model1.fit(X)
         centroids1 = model1.centroids_
 
-        model2 = PCM_JAX(n_clusters=2, random_seed=123, init_method='random')
+        model2 = PCM(n_clusters=2, random_seed=123, init_method='random')
         model2.fit(X)
         centroids2 = model2.centroids_
 
@@ -405,7 +404,7 @@ class TestPCMJAXReproducibility:
 
 
 class TestPCMJAXNumericalStability:
-    """Test PCM_JAX numerical stability."""
+    """Test PCM numerical stability."""
 
     def test_identical_points(self):
         """Test handling of identical points."""
@@ -416,7 +415,7 @@ class TestPCMJAXNumericalStability:
             [5.0, 6.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         model.fit(X)
         labels = model.predict(X)
 
@@ -433,7 +432,7 @@ class TestPCMJAXNumericalStability:
             [1.03, 1.03]
         ])
 
-        model = PCM_JAX(n_clusters=2, random_seed=42)
+        model = PCM(n_clusters=2, random_seed=42)
         # Should not raise errors even with very close points
         model.fit(X)
         labels = model.predict(X)
@@ -449,7 +448,7 @@ class TestPCMJAXNumericalStability:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, fuzzifier=5.0, random_seed=42)
+        model = PCM(n_clusters=2, fuzzifier=5.0, random_seed=42)
         model.fit(X)
         T = model.predict_proba(X)
 
@@ -466,7 +465,7 @@ class TestPCMJAXNumericalStability:
             [8.0, 8.0]
         ])
 
-        model = PCM_JAX(n_clusters=2, fuzzifier=1.1, random_seed=42)
+        model = PCM(n_clusters=2, fuzzifier=1.1, random_seed=42)
         model.fit(X)
         T = model.predict_proba(X)
 
@@ -476,7 +475,7 @@ class TestPCMJAXNumericalStability:
 
 
 class TestPCMJAXRealData:
-    """Test PCM_JAX on real datasets."""
+    """Test PCM on real datasets."""
 
     def test_iris_dataset(self):
         """Test PCM on Iris dataset."""
@@ -485,7 +484,7 @@ class TestPCMJAXRealData:
         X, y = load_iris(return_X_y=True)
         X_jax = jnp.array(X)
 
-        model = PCM_JAX(n_clusters=3, fuzzifier=2.0, k=1.0, random_seed=42)
+        model = PCM(n_clusters=3, fuzzifier=2.0, k=1.0, random_seed=42)
         model.fit(X_jax)
 
         # Check basic properties
@@ -514,7 +513,7 @@ class TestPCMJAXRealData:
         results = []
 
         for k in k_values:
-            model = PCM_JAX(n_clusters=3, fuzzifier=2.0, k=k, random_seed=42)
+            model = PCM(n_clusters=3, fuzzifier=2.0, k=k, random_seed=42)
             model.fit(X_jax)
             results.append({
                 'k': k,
@@ -530,52 +529,18 @@ class TestPCMJAXRealData:
 
 
 class TestPCMJAXComparison:
-    """Test PCM_JAX comparison with NumPy implementation."""
+    """Test PCM comparison with NumPy implementation."""
 
+    @pytest.mark.skip(reason="NumPy PCM implementation no longer available after JAX migration")
     def test_centroids_similarity_to_numpy(self):
         """Test that JAX and NumPy implementations produce similar centroids."""
-        from sklearn.datasets import load_iris
-
-        X, _ = load_iris(return_X_y=True)
-        X_jax = jnp.array(X, dtype=jnp.float32)
-        X_np = np.array(X, dtype=np.float32)
-
-        # JAX version
-        model_jax = PCM_JAX(
-            n_clusters=3,
-            fuzzifier=2.0,
-            k=1.0,
-            max_iter=50,
-            epsilon=1e-4,
-            init_method='fcm',
-            random_seed=42
-        )
-        model_jax.fit(X_jax)
-        centroids_jax = np.array(model_jax.centroids_)
-
-        # NumPy version (using FCM initialization)
-        model_np = PCM(
-            data=X_np,
-            c=3,
-            m=2.0,
-            k=1.0,
-            num_iter=50,
-            epsilon=1e-4,
-            ord='fro',
-            set_U_matrix='fcm'
-        )
-        model_np.fit()
-        centroids_np = model_np.final_centroids()
-
-        # Centroids should be relatively similar (may not be identical due to different implementations)
-        # We check if they're in similar regions of the feature space
-        assert centroids_jax.shape == centroids_np.shape
-        # At least the means should be similar
-        assert np.allclose(centroids_jax.mean(), centroids_np.mean(), rtol=0.5)
+        # This test is skipped because the NumPy PCM implementation has been removed
+        # as part of the JAX-only migration
+        pass
 
 
 class TestPCMJAXDeviceCompatibility:
-    """Test PCM_JAX device compatibility."""
+    """Test PCM device compatibility."""
 
     def test_cpu_device(self):
         """Test that PCM works on CPU."""
@@ -587,7 +552,7 @@ class TestPCMJAXDeviceCompatibility:
         ])
 
         with jax.default_device(jax.devices('cpu')[0]):
-            model = PCM_JAX(n_clusters=2, random_seed=42)
+            model = PCM(n_clusters=2, random_seed=42)
             model.fit(X)
             labels = model.predict(X)
 
@@ -611,7 +576,7 @@ class TestPCMJAXDeviceCompatibility:
 
         with jax.default_device(jax.devices('gpu')[0]):
             X_gpu = jax.device_put(X, jax.devices('gpu')[0])
-            model = PCM_JAX(n_clusters=2, random_seed=42)
+            model = PCM(n_clusters=2, random_seed=42)
             model.fit(X_gpu)
             labels = model.predict(X_gpu)
 

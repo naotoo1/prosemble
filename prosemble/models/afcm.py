@@ -1,389 +1,433 @@
 """
-Implementation of Allied Possibilistic Fuzzy c-Means Alternative Optimization Algorithm
+JAX-based Adaptive Fuzzy C-Means (AFCM) clustering implementation.
+
+This module provides a GPU-accelerated implementation of AFCM using JAX
+with JIT compilation for high performance.
 """
 
-# Author: Nana Abeka Otoo <abekaotoo@gmail.com>
-# License: MIT
+from typing import NamedTuple, Self
+from functools import partial
+
+import jax
+import jax.numpy as jnp
+import chex
+from jax import jit, lax
+
+from prosemble.models.base import FuzzyClusteringBase, ScanFitMixin
+from prosemble.models.fcm import FCM
 
 
-from collections import Counter
+class AFCMState(NamedTuple):
+    """Immutable state for AFCM iteration.
 
-import numpy as np
-from matplotlib import pyplot as plt
-
-from prosemble.core.distance import (
-    euclidean_distance,
-    squared_euclidean_distance
-)
-
-
-from .fcm import FCM
-
-
-class AFCM:
+    Attributes:
+        centroids: Cluster centroids, shape (n_clusters, n_features)
+        U: Fuzzy membership matrix, shape (n_samples, n_clusters)
+        T: Typicality matrix, shape (n_samples, n_clusters)
+        gamma: Scale parameters, shape (n_clusters,)
+        objective: Current objective function value
+        iteration: Current iteration number
+        converged: Whether algorithm has converged
     """
-    params:
-
-    data : array-like:
-        input data
-
-    c: int:
-        number of clusters
-
-    m: int:
-        fuzzy parameter
-
-    k: float:
-        gamma parameter
-
-    k: float:
-        parameter for gamma
-
-    num_iter: int:
-        number of iterations
-
-    epsilon: float:
-        small difference for termination of algorithm
-
-    ord:  {non-zero int, inf, -inf, ‘fro’, ‘nuc’}
-          order of the norm
-
-    a: int:
-        a parameter
-
-    b: int:
-        b parameter
-
-    set_centroids: array-like:
-        initial prototypes to  begin with. default is None
+    centroids: chex.Array
+    U: chex.Array
+    T: chex.Array
+    gamma: chex.Array
+    objective: chex.Array
+    iteration: int
+    converged: bool
 
 
-   set_U_matrix: array-like:
-        initial U matrix to  begin with. default is None
+class AFCM(ScanFitMixin, FuzzyClusteringBase):
+    """
+    Adaptive Fuzzy C-Means clustering with JAX.
 
-    plot_steps: bool:
-        True for visualisation of training and False otherwise
+    AFCM is an adaptive variant that combines fuzzy and possibilistic approaches
+    with specific parameter combinations.
 
-   """
+    Key features:
+    - Centroids use a·U^m + b·T (T to power 1, not m!)
+    - Gamma computed with Euclidean distance (not squared)
+    - Exponential T update with parameter b
+    - Standard FCM U update
 
-    def __init__(self, data, c, m, k, num_iter, epsilon, ord, a, b,
-                 set_centroids=None,
-                 set_U_matrix=None,
-                 plot_steps=False):
-        self.data = data
-        self.num_clusters = c
-        self.fuzzifier = m
-        self.k = k
-        self.num_iter = num_iter
-        self.epsilon = epsilon
-        self.set_U_matrix = set_U_matrix
-        self.set_centroids = set_centroids
-        self.plot_steps = plot_steps
-        self.ord = ord
+    Algorithm:
+    1. Initialize U using FCM
+    2. Compute γ_j = k·Σ_i(u_ij^m · d_ij) / Σ_i(u_ij^m)  [Euclidean distance!]
+    3. Update T: t_ij = exp(-b·d²_ij/γ_j)
+    4. Update U: Standard FCM
+    5. Update centroids: v_j = Σ_i[a·u_ij^m + b·t_ij]x_i / Σ_i[a·u_ij^m + b·t_ij]
+    6. Repeat until convergence
+
+    Objective function:
+        J = Σ_i Σ_j [d²_ij · (a·u_ij^m + b·t_ij)] +
+            Σ_j[γ_j · Σ_i(t_ij·log(t_ij) - t_ij)]
+
+    Parameters
+    ----------
+    n_clusters : int
+        Number of clusters (must be >= 2)
+    fuzzifier : float, default=2.0
+        Fuzziness parameter (must be > 1.0)
+    a : float, default=1.0
+        Weight for fuzzy membership term (must be > 0)
+    b : float, default=1.0
+        Weight for typicality term (must be > 0)
+    k : float, default=1.0
+        Scaling parameter for gamma (must be > 0)
+    max_iter : int, default=100
+        Maximum number of iterations
+    epsilon : float, default=1e-5
+        Convergence threshold
+    init_method : {'fcm'}, default='fcm'
+        Initialization method
+    random_seed : int, default=42
+        Random seed for reproducibility
+    plot_steps : bool, default=False
+        Whether to visualize clustering progress
+    show_confidence : bool, default=True
+        Whether to show confidence in visualization
+    show_pca_variance : bool, default=True
+        Whether to show PCA variance in visualization
+    save_plot_path : str, optional
+        Path to save final plot
+
+    Attributes
+    ----------
+    centroids_ : array, shape (n_clusters, n_features)
+        Final cluster centroids
+    U_ : array, shape (n_samples, n_clusters)
+        Final fuzzy membership matrix
+    T_ : array, shape (n_samples, n_clusters)
+        Final typicality matrix
+    gamma_ : array, shape (n_clusters,)
+        Final scale parameters
+    n_iter_ : int
+        Number of iterations until convergence
+    objective_ : float
+        Final objective function value
+    objective_history_ : array
+        Objective values at each iteration
+
+    Examples
+    --------
+    >>> import jax.numpy as jnp
+    >>> from prosemble.models import AFCM
+    >>> X = jnp.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8]])
+    >>> model = AFCM(n_clusters=2, fuzzifier=2.0, a=1.0, b=1.0, k=1.0, random_seed=42)
+    >>> model.fit(X)
+    >>> labels = model.predict(X)
+    """
+
+    _hyperparams = ('fuzzifier', 'a', 'b', 'k', 'init_method')
+    _fitted_array_names = ('U_', 'T_', 'gamma_')
+
+    def __init__(
+        self,
+        n_clusters: int,
+        fuzzifier: float = 2.0,
+        a: float = 1.0,
+        b: float = 1.0,
+        k: float = 1.0,
+        max_iter: int = 100,
+        epsilon: float = 1e-5,
+        init_method: str = 'fcm',
+        random_seed: int = 42,
+        distance_fn=None,
+        plot_steps: bool = False,
+        show_confidence: bool = True,
+        show_pca_variance: bool = True,
+        save_plot_path: str | None = None,
+        **kwargs
+    ):
+        # Validate model-specific parameters
+        if fuzzifier <= 1.0:
+            raise ValueError("fuzzifier must be > 1.0")
+        if a <= 0:
+            raise ValueError("a must be > 0")
+        if b <= 0:
+            raise ValueError("b must be > 0")
+        if k <= 0:
+            raise ValueError("k must be > 0")
+        if init_method != 'fcm':
+            raise ValueError("init_method must be 'fcm' for AFCM")
+
+        super().__init__(
+            n_clusters=n_clusters,
+            max_iter=max_iter,
+            epsilon=epsilon,
+            random_seed=random_seed,
+            distance_fn=distance_fn,
+            plot_steps=plot_steps,
+            show_confidence=show_confidence,
+            show_pca_variance=show_pca_variance,
+            save_plot_path=save_plot_path, **kwargs
+        )
+
+        self.fuzzifier = fuzzifier
         self.a = a
         self.b = b
-        self.objective_function = []
-        self.fit_cent = []
-        self.fit_clus = []
+        self.k = k
+        self.init_method = init_method
 
-        if self.set_U_matrix == 'fcm':
-            self.model1 = FCM(
-                data=self.data,
-                c=self.num_clusters,
-                m=self.fuzzifier,
-                num_iter=self.num_iter,
-                epsilon=self.epsilon,
-                ord=self.ord
-            )
-            self.model1.fit()
-            self.set_U_matrix = self.model1.predict_proba_(self.data)
-            self.set_centroids = self.model1.final_centroids()
+        # Model-specific fitted attributes
+        self.U_ = None
+        self.T_ = None
+        self.gamma_ = None
 
-        if not isinstance(self.data, np.ndarray):
-            self.data = np.array(self.data)
+    def _initialize(self, X: chex.Array):
+        """Initialize using FCM."""
+        n_samples = X.shape[0]
 
-        if self.set_U_matrix is not None:
-            if not isinstance(self.set_U_matrix, np.ndarray):
-                self.set_U_matrix = np.array(self.set_U_matrix)
-            if self.set_U_matrix.shape[1] != self.num_clusters:
-                raise ValueError(f'The input dim of fuzzy U matrix {self.set_U_matrix.shape[1]} '
-                                 f'!= number of cluster {self.num_clusters}')
-            if len(self.set_U_matrix) != self.data.shape[0]:
-                raise ValueError('There should one prototype per class')
-
-    def randomly_initialised_fuzzy_matrix(self):
-        return np.random.dirichlet(np.ones(self.num_clusters), size=self.data.shape[0])
-
-    def compute_centroids(self, fuzzy_matrix, t_matrix):
-
-        fuzzified_assignments = \
-            [(np.power([u_ik[i] for _, u_ik in enumerate(fuzzy_matrix)], self.fuzzifier) * self.a) +
-             (np.power([t_ik[i] for _, t_ik in enumerate(t_matrix)], 1) * self.b)
-             for i in range(self.num_clusters)]
-
-        sum_fuzzified_assigments = [np.sum(i) for i in fuzzified_assignments]
-
-        centroid_numerator = \
-            [[np.multiply(fuzzified_assignments[cluster_index][index], sample)
-              for index, sample in enumerate(self.data)]
-             for cluster_index in range(self.num_clusters)]
-
-        centroid = np.array(
-            [np.sum(v, axis=0) / sum_fuzzified_assigments[i]
-             for i, v in enumerate(centroid_numerator)]
+        # Initialize using FCM
+        fcm = FCM(
+            n_clusters=self.n_clusters,
+            fuzzifier=self.fuzzifier,
+            max_iter=self.max_iter,
+            epsilon=self.epsilon,
+            random_seed=self.random_seed,
+            distance_fn=self.distance_fn,
+            plot_steps=False
         )
+        fcm.fit(X)
 
-        return centroid
+        U = fcm.U_
+        centroids = fcm.centroids_
 
-    def compute_gamma(self, fuzzy_matrix, centriods):
+        # Initialize T as zeros
+        T = jnp.zeros((n_samples, self.n_clusters))
 
-        fuzzified_assignments = \
-            [np.power([u_ik[i] for _, u_ik in enumerate(fuzzy_matrix)], self.fuzzifier)
-             for i in range(self.num_clusters)]
+        return U, T, centroids
 
-        sum_fuzzified_assigments = [np.sum(i) for i in fuzzified_assignments]
+    @partial(jit, static_argnums=(0,))
+    def _compute_gamma(
+        self, X: chex.Array, U: chex.Array, centroids: chex.Array
+    ) -> chex.Array:
+        """Compute gamma using Euclidean distance (not squared!).
 
-        centroid_numerator = [
-            [np.multiply(fuzzified_assignments[cluster_index][index],
-                         euclidean_distance(sample, centriods[cluster_index])) for
-             index, sample in enumerate(self.data)] for cluster_index in range(self.num_clusters)]
+        γ_j = k·Σ_i(u_ij^m · d_ij) / Σ_i(u_ij^m)
+        """
+        D_sq = self.distance_fn(X, centroids)
+        D = jnp.sqrt(jnp.maximum(D_sq, 1e-10))  # Euclidean distance
 
-        gamma = np.array(
-            [np.sum(v, axis=0) * self.k / sum_fuzzified_assigments[i]
-             for i, v in enumerate(centroid_numerator)]
-        )
+        U_fuzz = jnp.power(U, self.fuzzifier)
+
+        numerator = jnp.sum(U_fuzz * D, axis=0)
+        denominator = jnp.sum(U_fuzz, axis=0)
+
+        gamma = self.k * numerator / denominator
 
         return gamma
 
-    def update_fuzzy_matrix(self, centroids, u_matrix, fuzzifier):
-        initial_u_matrix = u_matrix
-        for i in range(len(self.data)):
-            denomenator = 0
-            for j in range(self.num_clusters):
-                denomenator += np.power(
-                    1 / euclidean_distance(centroids[j], self.data[i]), 2 / (fuzzifier - 1))
-            for j in range(self.num_clusters):
-                uik_new = np.power(1 / euclidean_distance(centroids[j], self.data[i]),
-                                   2 / (fuzzifier - 1)) / denomenator
-                initial_u_matrix[i][j] = uik_new
-        return initial_u_matrix
+    @partial(jit, static_argnums=(0,))
+    def _update_T(
+        self, X: chex.Array, centroids: chex.Array, gamma: chex.Array
+    ) -> chex.Array:
+        """Update typicality matrix with exponential and parameter b.
 
-    def update_tipicality_matrix(self, centroids, g_matrix, t_matrix):
-        initial_t_matrix = t_matrix
-        for i in range(len(self.data)):
-            for j in range(self.num_clusters):
-                tik_new = np.exp(
-                    -self.b * (squared_euclidean_distance(centroids[j], self.data[i]) / g_matrix[j])
-                )
-                initial_t_matrix[i][j] = tik_new
-        return initial_t_matrix
+        t_ij = exp(-b·d²_ij/γ_j)
+        """
+        D_sq = self.distance_fn(X, centroids)
+        D_sq = jnp.maximum(D_sq, 1e-10)
 
-    def _select_fuzzy_U_matrix(self):
-        if self.set_U_matrix is None:
-            return self.randomly_initialised_fuzzy_matrix()
-        return self.set_U_matrix
+        # Exponential update with b parameter
+        ratio = self.b * D_sq / gamma[None, :]
+        T = jnp.exp(-ratio)
 
-    def compute_objective_function_0(self, centroids, u_matrix, t_matrix):
-        objective_distance = \
-            np.sum([[squared_euclidean_distance(self.data[i], centroids[j]) *
-                     (self.a * np.power(u_matrix[i][j], self.fuzzifier) +
-                      t_matrix[i][j] * self.b)
-                     for i in range(len(self.data))] for j in range(self.num_clusters)])
+        return T
 
-        return objective_distance
+    @partial(jit, static_argnums=(0,))
+    def _update_U(
+        self, X: chex.Array, centroids: chex.Array
+    ) -> chex.Array:
+        """Update fuzzy membership matrix (standard FCM)."""
+        # Compute distances
+        D = self.distance_fn(X, centroids)
+        D = jnp.maximum(D, 1e-10)
 
-    def compute_objective_function_1(self, t_matrix, gamma):
-        objective_function = \
-            np.sum([gamma[j] * (np.sum([
-                (t_matrix[i][j] * np.log(t_matrix[i][j]) - t_matrix[i][j])
-                for i in range(len(self.data))])) for j in range(self.num_clusters)]
-                   )
+        # Compute power for FCM update
+        power = 1.0 / (self.fuzzifier - 1.0)
 
-        return objective_function
+        # Compute distance ratios
+        def compute_membership_row(distances_i):
+            ratios = distances_i[:, None] / distances_i[None, :]
+            powered_ratios = jnp.power(ratios, power)
+            denominators = jnp.sum(powered_ratios, axis=1)
+            memberships = 1.0 / denominators
+            return memberships
 
-    def compute_objective_function(self, centroids, gamma, u_matrix, t_matrix):
-        return self.compute_objective_function_0(centroids, u_matrix, t_matrix) + \
-            self.compute_objective_function_1(t_matrix=t_matrix, gamma=gamma)
+        U = jax.vmap(compute_membership_row)(D)
 
-    @staticmethod
-    def _distance_(samples, centroid):
-        return np.sum([euclidean_distance(sample, centroid) for index, sample in enumerate(samples)])
+        # Normalize
+        U = U / jnp.sum(U, axis=1, keepdims=True)
 
-    @staticmethod
-    def _nearest_centroids(sample, centroids):
-        return np.argmin([euclidean_distance(sample, centroid) for centroid in centroids])
+        return U
 
-    def _centroid_stability(self, centroids_num, centroids):
-        if self.ord is not None and self.epsilon is None:
-            distance = np.linalg.norm((centroids_num - centroids), ord=self.ord)
-            return distance == 0
-        if self.ord is not None and self.epsilon is not None:
-            distance = np.linalg.norm((centroids_num - centroids), ord=self.ord)
-            return distance <= self.epsilon
-        if self.ord is None and self.epsilon is None:
-            distance = [euclidean_distance(centroids_num[index], centroids[index]) for index in
-                        range(self.num_clusters)]
-            return np.sum(distance) == 0
-        if self.ord is None and self.epsilon is not None:
-            distance = [euclidean_distance(centroids_num[index], centroids[index]) for index in
-                        range(self.num_clusters)]
-            return np.sum(distance) <= self.epsilon
-        return None
+    @partial(jit, static_argnums=(0,))
+    def _compute_centroids(
+        self, X: chex.Array, U: chex.Array, T: chex.Array
+    ) -> chex.Array:
+        """Compute cluster centroids.
 
-    def _get_cluster_results(self, cluster_result):
-        labels = np.empty(self.data.shape[0])
-        for cluster_index, cluster in enumerate(cluster_result):
-            for sample_index in cluster:
-                labels[sample_index] = cluster_index
+        v_j = Σ_i[a·u_ij^m + b·t_ij]x_i / Σ_i[a·u_ij^m + b·t_ij]
+
+        Note: T is NOT raised to a power!
+        """
+        U_fuzz = jnp.power(U, self.fuzzifier)
+
+        # Combined weights: a·U^m + b·T
+        weights = self.a * U_fuzz + self.b * T
+
+        # Compute centroids
+        numerator = weights.T @ X
+        denominator = jnp.sum(weights, axis=0, keepdims=True).T
+
+        denominator = jnp.maximum(denominator, 1e-10)
+        centroids = numerator / denominator
+
+        return centroids
+
+    @partial(jit, static_argnums=(0,))
+    def _compute_objective(
+        self, X: chex.Array, U: chex.Array, T: chex.Array,
+        centroids: chex.Array, gamma: chex.Array
+    ) -> chex.Array:
+        """Compute AFCM objective function.
+
+        J = Σ_i Σ_j [d²_ij · (a·u_ij^m + b·t_ij)] +
+            Σ_j[γ_j · Σ_i(t_ij·log(t_ij) - t_ij)]
+        """
+        D_sq = self.distance_fn(X, centroids)
+        U_fuzz = jnp.power(U, self.fuzzifier)
+
+        # First term: Σ_i Σ_j [d²_ij · (a·u_ij^m + b·t_ij)]
+        weights = self.a * U_fuzz + self.b * T
+        term1 = jnp.sum(D_sq * weights)
+
+        # Second term: Σ_j[γ_j · Σ_i(t·log(t) - t)]
+        T_safe = jnp.maximum(T, 1e-10)
+        entropy_like = T * jnp.log(T_safe) - T
+        inner_sum = jnp.sum(entropy_like, axis=0)
+        term2 = jnp.sum(gamma * inner_sum)
+
+        objective = term1 + term2
+
+        return objective
+
+    @partial(jit, static_argnums=(0,))
+    def _iteration_step(
+        self, state: AFCMState, X: chex.Array
+    ) -> tuple[AFCMState, dict]:
+        """Single AFCM iteration step."""
+        # Update T
+        T_new = self._update_T(X, state.centroids, state.gamma)
+
+        # Update U
+        U_new = self._update_U(X, state.centroids)
+
+        # Update centroids
+        centroids_new = self._compute_centroids(X, U_new, T_new)
+
+        # Recompute gamma with new U and centroids
+        gamma_new = self._compute_gamma(X, U_new, centroids_new)
+
+        # Compute objective
+        objective = self._compute_objective(X, U_new, T_new, centroids_new, gamma_new)
+
+        # Check convergence
+        centroid_change = jnp.linalg.norm(centroids_new - state.centroids, ord='fro')
+        converged = centroid_change <= self.epsilon
+
+        new_state = AFCMState(
+            centroids=centroids_new,
+            U=U_new,
+            T=T_new,
+            gamma=gamma_new,
+            objective=objective,
+            iteration=state.iteration + 1,
+            converged=converged
+        )
+
+        metrics = {
+            'objective': objective,
+            'centroid_change': centroid_change,
+            'converged': converged
+        }
+
+        return new_state, metrics
+
+    def _build_info(self, state, iteration):
+        labels = jnp.argmax(state.U, axis=1)
+        weights = jnp.max(state.U * state.T, axis=1)
+        return {
+            'centroids': state.centroids, 'labels': labels,
+            'weights': weights, 'iteration': iteration,
+            'objective': float(state.objective), 'max_iter': self.max_iter,
+        }
+
+    def fit(self, X: chex.Array, initial_centroids=None, resume=False) -> Self:
+        """Fit AFCM model to data."""
+        if resume and initial_centroids is not None:
+            raise ValueError("Cannot use both resume=True and initial_centroids")
+
+        X = self._validate_input(X)
+
+        if resume:
+            self._check_fitted()
+            centroids_init = self.centroids_
+            U_init = self._update_U(X, centroids_init)
+            gamma_init = self._compute_gamma(X, U_init, centroids_init)
+            T_init = self._update_T(X, centroids_init, gamma_init)
+        elif initial_centroids is not None:
+            centroids_init = self._validate_initial_centroids(X, initial_centroids)
+            U_init = self._update_U(X, centroids_init)
+            gamma_init = self._compute_gamma(X, U_init, centroids_init)
+            T_init = self._update_T(X, centroids_init, gamma_init)
+        else:
+            U_init, T_init, centroids_init = self._initialize(X)
+            gamma_init = self._compute_gamma(X, U_init, centroids_init)
+
+        initial_objective = self._compute_objective(X, U_init, T_init, centroids_init, gamma_init)
+        initial_state = AFCMState(
+            centroids=centroids_init, U=U_init, T=T_init, gamma=gamma_init,
+            objective=initial_objective, iteration=0, converged=False
+        )
+
+        final_state, self.history_ = self._run_training(X, initial_state)
+
+        # Store results
+        self.centroids_ = final_state.centroids
+        self.U_ = final_state.U
+        self.T_ = final_state.T
+        self.gamma_ = final_state.gamma
+        self.n_iter_ = int(final_state.iteration)
+        self.objective_ = float(final_state.objective)
+        self.objective_history_ = self.history_['objective']
+
+        return self
+
+    def predict(self, X: chex.Array) -> chex.Array:
+        """Predict cluster labels for new data."""
+        self._check_fitted()
+
+        U = self._update_U(X, self.centroids_)
+        labels = jnp.argmax(U, axis=1)
         return labels
 
-    def initialise_cluster(self, centroids):
-        clusters = [[] for _ in range(len(centroids))]
-        for index, sample in enumerate(self.data):
-            centroid_index = self._nearest_centroids(sample, centroids)
-            clusters[centroid_index].append(index)
-        return clusters
+    def predict_proba(self, X: chex.Array) -> chex.Array:
+        """Predict fuzzy membership probabilities."""
+        self._check_fitted()
 
-    def get_centroids(self):
-        u_matrix = self._select_fuzzy_U_matrix()
-        t_matrix = self.randomly_initialised_fuzzy_matrix()
-        centroids = self.compute_centroids(u_matrix, t_matrix)
-        for num in range(self.num_iter):
-            centroids_old = centroids
-            clusters = self.initialise_cluster(centroids_old)
-            self.get_plot(clusters, centroids_old)
-            u_matrix = self.update_fuzzy_matrix(centroids_old, u_matrix, self.fuzzifier)
-            gamma = self.compute_gamma(u_matrix, centroids)
-            t_matrix = self.update_tipicality_matrix(centroids, gamma, t_matrix)
-            obj = self.compute_objective_function(centroids, gamma, u_matrix, t_matrix)
-            self.objective_function.append(obj)
-            centroids = self.compute_centroids(u_matrix, t_matrix)
-            self.get_plot(clusters, centroids)
-            if self._centroid_stability(centroids_old, centroids) or num == self.num_iter - 1:
-                self.fit_clus.append(clusters)
-                self.fit_cent.append(centroids)
-                break
+        X = jnp.asarray(X)
 
-    def get_centroids_(self):
-        u_matrix = self._select_fuzzy_U_matrix()
-        t_matrix = self.randomly_initialised_fuzzy_matrix()
-        centroids = self.compute_centroids(u_matrix, t_matrix)
-        optimize = True
-        while optimize:
-            clusters = self.initialise_cluster(centroids)
-            self.get_plot(clusters, centroids)
-            gamma = self.compute_gamma(u_matrix, centroids)
-            t_matrix = self.update_tipicality_matrix(centroids, gamma, t_matrix)
-            u_matrix = self.update_fuzzy_matrix(centroids, u_matrix, self.fuzzifier)
-            centroid_num = centroids
-            centroids = self.compute_centroids(u_matrix, t_matrix)
-            self.objective_function.append(self.compute_objective_function(
-                centroids,
-                gamma,
-                u_matrix,
-                t_matrix)
-            )
-            self.get_plot(clusters, centroids)
-            if self._centroid_stability(centroid_num, centroids):
-                self.fit_clus.append(clusters)
-                self.fit_cent.append(centroids)
-                optimize = False
+        U = self._update_U(X, self.centroids_)
+        return U
 
-    def get_plot(self, cluster, centroids):
-        if self.plot_steps:
-            for _, v in enumerate(cluster):
-                plt.scatter(self.data[v][:, 0], self.data[v][:, 1])
-            for cent in centroids:
-                plt.scatter(cent[0], cent[1], marker='v', color='black')
-            plt.pause(0.3)
-            plt.clf()
+    def get_typicality(self, X: chex.Array) -> chex.Array:
+        """Compute typicality values."""
+        self._check_fitted()
 
-    def get_objective_function(self):
-        """
+        X = jnp.asarray(X)
 
-        :return: The objective function
-        """
-
-        return self.objective_function
-
-    def predict(self):
-        """
-
-        :return: array-like: cluster labels of the input dataset
-        """
-        return self._get_cluster_results(self.fit_clus[0])
-
-    def predict_new(self, x):
-        """
-
-        :param x: array-like: input vector
-        :return: cluster label of input vector
-        """
-
-        return [
-            self._nearest_centroids(sample, self.fit_cent[0]) for index, sample in enumerate(x)
-        ]
-
-    def get_clusters_index_cent(self):
-        return self.fit_clus, self.fit_cent
-
-    def fit(self):
-        """
-
-        :return: fits the data set to the model
-        """
-        if self.num_iter is None:
-            return self.get_centroids_()
-        return self.get_centroids()
-
-    def get_distance_space(self, x):
-        """
-
-        :param x: array-like: input vector
-        :return: distance space of the input vector
-        """
-
-        distance_space = \
-            np.array([[euclidean_distance(sample, centroid)
-                       for centroid in self.get_clusters_index_cent()[1][0]]
-                      for index, sample in enumerate(x)])
-        return distance_space
-
-    def predict_proba_(self, x):
-        """
-
-        :param x: array-like: input vector
-        :return: confidence of predicted label
-        """
-        final_matrix = np.zeros((len(x), self.num_clusters))
-        for i in range(len(x)):
-            denomenator = 0
-            for j in range(self.num_clusters):
-                denomenator += np.power(
-                    1 / euclidean_distance(self.fit_cent[0][j], x[i]), 2 / (self.fuzzifier - 1))
-            for j in range(self.num_clusters):
-                uik_new = np.power(1 / euclidean_distance(self.fit_cent[0][j], x[i]),
-                                   2 / (self.fuzzifier - 1)) / denomenator
-                final_matrix[i][j] = uik_new
-        return final_matrix
-
-    def get_prototypes(self, labels):
-        """
-
-        :param labels: array-like: labels of the input data set
-        :return: prototypes for the GNPC classifier design
-        """
-        self.fit()
-        clusters_indices, centroids = self.fit_clus[0], self.fit_cent[0]
-        clusters = [labels[cluster_with_indices] for cluster_with_indices in clusters_indices]
-        max_occurrence = [dict(Counter(cluster)) for _, cluster in enumerate(clusters)]
-        reposition_centroids = np.argsort([max(count, key=count.get) for count in max_occurrence])
-        prototypes = centroids[reposition_centroids]
-        return prototypes, centroids
-
-    def final_centroids(self):
-        """
-
-        :return: learned centroids
-        """
-        return self.fit_cent[0]
+        T = self._update_T(X, self.centroids_, self.gamma_)
+        return T

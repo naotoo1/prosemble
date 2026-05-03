@@ -1,257 +1,434 @@
 """
-Implementation of Hard c Means alternating optimisation algorithm
+JAX-based Hard C-Means (HCM) / K-Means clustering implementation.
+
+This module provides a GPU-accelerated implementation of Hard C-Means (K-Means)
+using JAX with JIT compilation for high performance.
 """
 
-# Author: Nana Abeka Otoo <abekaotoo@gmail.com>
-# License: MIT
+from typing import NamedTuple, Self
+from functools import partial
 
-
-from collections import Counter
-
+import jax
+import jax.numpy as jnp
 import numpy as np
-from matplotlib import pyplot as plt
-from prosemble.core.distance import (
-    euclidean_distance,
-    squared_euclidean_distance
-)
+import chex
+from jax import jit, lax
+
+from prosemble.models.base import FuzzyClusteringBase, ScanFitMixin
 
 
-class Kmeans:
+class HCMState(NamedTuple):
+    """Immutable state for HCM iteration.
+
+    Attributes:
+        centroids: Cluster centroids, shape (n_clusters, n_features)
+        labels: Hard cluster assignments, shape (n_samples,)
+        objective: Sum of squared distances to assigned centroids
+        iteration: Current iteration number
+        converged: Whether algorithm has converged
     """
-    params:
+    centroids: chex.Array
+    labels: chex.Array
+    objective: chex.Array
+    iteration: int
+    converged: bool
 
-    data : array-like:
-            input data
 
-    c: int:
-        number of clusters
+class HCM(ScanFitMixin, FuzzyClusteringBase):
+    """
+    Hard C-Means (K-Means) clustering with JAX.
 
-    num_iter: int:
-        number of iterations
+    HCM assigns each data point to exactly one cluster (hard assignment) based on
+    the nearest centroid. This is the classic K-Means algorithm.
 
-    epsilon: float:
-        small difference for termination of algorithm
+    Algorithm:
+    1. Initialize centroids randomly or from data
+    2. Assign each point to nearest centroid: label_i = argmin_j ||x_i - v_j||²
+    3. Update centroids as mean of assigned points: v_j = (1/|C_j|) Σ_{i∈C_j} x_i
+    4. Repeat until convergence
 
-    ord:  {non-zero int, inf, -inf, ‘fro’, ‘nuc’}
-          order of the norm
+    Objective function:
+        J = Σ_i ||x_i - v_{label_i}||²
 
-    set_prototypes: array-like:
-        initial prototypes to  begin with. default is None
+    Parameters
+    ----------
+    n_clusters : int
+        Number of clusters (must be >= 2)
+    max_iter : int, default=100
+        Maximum number of iterations
+    epsilon : float, default=1e-5
+        Convergence threshold for centroid change
+    init_method : {'random', 'kmeans++'}, default='random'
+        Method for initializing centroids
+    random_seed : int, default=42
+        Random seed for reproducibility
+    plot_steps : bool, default=False
+        Whether to visualize clustering progress (2D PCA projection)
+    show_confidence : bool, default=True
+        Whether to show confidence in visualization
+    show_pca_variance : bool, default=True
+        Whether to show PCA variance in visualization
+    save_plot_path : str, optional
+        Path to save final plot
 
-    plot_steps: bool:
-        True for visualisation of training and False otherwise
+    Attributes
+    ----------
+    centroids_ : array, shape (n_clusters, n_features)
+        Final cluster centroids
+    labels_ : array, shape (n_samples,)
+        Hard cluster assignments for training data
+    n_iter_ : int
+        Number of iterations until convergence
+    objective_ : float
+        Final objective function value
+    objective_history_ : array
+        Objective value at each iteration
 
+    Examples
+    --------
+    >>> import jax.numpy as jnp
+    >>> from prosemble.models import HCM
+    >>> X = jnp.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8]])
+    >>> model = HCM(n_clusters=2, random_seed=42)
+    >>> model.fit(X)
+    >>> labels = model.predict(X)
     """
 
-    def __init__(self, data, c, num_inter, epsilon, ord, set_prototypes=None, plot_steps=False):
-        self.data = data
-        self.num_clusters = c
-        self.num_iter = num_inter
-        self.epsilon = epsilon
-        self.set_prototypes = set_prototypes
-        self.plot_steps = plot_steps
-        self.ord = ord
-        self.objective_function = []
-        self.fit_cent = []
-        self.fit_clus = []
+    _hyperparams = ('init_method',)
+    _fitted_array_names = ('labels_',)
 
-        if not isinstance(self.data, np.ndarray):
-            self.data = np.array(self.data)
+    def __init__(
+        self,
+        n_clusters: int,
+        max_iter: int = 100,
+        epsilon: float = 1e-5,
+        init_method: str = 'random',
+        random_seed: int = 42,
+        distance_fn=None,
+        plot_steps: bool = False,
+        show_confidence: bool = True,
+        show_pca_variance: bool = True,
+        save_plot_path: str | None = None,
+        **kwargs
+    ):
+        # Validate model-specific parameters
+        if init_method not in ['random', 'kmeans++']:
+            raise ValueError("init_method must be 'random' or 'kmeans++'")
 
-        if set_prototypes is not None:
-            if not isinstance(self.set_prototypes, np.ndarray):
-                self.set_prototypes = np.array(self.set_prototypes)
-            if self.set_prototypes.shape[1] != self.data.shape[1]:
-                raise ValueError(f'The input dim of prototypes {self.set_prototypes.shape[1]} '
-                                 f'!= input dim of data {self.data.shape[1]}')
-            if len(self.set_prototypes) != self.num_clusters:
-                raise ValueError('There should one prototype per class')
-
-    def _select_centroids_randomly(self):
-        random_samples_feature_space = np.random.choice(
-            self.data.shape[0],
-            self.num_clusters, replace=False
-        )
-        return [self.data[index] for index in random_samples_feature_space]
-
-    def _select_centroids(self):
-        if self.set_prototypes is None:
-            return self._select_centroids_randomly()
-        return self.set_prototypes
-
-    def _initialise_cluster(self, centroids):
-        clusters = [[] for _ in range(self.num_clusters)]
-        for index, sample in enumerate(self.data):
-            centroid_index = self._nearest_centroids(sample, centroids)
-            clusters[centroid_index].append(index)
-        return clusters
-
-    def compute_objective_function(self, clusters, centroids):
-        return np.sum(
-            [self._distance_(self.data[clusters[i]], centroids[i]) for i in range(len(centroids))]
+        super().__init__(
+            n_clusters=n_clusters,
+            max_iter=max_iter,
+            epsilon=epsilon,
+            random_seed=random_seed,
+            distance_fn=distance_fn,
+            plot_steps=plot_steps,
+            show_confidence=show_confidence,
+            show_pca_variance=show_pca_variance,
+            save_plot_path=save_plot_path, **kwargs
         )
 
-    @staticmethod
-    def _distance_(samples, centroid):
-        return np.sum(
-            [squared_euclidean_distance(sample, centroid) for index, sample in enumerate(samples)]
-        )
+        self.init_method = init_method
 
-    @staticmethod
-    def _nearest_centroids(sample, centroids):
-        return np.argmin([euclidean_distance(sample, centroid) for centroid in centroids])
+        # Model-specific fitted attributes
+        self.labels_ = None
 
-    def _updated_centroids(self, clusters):
-        centroids = np.zeros((self.num_clusters, self.data.shape[1]))
-        for cluster_index, cluster in enumerate(clusters):
-            try:
-                mean_cluster = np.nanmean(self.data[cluster], axis=0)
-                centroids[cluster_index] = mean_cluster
-            except RuntimeWarning:
-                continue
+    def _initialize_centroids(self, X: chex.Array) -> chex.Array:
+        """Initialize cluster centroids.
+
+        Args:
+            X: Input data, shape (n_samples, n_features)
+
+        Returns:
+            Initial centroids, shape (n_clusters, n_features)
+        """
+        n_samples = X.shape[0]
+
+        if self.init_method == 'random':
+            # Randomly select data points as initial centroids
+            indices = jax.random.choice(
+                self.key, n_samples, shape=(self.n_clusters,), replace=False
+            )
+            centroids = X[indices]
+        elif self.init_method == 'kmeans++':
+            # K-means++ initialization
+            centroids = self._kmeans_plusplus_init(X)
+        else:
+            raise ValueError(f"Unknown init_method: {self.init_method}")
+
         return centroids
 
-    def _centroid_stability(self, centroids_num, centroids):
-        if self.ord is not None and self.epsilon is None:
-            distance = np.linalg.norm((centroids_num - centroids), ord=self.ord)
-            return np.sum(distance) == 0
-        if self.ord is not None and self.epsilon is not None:
-            distance = np.linalg.norm((centroids_num - centroids), ord=self.ord)
-            return np.sum(distance) <= self.epsilon
-        if self.ord is None and self.epsilon is None:
-            distance = [euclidean_distance(centroids_num[index], centroids[index]) for index in
-                        range(self.num_clusters)]
-            return np.sum(distance) == 0
-        if self.ord is None and self.epsilon is not None:
-            distance = [euclidean_distance(centroids_num[index], centroids[index]) for index in
-                        range(self.num_clusters)]
-            return np.sum(distance) <= self.epsilon
-        return None
+    def _kmeans_plusplus_init(self, X: chex.Array) -> chex.Array:
+        """Initialize centroids using K-means++ algorithm.
 
-    def _get_cluster_results(self, cluster_result):
-        labels = np.empty(self.data.shape[0])
-        for cluster_index, cluster in enumerate(cluster_result):
-            for sample_index in cluster:
-                labels[sample_index] = cluster_index
+        Args:
+            X: Input data, shape (n_samples, n_features)
+
+        Returns:
+            Initial centroids, shape (n_clusters, n_features)
+        """
+        n_samples, n_features = X.shape
+        centroids = jnp.zeros((self.n_clusters, n_features))
+
+        # Choose first centroid uniformly at random
+        key1, key2 = jax.random.split(self.key)
+        first_idx = jax.random.choice(key1, n_samples)
+        centroids = centroids.at[0].set(X[first_idx])
+
+        # Choose remaining centroids with probability proportional to distance squared
+        for i in range(1, self.n_clusters):
+            # Compute distances to nearest existing centroid
+            D_sq = self.distance_fn(X, centroids[:i])  # (n_samples, i)
+            min_distances = jnp.min(D_sq, axis=1)  # (n_samples,)
+
+            # Probability proportional to squared distance
+            probs = min_distances / jnp.sum(min_distances)
+
+            # Choose next centroid
+            key2, subkey = jax.random.split(key2)
+            next_idx = jax.random.choice(subkey, n_samples, p=probs)
+            centroids = centroids.at[i].set(X[next_idx])
+
+        return centroids
+
+    @partial(jit, static_argnums=(0,))
+    def _assign_labels(self, X: chex.Array, centroids: chex.Array) -> chex.Array:
+        """Assign each data point to nearest centroid (hard assignment).
+
+        Args:
+            X: Input data, shape (n_samples, n_features)
+            centroids: Current centroids, shape (n_clusters, n_features)
+
+        Returns:
+            labels: Hard cluster assignments, shape (n_samples,)
+        """
+        # Compute squared distances to all centroids
+        D_sq = self.distance_fn(X, centroids)  # (n_samples, n_clusters)
+
+        # Assign to nearest centroid
+        labels = jnp.argmin(D_sq, axis=1)  # (n_samples,)
+
         return labels
 
-    def get_centroids(self):
-        centroids = self._select_centroids()
-        for num in range(self.num_iter):
-            clusters = self._initialise_cluster(centroids)
-            self.objective_function.append(self.compute_objective_function(clusters, centroids))
-            self.get_plot(clusters, centroids)
-            centroids_num = centroids
-            centroids = self._updated_centroids(clusters)
-            self.get_plot(clusters, centroids)
-            if self._centroid_stability(centroids_num, centroids) or num == self.num_iter - 1:
-                self.fit_clus.append(clusters)
-                self.fit_cent.append(centroids)
-                break
+    @partial(jit, static_argnums=(0,))
+    def _update_centroids(self, X: chex.Array, labels: chex.Array) -> chex.Array:
+        """Update centroids as mean of assigned points.
 
-    def get_centroids_(self):
-        centroids = self._select_centroids()
-        optimize = True
-        while optimize:
-            clusters = self._initialise_cluster(centroids)
-            self.objective_function.append(self.compute_objective_function(clusters, centroids))
-            self.get_plot(clusters, centroids)
-            centroids_num = centroids
-            centroids = self._updated_centroids(clusters)
-            self.get_plot(clusters, centroids)
-            if self._centroid_stability(centroids_num, centroids):
-                self.fit_clus.append(clusters)
-                self.fit_cent.append(centroids)
-                optimize = False
+        Args:
+            X: Input data, shape (n_samples, n_features)
+            labels: Hard cluster assignments, shape (n_samples,)
 
-    def get_plot(self, cluster, centroids):
-        if self.plot_steps:
-            for _, v in enumerate(cluster):
-                plt.scatter(self.data[v][:, 0], self.data[v][:, 1])
-            for cent in centroids:
-                plt.scatter(cent[0], cent[1], marker='v', color='black')
-            plt.pause(0.3)
-            plt.clf()
-
-    def get_objective_function(self):
+        Returns:
+            centroids: Updated centroids, shape (n_clusters, n_features)
         """
+        n_features = X.shape[1]
 
-        :return: The objective function
+        def compute_centroid(cluster_idx):
+            # Get mask for points assigned to this cluster
+            mask = labels == cluster_idx  # (n_samples,)
+
+            # Count points in cluster
+            count = jnp.sum(mask)
+
+            # Compute mean of assigned points
+            # If no points assigned, keep old centroid (handled by where)
+            sum_points = jnp.sum(jnp.where(mask[:, None], X, 0.0), axis=0)
+            centroid = jnp.where(count > 0, sum_points / count, 0.0)
+
+            return centroid
+
+        # Vectorize over clusters
+        centroids = jax.vmap(compute_centroid)(jnp.arange(self.n_clusters))
+
+        return centroids
+
+    @partial(jit, static_argnums=(0,))
+    def _compute_objective(
+        self, X: chex.Array, labels: chex.Array, centroids: chex.Array
+    ) -> chex.Array:
+        """Compute HCM objective function.
+
+        Objective: J = Σ_i ||x_i - v_{label_i}||²
+
+        Args:
+            X: Input data, shape (n_samples, n_features)
+            labels: Hard cluster assignments, shape (n_samples,)
+            centroids: Current centroids, shape (n_clusters, n_features)
+
+        Returns:
+            objective: Scalar objective value
         """
+        # Get assigned centroids for each point
+        assigned_centroids = centroids[labels]  # (n_samples, n_features)
 
-        return self.objective_function
+        # Compute squared distances
+        diff = X - assigned_centroids
+        sq_distances = jnp.sum(diff * diff, axis=1)  # (n_samples,)
 
-    def predict(self):
+        # Sum over all points
+        objective = jnp.sum(sq_distances)
+
+        return objective
+
+    @partial(jit, static_argnums=(0,))
+    def _iteration_step(
+        self, state: HCMState, X: chex.Array
+    ) -> tuple[HCMState, dict]:
+        """Single HCM iteration step.
+
+        Args:
+            state: Current HCM state
+            X: Input data, shape (n_samples, n_features)
+
+        Returns:
+            new_state: Updated HCM state
+            metrics: Dictionary of metrics for this iteration
         """
+        # Assign labels based on current centroids
+        labels = self._assign_labels(X, state.centroids)
 
-        :return: The cluster labels for the input data set
-        """
-        return self._get_cluster_results(self.fit_clus[0])
+        # Update centroids based on new assignments
+        new_centroids = self._update_centroids(X, labels)
 
-    def predict_new(self, x):
-        """
+        # Compute objective
+        objective = self._compute_objective(X, labels, new_centroids)
 
-        :param x: input data
-        :return: predicts the cluster label of the input data
-        """
-        return [
-            self._nearest_centroids(sample, self.fit_cent[0]) for index, sample in enumerate(x)
-        ]
+        # Check convergence based on centroid change
+        centroid_change = jnp.linalg.norm(new_centroids - state.centroids, ord='fro')
+        converged = centroid_change <= self.epsilon
 
-    def get_clusters_index_cent(self):
-        return self.fit_clus, self.fit_cent
-
-    def fit(self):
-        """
-
-        :return: fits the model to input data for training
-        """
-        if self.num_iter is None:
-            return self.get_centroids_()
-        return self.get_centroids()
-
-    def get_distance_space(self, x):
-        """
-
-        :param x: input vector
-        :return: distance space for the given input vector
-        """
-        distance_space = np.array(
-            [[euclidean_distance(sample, centroid)
-              for centroid in self.get_clusters_index_cent()[1][0]]
-             for index, sample in enumerate(x)]
+        new_state = HCMState(
+            centroids=new_centroids,
+            labels=labels,
+            objective=objective,
+            iteration=state.iteration + 1,
+            converged=converged
         )
-        return distance_space
 
-    def predict_proba_(self, x):
-        """
+        metrics = {
+            'objective': objective,
+            'centroid_change': centroid_change,
+            'converged': converged
+        }
 
-        :param x: input vector
-        :return: returns the confidence of the prediction
-        """
-        init_proba = np.zeros((len(x), self.num_clusters))
-        prediction = self.predict_new(x)
-        for index, results in enumerate(prediction):
-            init_proba[index][results] = 1
-        return init_proba
+        return new_state, metrics
 
-    def get_prototypes(self, labels):
-        """
+    def _build_info(self, state, iteration):
+        weights = jnp.ones(state.labels.shape[0])
+        return {
+            'centroids': state.centroids, 'labels': state.labels,
+            'weights': weights, 'iteration': iteration,
+            'objective': float(state.objective), 'max_iter': self.max_iter,
+        }
 
-        :param labels: array-like
-        :return: prototypes used as component initializer  for GNPC classifier design
-        """
-        self.fit()
-        clusters_indices, centroids = self.fit_clus[0], self.fit_cent[0]
-        clusters = [labels[cluster_with_indices] for cluster_with_indices in clusters_indices]
-        max_occurrence = [dict(Counter(cluster)) for _, cluster in enumerate(clusters)]
-        reposition_centroids = np.argsort([max(count, key=count.get) for count in max_occurrence])
-        prototypes = centroids[reposition_centroids]
-        return prototypes, centroids
+    def fit(self, X: chex.Array, initial_centroids=None, resume=False) -> Self:
+        """Fit HCM model to data.
 
-    def final_centroids(self):
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Training data
+        initial_centroids : array-like, shape (n_clusters, n_features), optional
+            Pre-computed centroids for warm starting
+        resume : bool, default=False
+            If True, resume from the model's current fitted state
         """
+        X = self._validate_input(X)
 
-        :return: learned centroids
+        if resume and initial_centroids is not None:
+            raise ValueError("Cannot use both resume=True and initial_centroids")
+
+        # Initialize centroids
+        if resume:
+            self._check_fitted()
+            centroids_init = self.centroids_
+        elif initial_centroids is not None:
+            centroids_init = self._validate_initial_centroids(X, initial_centroids)
+        else:
+            centroids_init = self._initialize_centroids(X)
+
+        initial_labels = self._assign_labels(X, centroids_init)
+        initial_objective = self._compute_objective(X, initial_labels, centroids_init)
+        initial_state = HCMState(
+            centroids=centroids_init, labels=initial_labels,
+            objective=initial_objective, iteration=0, converged=False
+        )
+
+        final_state, self.history_ = self._run_training(X, initial_state)
+
+        # Store results
+        self.centroids_ = final_state.centroids
+        self.labels_ = final_state.labels
+        self.n_iter_ = int(final_state.iteration)
+        self.objective_ = float(final_state.objective)
+        self.objective_history_ = self.history_['objective']
+
+        return self
+
+    def predict(self, X: chex.Array) -> chex.Array:
+        """Predict cluster labels for new data.
+
+        Args:
+            X: Input data, shape (n_samples, n_features)
+
+        Returns:
+            labels: Cluster labels, shape (n_samples,)
+
+        Raises:
+            ValueError: If model has not been fitted
         """
-        return self.fit_cent[0]
+        self._check_fitted()
+
+        X = jnp.asarray(X)
+
+        labels = self._assign_labels(X, self.centroids_)
+        return labels
+
+    def predict_proba(self, X: chex.Array) -> chex.Array:
+        """Predict hard cluster membership (one-hot encoding).
+
+        For HCM, this returns a one-hot encoding of the cluster assignments,
+        with 1.0 for the assigned cluster and 0.0 for others.
+
+        Args:
+            X: Input data, shape (n_samples, n_features)
+
+        Returns:
+            membership: One-hot encoded assignments, shape (n_samples, n_clusters)
+
+        Raises:
+            ValueError: If model has not been fitted
+        """
+        self._check_fitted()
+
+        labels = self.predict(X)
+        n_samples = X.shape[0]
+
+        # Create one-hot encoding
+        membership = jnp.zeros((n_samples, self.n_clusters))
+        membership = membership.at[jnp.arange(n_samples), labels].set(1.0)
+
+        return membership
+
+    def get_distance_space(self, X: chex.Array) -> chex.Array:
+        """Compute distances to all cluster centroids.
+
+        Args:
+            X: Input data, shape (n_samples, n_features)
+
+        Returns:
+            distances: Euclidean distances to centroids, shape (n_samples, n_clusters)
+
+        Raises:
+            ValueError: If model has not been fitted
+        """
+        self._check_fitted()
+
+        X = jnp.asarray(X)
+
+        # Compute squared distances
+        D_sq = self.distance_fn(X, self.centroids_)
+
+        # Return Euclidean distances
+        distances = jnp.sqrt(D_sq)
+
+        return distances

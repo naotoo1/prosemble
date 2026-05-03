@@ -1,0 +1,211 @@
+Models API Reference
+====================
+
+All models are importable from ``prosemble.models``.
+
+Supervised LVQ
+--------------
+
+.. autoclass:: prosemble.models.GLVQ
+   :members: fit, predict, predict_proba, save, load
+   :undoc-members:
+
+.. autoclass:: prosemble.models.GRLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.GMLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.LGMLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.GTLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.CELVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.LVQ1
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.LVQ21
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.MedianLVQ
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RSLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+Deep and Siamese Variants
+--------------------------
+
+.. autoclass:: prosemble.models.LVQMLN
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.PLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SiameseGLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SiameseGMLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SiameseGTLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+Image LVQ
+---------
+
+.. autoclass:: prosemble.models.ImageGLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.ImageGMLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.ImageGTLVQ
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+Classification-By-Components
+-----------------------------
+
+.. autoclass:: prosemble.models.CBC
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.ImageCBC
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+Supervised Neural Gas
+---------------------
+
+.. autoclass:: prosemble.models.SRNG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+Fuzzy Clustering
+----------------
+
+.. autoclass:: prosemble.models.FCM
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.PCM
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.FPCM
+   :members: fit, predict, predict_proba, get_typicality
+   :undoc-members:
+
+.. autoclass:: prosemble.models.PFCM
+   :members: fit, predict, predict_proba, get_typicality
+   :undoc-members:
+
+.. autoclass:: prosemble.models.AFCM
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.HCM
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.IPCM
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.IPCM2
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+Kernel Clustering
+^^^^^^^^^^^^^^^^^
+
+.. autoclass:: prosemble.models.KFCM
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.KPCM
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.KFPCM
+   :members: fit, predict, predict_proba, get_typicality
+   :undoc-members:
+
+.. autoclass:: prosemble.models.KPFCM
+   :members: fit, predict, predict_proba, get_typicality
+   :undoc-members:
+
+.. autoclass:: prosemble.models.KAFCM
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.KIPCM
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.KIPCM2
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+Topology-Preserving Models
+--------------------------
+
+.. autoclass:: prosemble.models.NeuralGas
+   :members: fit, predict, transform
+   :undoc-members:
+
+.. autoclass:: prosemble.models.GrowingNeuralGas
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.KohonenSOM
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.HeskesSOM
+   :members: fit, predict
+   :undoc-members:
+
+Utility Models
+--------------
+
+.. autoclass:: prosemble.models.KMeansPlusPlus
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.KNN
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.NPC
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.BGPC
+   :members: fit, predict
+   :undoc-members:

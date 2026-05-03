@@ -14,7 +14,7 @@ import numpy as np
 try:
     import jax
     import jax.numpy as jnp
-    from prosemble.core.distance_jax import (
+    from prosemble.core import (
         euclidean_distance_matrix,
         squared_euclidean_distance_matrix,
         manhattan_distance_matrix,

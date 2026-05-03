@@ -74,6 +74,44 @@ Utilities
    :members:
    :undoc-members:
 
+Pipeline
+--------
+
+.. autoclass:: prosemble.core.pipeline.NotFittedError
+   :members:
+   :undoc-members:
+
+.. autoclass:: prosemble.core.pipeline.TransformerMixin
+   :members:
+   :undoc-members:
+
+.. autoclass:: prosemble.core.pipeline.StandardScaler
+   :members: fit, transform, fit_transform, get_params, set_params
+   :undoc-members:
+
+.. autoclass:: prosemble.core.pipeline.MinMaxScaler
+   :members: fit, transform, fit_transform, get_params, set_params
+   :undoc-members:
+
+.. autoclass:: prosemble.core.pipeline.PCA
+   :members: fit, transform, fit_transform, get_params, set_params
+   :undoc-members:
+
+.. autoclass:: prosemble.core.pipeline.Pipeline
+   :members: fit, predict, predict_proba, transform, fit_transform, get_params, set_params
+   :undoc-members:
+
+Model Selection
+---------------
+
+.. autofunction:: prosemble.core.model_selection.clone
+
+.. autofunction:: prosemble.core.model_selection.cross_val_score
+
+.. autoclass:: prosemble.core.model_selection.GridSearchCV
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
 Datasets
 --------
 

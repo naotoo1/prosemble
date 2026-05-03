@@ -31,6 +31,8 @@ from .losses import (
     nllr_loss, rslvq_loss, cross_entropy_lvq_loss, margin_loss,
     neural_gas_energy,
 )
+from .pipeline import Pipeline, StandardScaler, MinMaxScaler, PCA, TransformerMixin
+from .model_selection import GridSearchCV, cross_val_score, clone
 
 try:
     import jax
@@ -69,4 +71,8 @@ __all__ = _distance_all + [
     'glvq_loss', 'glvq_loss_with_transfer', 'lvq1_loss', 'lvq21_loss',
     'nllr_loss', 'rslvq_loss', 'cross_entropy_lvq_loss', 'margin_loss',
     'neural_gas_energy',
+    # Pipeline & Transformers
+    'Pipeline', 'StandardScaler', 'MinMaxScaler', 'PCA', 'TransformerMixin',
+    # Model Selection
+    'GridSearchCV', 'cross_val_score', 'clone',
 ]

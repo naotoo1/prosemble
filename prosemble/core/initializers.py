@@ -280,8 +280,8 @@ def literal_init(values):
 def stratified_noise_init(X, y, n_per_class, key, noise_std=0.1):
     """Initialize prototypes by selecting samples per class and adding noise.
 
-    Corresponds to ProtoTorch's SSCI (Stratified Subspace Component Initializer)
-    with noise injection.
+    Combines stratified selection with Gaussian noise injection for
+    diverse initial prototypes.
 
     Parameters
     ----------
@@ -385,7 +385,7 @@ def pure_positive_reasonings_init(n_components, n_classes, key=None):
     """Initialize CBC reasoning matrices with pure positive evidence.
 
     Each component maps to exactly one class with high positive evidence
-    and low negative evidence. Matches ProtoTorch's PurePositiveReasoningsInitializer.
+    and low negative evidence.
 
     Parameters
     ----------

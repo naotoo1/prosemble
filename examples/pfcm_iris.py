@@ -1,43 +1,71 @@
-"""Possibilistic Fuzzy C-Means clustering example using Iris Data."""
+"""
+Example: Possibilistic Fuzzy C-Means (PFCM) clustering with JAX on Iris dataset.
 
-# import prosemble package
-import prosemble as ps
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
+PFCM combines fuzzy membership (U) and typicality (T) to handle both overlapping
+clusters and outliers effectively.
+"""
 
-# load some data
-X, y = load_iris(return_X_y=True)
+import jax.numpy as jnp
+from prosemble.datasets import load_iris_jax
+from prosemble.models import PFCM
 
-# Get data split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+# Load Iris dataset (JAX arrays directly)
+dataset = load_iris_jax()
+X_jax, y = dataset.input_data, dataset.labels
 
-# Setup the model
-pfcm = ps.models.PFCM(
-    data=X_train,
-    c=3,
-    m=2,
-    eta=2,
-    k=1,
-    a=2,
-    b=2,
-    num_iter=1000,
-    epsilon=0.00001,
-    ord='fro',
-    set_U_matrix='fcm',
-    plot_steps=True
+print("Running PFCM on Iris dataset...")
+print(f"Data shape: {X_jax.shape}")
+print(f"Number of clusters: 3")
+print()
+
+# Create and fit PFCM model with visualization
+model = PFCM(
+    n_clusters=3,
+    fuzzifier=2.0,
+    eta=2.0,
+    a=1.0,
+    b=1.0,
+    k=1.0,
+    max_iter=100,
+    epsilon=1e-5,
+    init_method='fcm',
+    random_seed=42,
+    plot_steps=True,
+    show_confidence=True,
+    show_pca_variance=True,
+    save_plot_path='pfcm_iris_final.png'
 )
 
-# fit the model
-pfcm.fit()
+model.fit(X_jax)
 
-# summary of the objective function
-print(pfcm.get_objective_function())
+print(f"Training completed in {model.n_iter_} iterations")
+print(f"Final objective: {model.objective_:.4f}")
+print(f"Centroids shape: {model.centroids_.shape}")
+print(f"Membership (U) shape: {model.U_.shape}")
+print(f"Typicality (T) shape: {model.T_.shape}")
+print()
 
-# Get the clustering results of the input vector
-print(pfcm.predict())
+# Get predictions
+labels = model.predict(X_jax)
+U = model.predict_proba(X_jax)
+T = model.predict_typicality(X_jax)
 
-# Make new prediction
-print(pfcm.predict_new(x=X_test))
+print(f"Predicted labels shape: {labels.shape}")
+print(f"Unique labels: {jnp.unique(labels)}")
+print()
 
-# Get the learned centroids
-print(pfcm.final_centroids())
+# Show membership and typicality statistics
+print("Membership (U) statistics:")
+print(f"  Mean: {jnp.mean(U):.4f}")
+print(f"  Row sums (should be ~1.0): {jnp.mean(jnp.sum(U, axis=1)):.4f}")
+print()
+
+print("Typicality (T) statistics:")
+print(f"  Mean: {jnp.mean(T):.4f}")
+print(f"  Row sums (not necessarily 1.0): {jnp.mean(jnp.sum(T, axis=1)):.4f}")
+print()
+
+# Show objective history
+objectives = model.get_objective_history()
+print(f"Objective function history (first 5): {objectives[:5]}")
+print(f"Objective function history (last 5): {objectives[-5:]}")

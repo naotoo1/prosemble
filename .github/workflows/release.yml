@@ -1,0 +1,106 @@
+name: Release to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[all]
+      - name: Run tests
+        run: pytest tests/ -x -q --ignore=tests/test_oc_glvq.py --ignore=tests/test_oc_glvq_ng.py --ignore=tests/test_oc_glvq_variants.py --ignore=tests/test_svq_occ.py --ignore=tests/test_svq_occ_r.py --ignore=tests/test_svq_occ_variants.py --ignore=tests/test_smng.py --ignore=tests/test_slng.py --ignore=tests/test_stng.py --ignore=tests/test_riemannian_neural_gas.py
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build tools
+        run: pip install build
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Verify distributions
+        run: |
+          pip install twine
+          twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  nix-build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Build with Nix
+        run: |
+          nix-build -E '
+            let
+              pkgs = import <nixpkgs> {};
+              python = pkgs.python312;
+            in python.pkgs.buildPythonPackage {
+              pname = "prosemble";
+              version = "1.0.0";
+              pyproject = true;
+              src = ./.;
+              build-system = with python.pkgs; [ setuptools setuptools-scm ];
+              dependencies = with python.pkgs; [
+                numpy scikit-learn matplotlib
+                jax jaxlib chex optax
+              ];
+              doCheck = false;
+              pythonImportsCheck = [ "prosemble" "prosemble.models" "prosemble.core" ];
+            }
+          '
+
+  github-release:
+    needs: [publish-pypi, nix-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" dist/* --generate-notes

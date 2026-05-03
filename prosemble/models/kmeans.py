@@ -1,199 +1,214 @@
 """
-Implementation of Kmeans++ Alternating Optimisation Algorithm
+JAX implementation of K-means++ (Hard C-Means with K-means++ initialization)
+
+This is a GPU-accelerated implementation using JAX.
+K-means++ provides better initialization than random selection.
 """
 
 # Author: Nana Abeka Otoo <abekaotoo@gmail.com>
 # License: MIT
 
-import numpy as np
-from prosemble.core.distance import euclidean_distance
-from .hcm import Kmeans
+from typing import Self
+
+import jax
+import jax.numpy as jnp
+import chex
+from jax import jit
+from functools import partial
+
+from prosemble.core.distance import batch_squared_euclidean
+from .hcm import HCM
 
 
+class KMeansPlusPlus:
+    """
+    K-means++ clustering with JAX (Hard C-Means with smart initialization)
 
-def softmin_funct(x):
+    K-means++ is an algorithm for choosing initial cluster centers with
+    better convergence properties than random initialization.
+
+    Algorithm:
+    1. Choose first center uniformly at random from data points
+    2. For each data point x, compute D(x), the distance to nearest center
+    3. Choose next center with probability proportional to D(x)²
+    4. Repeat until k centers are chosen
+    5. Run standard k-means (HCM) with these initial centers
+
+    Parameters
+    ----------
+    n_clusters : int, default=3
+        Number of clusters
+    max_iter : int, default=100
+        Maximum number of iterations
+    epsilon : float, default=1e-5
+        Convergence tolerance
+    random_seed : int, optional
+        Random seed for reproducibility
+    plot_steps : bool, default=False
+        Whether to enable visualization (requires LiveVisualizer)
+
+    Attributes
+    ----------
+    centroids_ : array of shape (n_clusters, n_features)
+        Cluster centers
+    labels_ : array of shape (n_samples,)
+        Labels of each point
+    n_iter_ : int
+        Number of iterations run
+    objective_ : float
+        Final objective function value
     """
 
-    :param x: input vector
-    :return: softmin function
-    """
-    return np.exp(-x) / np.exp(-x).sum()
-
-
-class kmeans_plusplus:
-    """
-    params:
-
-    data : array-like:
-            input data
-
-    c: int:
-        number of clusters
-
-    num_iter: int:
-        number of iterations
-
-    epsilon: float:
-        small difference for termination of algorithm
-
-    ord:  {non-zero int, inf, -inf, ‘fro’, ‘nuc’}
-          order of the norm
-
-    plot_steps: bool:
-        True for visualisation of training and False otherwise
-
-    """
-
-    def __init__(self, data, c, num_inter, epsilon, ord, plot_steps=False):
-
-        self.data = data
-        self.num_clusters = c
-        self.num_iter = num_inter
+    def __init__(
+        self,
+        n_clusters: int = 3,
+        max_iter: int = 100,
+        epsilon: float = 1e-5,
+        random_seed: int | None = None,
+        plot_steps: bool = False
+    ):
+        self.n_clusters = n_clusters
+        self.max_iter = max_iter
         self.epsilon = epsilon
-        self.ord = ord
+        self.random_seed = random_seed
         self.plot_steps = plot_steps
 
-        self.model = Kmeans(
-            data=self.data,
-            c=self.num_clusters,
-            num_inter=self.num_iter,
+        # Fitted attributes
+        self.centroids_ = None
+        self.labels_ = None
+        self.n_iter_ = 0
+        self.objective_ = None
+        self._hcm = None
+
+    def _kmeans_plusplus_init(self, X: chex.Array, key: chex.PRNGKey) -> chex.Array:
+        """
+        Initialize centroids using k-means++ algorithm.
+
+        Uses a Python loop (not lax.fori_loop) because each iteration
+        changes the number of selected centroids.
+
+        Parameters
+        ----------
+        X : array of shape (n_samples, n_features)
+            Training data
+        key : PRNGKey
+            Random key for JAX
+
+        Returns
+        -------
+        centroids : array of shape (n_clusters, n_features)
+            Initial cluster centers
+        """
+        n_samples, n_features = X.shape
+
+        # Step 1: Choose first center uniformly at random
+        key, subkey = jax.random.split(key)
+        first_idx = jax.random.choice(subkey, n_samples)
+        centroids = X[first_idx:first_idx+1]  # Shape: (1, n_features)
+
+        # Steps 2-4: Choose remaining centers
+        for _ in range(self.n_clusters - 1):
+            # Compute squared distances to nearest centroid
+            D_sq = batch_squared_euclidean(X, centroids)  # (n_samples, n_centers)
+            min_distances = jnp.min(D_sq, axis=1)  # (n_samples,)
+
+            # Sample proportional to squared distance
+            key, subkey = jax.random.split(key)
+            probs = min_distances / jnp.maximum(jnp.sum(min_distances), 1e-10)
+            next_idx = jax.random.choice(subkey, n_samples, p=probs)
+            new_cent = X[next_idx:next_idx+1]
+            centroids = jnp.concatenate([centroids, new_cent], axis=0)
+
+        return centroids
+
+    def fit(self, X: chex.Array) -> Self:
+        """
+        Fit K-means++ model to data.
+
+        Parameters
+        ----------
+        X : array of shape (n_samples, n_features)
+            Training data
+
+        Returns
+        -------
+        self : object
+            Fitted estimator
+        """
+        # Initialize centroids using k-means++
+        seed = self.random_seed if self.random_seed is not None else 42
+        key = jax.random.PRNGKey(seed)
+        initial_centroids = self._kmeans_plusplus_init(X, key)
+
+        # Use HCM with k-means++ initialization
+        self._hcm = HCM(
+            n_clusters=self.n_clusters,
+            max_iter=self.max_iter,
             epsilon=self.epsilon,
-            ord=self.ord,
-            set_prototypes=self.get_prototypes_(),
+            random_seed=self.random_seed,
             plot_steps=self.plot_steps
         )
 
-        if not isinstance(self.plot_steps, bool):
-            raise ValueError('must be a True')
+        # Pass k-means++ centroids to HCM
+        self._hcm.fit(X, initial_centroids=initial_centroids)
 
-    def _get_random_initial_prototype(self):
-        random_selection = np.random.choice(self.data.shape[0], replace=False)
-        return self.data[random_selection]
+        # Copy results
+        self.centroids_ = self._hcm.centroids_
+        self.labels_ = self._hcm.labels_
+        self.n_iter_ = self._hcm.n_iter_
+        self.objective_ = self._hcm.objective_
 
-    def _get_sample_max_prob_margin(self):
-        sample_index = np.argmax([
-            euclidean_distance(sample, self._get_random_initial_prototype())
-            for index, sample in enumerate(self.data)])
-        return self.data[sample_index]
+        return self
 
-    @staticmethod
-    def _nearest_centroids(sample, centroids):
-        return np.argmin([euclidean_distance(sample, centroid) for centroid in centroids])
-
-    def initialise_cluster(self, centroids):
-        clusters = [[] for _ in range(len(centroids))]
-        for index, sample in enumerate(self.data):
-            centroid_index = self._nearest_centroids(sample, centroids)
-            clusters[centroid_index].append(index)
-        return clusters
-
-    def compute_objective_function(self, clusters, centroids):
-        return np.sum(
-            [self._distance_(self.data[clusters[i]], centroids[i]) for i in range(len(centroids))]
-        )
-
-    @staticmethod
-    def _distance_(samples, centroid):
-        return np.sum(
-            [euclidean_distance(sample, centroid) for index, sample in enumerate(samples)]
-        )
-
-    @staticmethod
-    def not_nearest_centroids(samples, centroid):
-        try:
-            distance = [euclidean_distance(sample, centroid) for sample in samples]
-            return [max(distance), np.argmax(distance)]
-        except ValueError:
-            pass
-        return None
-
-    def get_prototypes_(self):
-        prototypes = [self._get_random_initial_prototype(), self._get_sample_max_prob_margin()]
-        while len(prototypes) < self.num_clusters:
-            clusters = self.initialise_cluster(centroids=prototypes)
-            not_nearest_centroids = [
-                self.not_nearest_centroids(samples=self.data[clusters[index]], centroid=prototype)
-                for index, prototype in enumerate(prototypes)
-            ]
-            try:
-                selected_distance = np.argmax(
-                    [distance_info[0] for index, distance_info in enumerate(not_nearest_centroids)]
-                )
-                prototypes.append(self.data[not_nearest_centroids[selected_distance][1]])
-            except TypeError:
-                prototypes = [
-                    self._get_random_initial_prototype(), self._get_sample_max_prob_margin()
-                ]
-        return np.array(prototypes)
-
-    def fit(self):
+    def predict(self, X: chex.Array) -> chex.Array:
         """
+        Predict cluster labels for samples.
 
-        :return: fits the training data to the model
+        Parameters
+        ----------
+        X : array of shape (n_samples, n_features)
+            New data to predict
+
+        Returns
+        -------
+        labels : array of shape (n_samples,)
+            Index of the cluster each sample belongs to
         """
-        return self.model.fit()
+        if self._hcm is None:
+            raise ValueError("Model not fitted yet. Call fit() first.")
+        return self._hcm.predict(X)
 
-    def get_objective_function(self):
+    def get_objective_history(self):
+        """Get the objective function history."""
+        if self._hcm is None:
+            raise ValueError("Model not fitted yet. Call fit() first.")
+        return self._hcm.get_objective_history()
+
+    def final_centroids(self):
+        """Get final cluster centroids."""
+        if self.centroids_ is None:
+            raise ValueError("Model not fitted yet. Call fit() first.")
+        return self.centroids_
+
+    def get_distance_space(self, X: chex.Array) -> chex.Array:
         """
+        Compute distance space (distances to all centroids).
 
-        :return: objective function of the training
+        Parameters
+        ----------
+        X : array of shape (n_samples, n_features)
+            Input data
+
+        Returns
+        -------
+        distances : array of shape (n_samples, n_clusters)
+            Distances to each centroid
         """
+        if self._hcm is None:
+            raise ValueError("Model not fitted yet. Call fit() first.")
+        return self._hcm.get_distance_space(X)
 
-        return self.model.get_objective_function()
 
-    def predict(self):
-        """
-
-        :return: cluster labels of the given input data
-        """
-        return self.model.predict()
-
-    def predict_new(self, x):
-        """
-
-        :param x: input vector
-        :return: cluster label of input vector
-        """
-        return self.model.predict_new(x)
-
-    def get_centroids(self):
-        """
-
-        :return: learned centroids
-        """
-
-        return self.model.get_clusters_index_cent()[1]
-
-    def get_distance_space(self, x):
-        """
-
-        :param x: input vector
-        :return: distance space for the given input vector
-        """
-        return self.model.get_distance_space(x)
-
-    # classification aspect
-    def get_prototypes_class(self, labels):
-        """
-
-        :param labels: array-like: labels of the input data set
-        :return: component initializer for GNPC classifier designs
-        """
-        return self.model.get_prototypes(labels)
-
-    def predict_proba(self, x):
-        """
-
-        :param x: input vector
-        :return: confidence of the given prediction
-        """
-        return self.model.predict_proba_(x)
-
-    def get_proba(self, x):
-        """
-
-        :param x: input vector
-        :return: soft confidence for the given prediction
-        """
-        distance_space = self.get_distance_space(x)
-        return np.array([softmin_funct(v) for _, v in enumerate(distance_space)])
+# Alias for backward compatibility
+kmeans_plusplus_jax = KMeansPlusPlus
+Kmeans = KMeansPlusPlus

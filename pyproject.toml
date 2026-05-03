@@ -1,9 +1,9 @@
 [project]
 name = "prosemble"
-version = "0.9.2"
+version = "1.0.0"
 description = "A python project for prototype-based machine learning models"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
     { name = "Nana Abeka Otoo", email = "nanaabekaotoo@gmail.com" }
@@ -13,35 +13,33 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Education",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12"
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
 dependencies = [
     "numpy",
     "scikit-learn",
-    "pandas",
-    "scipy",
     "matplotlib"
 ]    
 
 [project.urls]
 Homepage = "https://github.com/naotoo1/prosemble"
+Documentation = "https://prosemble.readthedocs.io"
 Repository = "https://github.com/naotoo1/prosemble"
 Issues = "https://github.com/naotoo1/prosemble/issues"
 
 [tool]
+[tool.setuptools.package-data]
+prosemble = ["py.typed"]
+
 [tool.setuptools.packages.find]
 include = ["prosemble"]
 exclude = ["docs*"]
@@ -50,7 +48,7 @@ exclude = ["docs*"]
 universal = true
 
 [tool.bumpversion]
-current_version = "0.9.2"
+current_version = "1.0.0"
 commit = true
 tag = true
 
@@ -76,15 +74,31 @@ dev = [
     "tox",
     "coverage",
     "Sphinx",
+    "furo",
+    "sphinx-copybutton",
     "twine",
     "autopep8",
     "pytest"
 ]
+jax = [
+    "jax>=0.4.23",
+    "jaxlib>=0.4.23",
+    "chex>=0.1.85",
+    "optax>=0.2.0",
+]
+jax-cuda12 = [
+    "jax[cuda12]>=0.4.23",
+    "chex>=0.1.85",
+    "optax>=0.2.0",
+]
+docs = [
+    "Sphinx",
+    "furo",
+    "sphinx-copybutton",
+]
 all = [
     "numpy",
     "scikit-learn",
-    "pandas",
-    "scipy",
     "matplotlib",
     "black",
     "black[jupyter]",
@@ -96,11 +110,25 @@ all = [
     "tox",
     "coverage",
     "Sphinx",
+    "furo",
+    "sphinx-copybutton",
     "twine",
     "autopep8",
-    "pytest"
+    "pytest",
+    "jax>=0.4.23",
+    "jaxlib>=0.4.23",
+    "chex>=0.1.85",
+    "optax>=0.2.0",
+]
+export = [
+    "flatbuffers>=25.12.19",
 ]
 
 [build-system]
 requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "python-docx>=1.2.0",
+]

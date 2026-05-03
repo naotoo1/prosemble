@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[all]
+      - name: Run tests
+        run: pytest tests/ -x -q --tb=short --ignore=tests/test_oc_glvq.py --ignore=tests/test_oc_glvq_ng.py --ignore=tests/test_oc_glvq_variants.py --ignore=tests/test_svq_occ.py --ignore=tests/test_svq_occ_r.py --ignore=tests/test_svq_occ_variants.py --ignore=tests/test_smng.py --ignore=tests/test_slng.py --ignore=tests/test_stng.py --ignore=tests/test_riemannian_neural_gas.py
+
+  build:
+    name: Build package
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install build tools
+        run: pip install build twine
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Verify distributions
+        run: twine check dist/*

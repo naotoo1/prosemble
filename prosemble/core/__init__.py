@@ -1,6 +1,72 @@
 """
-Prosemble core
+Prosemble core - JAX-based implementations
 """
 
+# Import from JAX modules
 from .distance import *
+from .kernel import *
+from .utils import *
 from .initializers import *
+from .visualizer import LiveVisualizer
+from .callbacks import Callback, VisualizationCallback
+from .quantization import MetadataCollectorMixin, QuantizationMixin
+from .vis import (
+    plot_umatrix, plot_hit_map, plot_component_planes, plot_som_grid,
+    plot_som_loss, plot_som_summary,
+    plot_decision_boundary_2d, plot_prototype_trajectory, plot_relevance_matrix,
+    plot_lvq_summary,
+    plot_neural_gas,
+)
+
+# Phase 1 core primitives
+from .activations import identity, sigmoid_beta, swish_beta, get_activation
+from .pooling import (
+    stratified_min_pooling, stratified_sum_pooling,
+    stratified_max_pooling, stratified_prod_pooling,
+)
+from .competitions import wtac, knnc, cbcc
+from .similarities import gaussian_similarity, cosine_similarity_matrix, euclidean_similarity, rank_scaled_gaussian
+from .losses import (
+    glvq_loss, glvq_loss_with_transfer, lvq1_loss, lvq21_loss,
+    nllr_loss, rslvq_loss, cross_entropy_lvq_loss, margin_loss,
+    neural_gas_energy,
+)
+
+try:
+    import jax
+    JAX_AVAILABLE = True
+except ImportError:
+    JAX_AVAILABLE = False
+    import warnings
+    warnings.warn("JAX is required for prosemble. Install with: pip install jax")
+
+from .distance import __all__ as _distance_all
+
+__all__ = _distance_all + [
+    'LiveVisualizer',
+    'Callback',
+    'VisualizationCallback',
+    # Visualization
+    'plot_umatrix', 'plot_hit_map', 'plot_component_planes', 'plot_som_grid',
+    'plot_som_loss', 'plot_som_summary',
+    'plot_decision_boundary_2d', 'plot_prototype_trajectory', 'plot_relevance_matrix',
+    'plot_lvq_summary',
+    'plot_neural_gas',
+    'MetadataCollectorMixin',
+    'QuantizationMixin',
+    'JAX_AVAILABLE',
+    # Activations
+    'identity', 'sigmoid_beta', 'swish_beta', 'get_activation',
+    # Pooling
+    'stratified_min_pooling', 'stratified_sum_pooling',
+    'stratified_max_pooling', 'stratified_prod_pooling',
+    # Competitions
+    'wtac', 'knnc', 'cbcc',
+    # Similarities
+    'gaussian_similarity', 'cosine_similarity_matrix', 'euclidean_similarity',
+    'rank_scaled_gaussian',
+    # Losses
+    'glvq_loss', 'glvq_loss_with_transfer', 'lvq1_loss', 'lvq21_loss',
+    'nllr_loss', 'rslvq_loss', 'cross_entropy_lvq_loss', 'margin_loss',
+    'neural_gas_energy',
+]

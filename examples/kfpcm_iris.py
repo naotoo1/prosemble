@@ -1,44 +1,55 @@
-"""Kernel Fuzzy Possibilistic C-Means clustering example using Iris Data."""
+"""
+Kernel Fuzzy Possibilistic C-Means clustering example using Iris Data with JAX.
 
-# import prosemble package
-import prosemble as ps
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
+This example demonstrates KFPCM with pure JAX implementation.
+"""
 
-# load some data
-X, y = load_iris(return_X_y=True)
-print(X.shape[0])
+import jax.numpy as jnp
+from prosemble.datasets import load_iris_jax
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import KFPCM
 
-# Get data split
-X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_size=10)
+# Load data (JAX arrays directly)
+dataset = load_iris_jax()
+X, y = dataset.input_data, dataset.labels
 
-# Setup the model
-kfpcm = ps.models.KFPCM(
-    data=X_train,
-    c=3,
-    num_iter=100,
-    epsilon=0.0001,
-    ord='fro',
-    m=2,
-    sigma=1,
-    eta=2,
-    set_centroids=None,
-    set_U_matrix='kfcm',
+# Train/test split (JAX-native)
+X_train, X_test, y_train, y_test = train_test_split_jax(
+    X, y, test_size=0.2, random_seed=42
+)
+
+print(f"Dataset: {X.shape}")
+print(f"Train: {X_train.shape}, Test: {X_test.shape}")
+
+# Setup KFPCM model
+kfpcm = KFPCM(
+    n_clusters=3,
+    fuzzifier=2.0,
+    eta=2.0,
+    sigma=1.0,
+    max_iter=100,
+    epsilon=1e-5,
+    init_method='kfcm',
+    random_seed=42,
     plot_steps=True
 )
 
-# fit the model
-kfpcm.fit()
+# Fit model
+print("\nTraining KFPCM...")
+kfpcm.fit(X_train)
 
-# summary of the objective function
-print(kfpcm.get_objective_function())
+# Results
+print(f"\nObjective History (last 5): {kfpcm.get_objective_history()[-5:]}")
+print(f"Converged in {kfpcm.n_iter_} iterations")
+print(f"Final objective: {kfpcm.objective_:.4f}")
 
-# Get the clustering results of the input vector
-print(kfpcm.predict())
+# Predictions
+train_labels = kfpcm.predict(X_train)
+test_labels = kfpcm.predict(X_test)
 
-# Make new prediction
-print(kfpcm.predict_new(x=X_test))
+print(f"\nTrain predictions: {train_labels.shape}")
+print(f"Test predictions: {test_labels.shape}")
 
-# Get the learned centroids
-print(kfpcm.final_centroids())
-
+# Centroids
+centroids = kfpcm.final_centroids()
+print(f"\nCentroids shape: {centroids.shape}")

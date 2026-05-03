@@ -1,37 +1,49 @@
-"""Basic Graded Possibilistic clustering example using Iris Data."""
+"""
+Bagging Gaussian Prototype Classifier example using Iris Data with JAX.
 
-# import prosemble package
-import prosemble as ps
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
+This example demonstrates BGPC with pure JAX implementation.
+"""
 
-# load some data
-X, y = load_iris(return_X_y=True)
+import jax.numpy as jnp
+from prosemble.datasets import load_iris_jax
+from prosemble.core.utils import train_test_split_jax, accuracy_score_jax
+from prosemble.models import BGPC
 
-# Get data split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+# Load data (JAX arrays directly)
+dataset = load_iris_jax()
+X, y = dataset.input_data, dataset.labels
 
-# Setup the model
-bgpc = ps.models.BGPC(
-    data=X_train,
-    c=3,
-    a_f=2,
-    b_f=0.5,
-    num_iter=100,
-    epsilon=0.00001,
-    ord='fro',
-    set_U_matrix='fcm',
-    plot_steps=True
+# Train/test split (JAX-native)
+X_train, X_test, y_train, y_test = train_test_split_jax(
+    X, y, test_size=0.3, random_seed=42
 )
 
-# fit the model
-bgpc.fit()
+print(f"Dataset: {X.shape}")
+print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
-# Get the clustering results of the input vector
-print(bgpc.predict())
+# Setup BGPC model
+bgpc = BGPC(
+    n_clusters=3,
+    max_iter=10,
+    alpha_init=1.0,
+    random_state=42
+)
 
-# Make new prediction
-print(bgpc.predict_new(x=X_test))
+# Fit model (unsupervised)
+print("\nTraining BGPC...")
+bgpc.fit(X_train)
 
-# Get the learned centroids
-print(bgpc.final_centroids())
+# Results
+print(f"\nTraining iterations: {bgpc.n_iter_}")
+
+# Predictions
+train_pred = bgpc.predict(X_train)
+test_pred = bgpc.predict(X_test)
+
+# Accuracy (comparing cluster assignments to true labels)
+train_acc = accuracy_score_jax(y_train, train_pred)
+test_acc = accuracy_score_jax(y_test, test_pred)
+
+print(f"\nTrain accuracy: {train_acc:.2%}")
+print(f"Test accuracy: {test_acc:.2%}")
+print(f"Centroids shape: {bgpc.centroids_.shape}")

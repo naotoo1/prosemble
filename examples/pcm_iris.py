@@ -1,40 +1,26 @@
-"""Possibilistic C-Means clustering example using Iris Data."""
+"""Possibilistic C-Means clustering example using Iris Data with JAX."""
 
-# import prosemble package
-import prosemble as ps
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
+import jax.numpy as jnp
+from prosemble.datasets import load_iris_jax
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import PCM
 
-# load some data
-X, y = load_iris(return_X_y=True)
+# Load data (JAX arrays directly)
+dataset = load_iris_jax()
+X, y = dataset.input_data, dataset.labels
 
-# Get data split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+# Train/test split (JAX-native)
+X_train, X_test, y_train, y_test = train_test_split_jax(X, y, test_size=0.2, random_seed=42)
 
-# Setup the model
-pcm = ps.models.PCM(
-    data=X_train,
-    c=3,
-    m=2,
-    k=0.001,
-    num_iter=1000,
-    epsilon=0.00001,
-    ord='fro',
-    set_U_matrix='fcm',
-    plot_steps=True
-)
+# Setup model
+pcm = PCM(n_clusters=3, fuzzifier=2.0, k=1.0, max_iter=100, epsilon=1e-5,
+          init_method='fcm', random_seed=42)
 
-# fit the model
-pcm.fit()
+# Fit model
+pcm.fit(X_train)
 
-# summary of the objective function
-print(pcm.get_objective_function())
-
-# Get the clustering results of the input vector
-print(pcm.predict())
-
-# Make new prediction
-print(pcm.predict_new(x=X_test))
-
-# Get the learned centroids
+# Results
+print(pcm.get_objective_history())
+print(pcm.predict(X_train))
+print(pcm.predict(X_test))
 print(pcm.final_centroids())

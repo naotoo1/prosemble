@@ -1,45 +1,57 @@
-"""Kernel Allied Fuzzy C-Means clustering example using Iris Data."""
+"""
+Kernel Allied Fuzzy C-Means clustering example using Iris Data with JAX.
 
-# import prosemble package
-import prosemble as ps
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
+This example demonstrates KAFCM with pure JAX implementation.
+"""
 
-# load some data
-X, y = load_iris(return_X_y=True)
-print(X.shape[0])
+import jax.numpy as jnp
+from prosemble.datasets import load_iris_jax
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import KAFCM
 
-# Get data split
-X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_size=10)
+# Load data (JAX arrays directly)
+dataset = load_iris_jax()
+X, y = dataset.input_data, dataset.labels
 
-# Setup the model
-kafcm = ps.models.KAFCM(
-    data=X_train,
-    c=3,
-    num_iter=1000,
-    epsilon=0.00001,
-    ord='fro',
-    m=2,
-    a=3,
-    b=3,
-    k=1,
-    sigma=1,
-    set_centroids='kfcm',
-    set_U_matrix='kfcm',
+# Train/test split (JAX-native)
+X_train, X_test, y_train, y_test = train_test_split_jax(
+    X, y, test_size=0.2, random_seed=42
+)
+
+print(f"Dataset: {X.shape}")
+print(f"Train: {X_train.shape}, Test: {X_test.shape}")
+
+# Setup KAFCM model
+kafcm = KAFCM(
+    n_clusters=3,
+    fuzzifier=2.0,
+    a=2.0,
+    b=2.0,
+    k=1.0,
+    sigma=1.0,
+    max_iter=100,
+    epsilon=1e-5,
+    init_method='fcm',
+    random_seed=42,
     plot_steps=True
 )
 
-# fit the model
-kafcm.fit()
+# Fit model
+print("\nTraining KAFCM...")
+kafcm.fit(X_train)
 
-# summary of the objective function
-print(kafcm.get_objective_function())
+# Results
+print(f"\nObjective History (last 5): {kafcm.get_objective_history()[-5:]}")
+print(f"Converged in {kafcm.n_iter_} iterations")
+print(f"Final objective: {kafcm.objective_:.4f}")
 
-# Get the clustering results of the input vector
-print(kafcm.predict())
+# Predictions
+train_labels = kafcm.predict(X_train)
+test_labels = kafcm.predict(X_test)
 
-# Make new prediction
-print(kafcm.predict_new(x=X_test))
+print(f"\nTrain predictions: {train_labels.shape}")
+print(f"Test predictions: {test_labels.shape}")
 
-# Get the learned centroids
-print(kafcm.final_centroids())
+# Centroids
+centroids = kafcm.final_centroids()
+print(f"\nCentroids shape: {centroids.shape}")

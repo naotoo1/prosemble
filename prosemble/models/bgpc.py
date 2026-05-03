@@ -1,349 +1,430 @@
 """
-Implementation of Basic Graded Possibilistic alternating optimisation algorithm
+JAX implementation of Bayesian Graded Possibilistic C-Means (BGPC)
+
+This is a GPU-accelerated implementation using JAX.
 """
 
 # Author: Nana Abeka Otoo <abekaotoo@gmail.com>
 # License: MIT
 
+from functools import partial
+from typing import NamedTuple, Self
 
-from collections import Counter
+import chex
+import jax
+import jax.numpy as jnp
+from jax import jit
+from jax import lax
 
-# import matplotlib
-import numpy as np
-from matplotlib import pyplot as plt
-
-# matplotlib.use('QtAgg')
-from prosemble.core.distance import euclidean_distance
-from .fcm import FCM
+from prosemble.core.distance import batch_squared_euclidean, batch_euclidean
 
 
-np.seterr(all='ignore')
+class BGPCState(NamedTuple):
+    """State for BGPC optimization loop"""
+    centroids: chex.Array
+    U: chex.Array
+    V: chex.Array
+    iteration: int
+    converged: bool
+    alpha: float
+    beta: float
 
 
 class BGPC:
     """
-    params:
+    Bayesian Graded Possibilistic C-Means (BGPC) with JAX
 
-    data : array-like:
-        input data
+    BGPC uses exponential weighting with time-decaying alpha and beta parameters.
 
-    c: int:
-        number of clusters
+    Algorithm:
+    1. V_ij = exp(-d(x_i, v_j) / β)
+    2. Compute Z_i based on V_i values and α
+    3. U_ij = V_ij / Z_i
+    4. Update centroids: v_j = Σ_i u_ij·x_i / Σ_i u_ij
+    5. Update β and α with decay schedules
 
-    num_iter: int:
-        number of iterations
-    a_f: float:
-        alpha parameter
-
-    b_f: float
-        beta parameter
-
-    epsilon: float:
-        small difference for termination of algorithm
-
-    ord:  {non-zero int, inf, -inf, ‘fro’, ‘nuc’}
-          order of the norm
-
-    set_U_matrix: array-like:
-        initial U matrix to  begin with. default is None
-
-    plot_steps: bool:
-        True for visualization of training steps and False otherwise
+    Parameters
+    ----------
+    n_clusters : int
+        Number of clusters
+    max_iter : int, default=100
+        Maximum number of iterations
+    tol : float, default=1e-4
+        Convergence tolerance
+    alpha_init : float, default=1.0
+        Initial alpha parameter
+    beta_init : float, default=0.1
+        Initial beta parameter (starting value for decay)
+    beta_final : float, default=10.0
+        Final beta parameter (ending value for decay)
+    init : str, default='fcm'
+        Initialization method: 'random', 'fcm', or 'kmeans++'
+    random_state : int, optional
+        Random seed for reproducibility
     """
 
-    def __init__(self, data, c, num_iter, a_f, b_f, epsilon, ord, set_centroids=None,
-                 set_U_matrix=None,
-                 plot_steps=False):
-        self.data = data
-        self.num_clusters = c
-        self.a_f = a_f
-        self.b_f = b_f
-        self.num_iter = num_iter
-        self.epsilon = epsilon
-        self.set_U_matrix = set_U_matrix
-        self.set_centroids = set_centroids
-        self.plot_steps = plot_steps
-        self.ord = ord
-        self.objective_function = []
-        self.fit_cent = []
-        self.fit_clus = []
-        self.b = []
-        self.a = []
+    def __init__(
+        self,
+        n_clusters: int = 3,
+        max_iter: int = 100,
+        tol: float = 1e-4,
+        alpha_init: float = 1.0,
+        beta_init: float = 0.1,
+        beta_final: float = 10.0,
+        init: str = 'fcm',
+        random_state: int | None = None
+    ):
+        self.n_clusters = n_clusters
+        self.max_iter = max_iter
+        self.tol = tol
+        self.alpha_init = alpha_init
+        self.beta_init = beta_init
+        self.beta_final = beta_final
+        self.init = init
+        self.random_state = random_state
 
-        if self.set_U_matrix == 'fcm':
-            self.model1 = FCM(
-                data=self.data,
-                c=self.num_clusters,
-                m=2,
-                num_iter=self.num_iter,
-                epsilon=self.epsilon,
-                ord=self.ord
+        # Fitted attributes
+        self.centroids_ = None
+        self.U_ = None
+        self.V_ = None
+        self.n_iter_ = 0
+        self.alpha_ = None
+        self.beta_ = None
+
+    @partial(jit, static_argnums=(0,))
+    def _compute_beta_decay(self, iteration: int) -> float:
+        """
+        Compute beta decay: β(t) = 0.1 * (β_f / 0.1)^(t/T)
+
+        β starts at 0.1 and grows to β_f over iterations
+        """
+        ratio = iteration / self.max_iter
+        beta = self.beta_init * jnp.power(self.beta_final / self.beta_init, ratio)
+        return beta
+
+    @partial(jit, static_argnums=(0,))
+    def _compute_alpha_decay(self, iteration: int) -> float:
+        """
+        Compute alpha decay: α(t) = (1 - β_f) * (1 + exp(t - T) + α_0)
+
+        α decays over iterations
+        """
+        alpha = (1 - self.beta_final) * (1 + jnp.exp(iteration - self.max_iter) + self.alpha_init)
+        return alpha
+
+    @partial(jit, static_argnums=(0,))
+    def _compute_V_matrix(self, X: chex.Array, centroids: chex.Array, beta: float) -> chex.Array:
+        """
+        Compute V matrix: V_ij = exp(-d(x_i, v_j) / β)
+
+        Uses Euclidean distance (not squared)
+        """
+        D_sq = batch_squared_euclidean(X, centroids)
+        D = jnp.sqrt(jnp.maximum(D_sq, 1e-10))
+        V = jnp.exp(-D / beta)
+        return V
+
+    @partial(jit, static_argnums=(0,))
+    def _compute_z_value(self, v_i: chex.Array, alpha: float) -> float:
+        """
+        Compute Z_i for a single data point based on V_i values
+
+        Logic from original:
+        - If Σ(v_ik^(1/α)) > 1: z_i = (Σ(v_ik^(1/α)))^α
+        - If Σ(v_ik^α) < 1: z_i = (Σ(v_ik^α))^(1/α)
+        - Otherwise: z_i = 1
+        """
+        v_pow_inv_alpha = jnp.power(v_i, 1.0 / alpha)
+        v_pow_alpha = jnp.power(v_i, alpha)
+
+        sum_inv = jnp.sum(v_pow_inv_alpha)
+        sum_alpha = jnp.sum(v_pow_alpha)
+
+        # Compute z based on conditions
+        z = jnp.where(
+            sum_inv > 1.0,
+            jnp.power(sum_inv, alpha),
+            jnp.where(
+                sum_alpha < 1.0,
+                jnp.power(sum_alpha, 1.0 / alpha),
+                1.0
             )
-            self.model1.fit()
-            self.set_U_matrix = self.model1.predict_proba_(self.data)
-            self.set_centroids = self.model1.final_centroids()
-
-        if not isinstance(self.data, np.ndarray):
-            self.data = np.array(self.data)
-
-        if self.set_U_matrix is not None:
-            if not isinstance(self.set_U_matrix, np.ndarray):
-                self.set_U_matrix = np.array(self.set_U_matrix)
-            if self.set_U_matrix.shape[1] != self.num_clusters:
-                raise ValueError(f'The input dim of fuzzy U matrix {self.set_U_matrix.shape[1]} '
-                                 f'!= number of cluster {self.num_clusters}')
-            if len(self.set_U_matrix) != self.data.shape[0]:
-                raise ValueError('There should one prototype per class')
-
-    def randomly_initialised_fuzzy_matrix(self):
-        return np.random.dirichlet(np.ones(self.num_clusters), size=self.data.shape[0])
-
-    def _select_centroids_randomly(self):
-        random_samples_feature_space = np.random.choice(
-            self.data.shape[0],
-            self.num_clusters,
-            replace=False
         )
-        return [self.data[index] for index in random_samples_feature_space]
+        return z
 
-    def compute_centroids(self, u_matrix):
+    @partial(jit, static_argnums=(0,))
+    def _compute_Z_list(self, V: chex.Array, alpha: float) -> chex.Array:
+        """Compute Z values for all data points"""
+        # Vectorized version using vmap
+        compute_z_vmap = jax.vmap(lambda v_i: self._compute_z_value(v_i, alpha))
+        Z = compute_z_vmap(V)
+        return Z
 
-        fuzzified_assignments = [
-            [u_ik[i] for _, u_ik in enumerate(u_matrix)]
-            for i in range(self.num_clusters)
-        ]
+    @partial(jit, static_argnums=(0,))
+    def _update_U_matrix(self, V: chex.Array, Z: chex.Array) -> chex.Array:
+        """
+        Update U matrix: U_ij = V_ij / Z_i
+        """
+        U = V / (Z[:, None] + 1e-10)
+        return U
 
-        sum_fuzzified_assignments = [np.sum(i) for i in fuzzified_assignments]
-
-        centroid_numerator = [
-            [np.multiply(fuzzified_assignments[cluster_index][index], sample)
-             for index, sample in enumerate(self.data)]
-            for cluster_index in range(self.num_clusters)
-        ]
-
-        centroids = np.array(
-            [np.sum(v, axis=0) / sum_fuzzified_assignments[i]
-             for i, v in enumerate(centroid_numerator)]
-        )
-
+    @partial(jit, static_argnums=(0,))
+    def _compute_centroids(self, X: chex.Array, U: chex.Array) -> chex.Array:
+        """
+        Compute centroids: v_j = Σ_i u_ij·x_i / Σ_i u_ij
+        """
+        numerator = U.T @ X
+        denominator = jnp.sum(U, axis=0, keepdims=True).T
+        centroids = numerator / jnp.maximum(denominator, 1e-10)
         return centroids
 
-    def compute_beta_decay(self, iter):
-        return 0.1 * np.power((self.b_f / 0.1), (iter / self.num_iter))
+    @partial(jit, static_argnums=(0,))
+    def _initialize_centroids_random(self, X: chex.Array, key: chex.PRNGKey) -> chex.Array:
+        """Random initialization"""
+        n_samples = X.shape[0]
+        indices = jax.random.choice(key, n_samples, shape=(self.n_clusters,), replace=False)
+        return X[indices]
 
-    def compute_alpha_decay(self, iter):
-        return (1 - self.b_f) * (1 + np.exp(iter - self.num_iter) + self.a_f)
+    @partial(jit, static_argnums=(0,))
+    def _initialize_centroids_kmeanspp(self, X: chex.Array, key: chex.PRNGKey) -> chex.Array:
+        """K-means++ initialization"""
+        n_samples = X.shape[0]
 
-    def compute_v_matrix(self, centroids, b, v_matrix):
-        initial_v_matrix = v_matrix
-        for i in range(len(self.data)):
-            for j in range(self.num_clusters):
-                exponent = np.exp((-euclidean_distance(centroids[j], self.data[i]) / b))
-                vik_new = exponent
-                initial_v_matrix[i][j] = vik_new
-        return initial_v_matrix
+        # First centroid: random
+        key, subkey = jax.random.split(key)
+        first_idx = jax.random.choice(subkey, n_samples)
+        centroids = X[first_idx:first_idx+1]
 
-    @staticmethod
-    def compute_z_list(v_matrix, a):
-        z_k = []
-        for _, v_ik in enumerate(v_matrix):
-            if np.sum(np.power(v_ik, 1 / a)) > 1:
-                z_k.append(np.power(np.sum(np.power(v_ik, 1 / a)), a))
-            if np.sum(np.power(v_ik, a)) < 1:
-                z_k.append(np.power(np.sum(np.power(v_ik, a)), 1 / a))
-            if np.sum(np.power(v_ik, a)) == 1:
-                z_k.append(1)
-            if np.sum(np.power(v_ik, 1 / a)) == 1:
-                z_k.append(1)
-        return z_k
+        # Remaining centroids
+        def body_fn(i, state):
+            cents, k = state
+            # Compute distances to nearest centroid
+            D_sq = batch_squared_euclidean(X, cents)
+            min_distances = jnp.min(D_sq, axis=1)
 
-    def update_u_matrix(self, v_matrix, z_list):
-        initial_u_matrix = v_matrix
-        for i in range(len(self.data)):
-            for j in range(self.num_clusters):
-                try:
-                    uik_new = v_matrix[i][j] / z_list[i]
-                    initial_u_matrix[i][j] = uik_new
-                except IndexError:
-                    pass
-        return initial_u_matrix
+            # Sample proportional to squared distance
+            k, subk = jax.random.split(k)
+            probs = min_distances / jnp.sum(min_distances)
+            next_idx = jax.random.choice(subk, n_samples, p=probs)
+            new_cent = X[next_idx:next_idx+1]
+            cents = jnp.concatenate([cents, new_cent], axis=0)
+            return cents, k
 
-    def _select_fuzzy_U_matrix(self):
-        if self.set_U_matrix is None:
-            return self.randomly_initialised_fuzzy_matrix()
-        return self.set_U_matrix
+        centroids, _ = lax.fori_loop(0, self.n_clusters - 1, body_fn, (centroids, key))
+        return centroids
 
-    @staticmethod
-    def _distance_(samples, centroid):
+    def _initialize_centroids_fcm(self, X: chex.Array) -> chex.Array:
+        """Initialize using FCM (requires importing FCM)"""
+        from .fcm import FCM
 
-        return np.sum(
-            [euclidean_distance(sample, centroid) for index, sample in enumerate(samples)]
+        random_seed = self.random_state if self.random_state is not None else 42
+        fcm = FCM(
+            n_clusters=self.n_clusters,
+            max_iter=self.max_iter,
+            random_seed=random_seed
+        )
+        fcm.fit(X)
+        return fcm.centroids_
+
+    def _initialize_centroids(self, X: chex.Array, key: chex.PRNGKey) -> chex.Array:
+        """Initialize centroids based on init method"""
+        if self.init == 'random':
+            return self._initialize_centroids_random(X, key)
+        elif self.init == 'kmeans++':
+            return self._initialize_centroids_kmeanspp(X, key)
+        elif self.init == 'fcm':
+            return self._initialize_centroids_fcm(X)
+        else:
+            raise ValueError(f"Unknown init method: {self.init}")
+
+    @partial(jit, static_argnums=(0,))
+    def _check_convergence(self, centroids_old: chex.Array, centroids_new: chex.Array) -> bool:
+        """Check if centroids have converged"""
+        diff = jnp.linalg.norm(centroids_new - centroids_old)
+        return diff <= self.tol
+
+    @partial(jit, static_argnums=(0,))
+    def _iteration_step(self, state: BGPCState, X: chex.Array) -> BGPCState:
+        """Single iteration of BGPC"""
+        # Compute beta and alpha for this iteration
+        beta = self._compute_beta_decay(state.iteration)
+        alpha = self._compute_alpha_decay(state.iteration)
+
+        # Compute V matrix
+        V = self._compute_V_matrix(X, state.centroids, beta)
+
+        # Compute Z values
+        Z = self._compute_Z_list(V, alpha)
+
+        # Update U matrix
+        U = self._update_U_matrix(V, Z)
+
+        # Update centroids
+        centroids_new = self._compute_centroids(X, U)
+
+        # Check convergence
+        converged = self._check_convergence(state.centroids, centroids_new)
+
+        return BGPCState(
+            centroids=centroids_new,
+            U=U,
+            V=V,
+            iteration=state.iteration + 1,
+            converged=converged,
+            alpha=alpha,
+            beta=beta
         )
 
-    @staticmethod
-    def _nearest_centroids(sample, centroids):
-        return np.argmin([euclidean_distance(sample, centroid) for centroid in centroids])
+    @partial(jit, static_argnums=(0,))
+    def _optimize(self, X: chex.Array, initial_centroids: chex.Array) -> BGPCState:
+        """Run BGPC optimization loop"""
+        # Initialize state
+        n_samples = X.shape[0]
+        initial_V = jnp.zeros((n_samples, self.n_clusters))
+        initial_U = jnp.ones((n_samples, self.n_clusters)) / self.n_clusters
 
-    def _centroid_stability(self, centroids_num, centroids):
-        if self.ord is not None and self.epsilon is None:
-            distance = np.linalg.norm((centroids_num - centroids), ord=self.ord)
-            return distance == 0
-        if self.ord is not None and self.epsilon is not None:
-            distance = np.linalg.norm((centroids_num - centroids), ord=self.ord)
-            return distance <= self.epsilon
-        if self.ord is None and self.epsilon is None:
-            distance = [euclidean_distance(centroids_num[index], centroids[index]) for index in
-                        range(self.num_clusters)]
-            return np.sum(distance) == 0
-        if self.ord is None and self.epsilon is not None:
-            distance = [euclidean_distance(centroids_num[index], centroids[index]) for index in
-                        range(self.num_clusters)]
-            return np.sum(distance) <= self.epsilon
-        return None
+        initial_state = BGPCState(
+            centroids=initial_centroids,
+            U=initial_U,
+            V=initial_V,
+            iteration=0,
+            converged=False,
+            alpha=self.alpha_init,
+            beta=self.beta_init
+        )
 
-    def _get_cluster_results(self, cluster_result):
-        labels = np.empty(self.data.shape[0])
-        for cluster_index, cluster in enumerate(cluster_result):
-            for sample_index in cluster:
-                labels[sample_index] = cluster_index
+        # Optimization loop
+        def cond_fn(state):
+            return jnp.logical_and(
+                state.iteration < self.max_iter,
+                jnp.logical_not(state.converged)
+            )
+
+        def body_fn(state):
+            return self._iteration_step(state, X)
+
+        final_state = lax.while_loop(cond_fn, body_fn, initial_state)
+        return final_state
+
+    def fit(self, X: chex.Array) -> Self:
+        """
+        Fit BGPC model to data
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training data
+
+        Returns
+        -------
+        self
+        """
+        X = jnp.asarray(X)
+
+        # Initialize random key
+        if self.random_state is not None:
+            key = jax.random.PRNGKey(self.random_state)
+        else:
+            key = jax.random.PRNGKey(0)
+
+        # Initialize centroids
+        initial_centroids = self._initialize_centroids(X, key)
+
+        # Run optimization
+        final_state = self._optimize(X, initial_centroids)
+
+        # Store results
+        self.centroids_ = final_state.centroids
+        self.U_ = final_state.U
+        self.V_ = final_state.V
+        self.n_iter_ = int(final_state.iteration)
+        self.alpha_ = float(final_state.alpha)
+        self.beta_ = float(final_state.beta)
+
+        return self
+
+    @partial(jit, static_argnums=(0,))
+    def _predict_labels(self, X: chex.Array) -> chex.Array:
+        """Predict cluster labels (hard assignment)"""
+        D_sq = batch_squared_euclidean(X, self.centroids_)
+        labels = jnp.argmin(D_sq, axis=1)
         return labels
 
-    def initialise_cluster(self, centroids):
-        clusters = [[] for _ in range(len(centroids))]
-        for index, sample in enumerate(self.data):
-            centroid_index = self._nearest_centroids(sample, centroids)
-            clusters[centroid_index].append(index)
-        return clusters
-
-    def centroids_init_option(self):
-        if self.set_centroids is None:
-            return self._select_centroids_randomly()
-        return self.set_centroids
-
-    def get_centroids_(self):
-        centroids = self.centroids_init_option()
-        v_matrix = np.zeros((len(self.data), self.num_clusters))
-        for num in range(self.num_iter):
-            centroids_old = centroids
-            clusters = self.initialise_cluster(centroids_old)
-            self.get_plot(clusters, centroids_old)
-            b = self.compute_beta_decay(iter=num)
-            v_matrix = self.compute_v_matrix(centroids, b, v_matrix)
-            a = self.compute_alpha_decay(iter=num)
-            z_list = self.compute_z_list(v_matrix, a)
-            u_matrix = self.update_u_matrix(v_matrix, z_list)
-            centroids = self.compute_centroids(u_matrix)
-            self.get_plot(clusters, centroids)
-            if self._centroid_stability(centroids_old, centroids) or num == self.num_iter - 1:
-                self.fit_clus.append(clusters)
-                self.fit_cent.append(centroids)
-                self.b.append(b)
-                self.a.append(a)
-                break
-
-    def get_plot(self, cluster, centroids):
-        if self.plot_steps:
-            for _, v in enumerate(cluster):
-                plt.scatter(self.data[v][:, 0], self.data[v][:, 1])
-            for cent in centroids:
-                plt.scatter(cent[0], cent[1], marker='v', color='black')
-            plt.pause(0.3)
-            plt.clf()
-
-    def predict(self):
+    def predict(self, X: chex.Array) -> chex.Array:
         """
+        Predict cluster labels for samples
 
-        :return: array-like: cluster labels of input data
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Data to predict
+
+        Returns
+        -------
+        labels : array of shape (n_samples,)
+            Cluster labels
         """
-        return self._get_cluster_results(self.fit_clus[0])
+        if self.centroids_ is None:
+            raise ValueError("Model not fitted. Call fit() first.")
 
-    def predict_new(self, x):
+        X = jnp.asarray(X)
+        return self._predict_labels(X)
+
+    @partial(jit, static_argnums=(0,))
+    def _predict_proba(self, X: chex.Array) -> chex.Array:
+        """Compute U matrix (membership probabilities) for new data"""
+        # Compute V matrix
+        V = self._compute_V_matrix(X, self.centroids_, self.beta_)
+
+        # Compute Z values
+        Z = self._compute_Z_list(V, self.alpha_)
+
+        # Compute U matrix
+        U = self._update_U_matrix(V, Z)
+        return U
+
+    def predict_proba(self, X: chex.Array) -> chex.Array:
         """
+        Predict membership probabilities for samples
 
-        :param x: array-like: input vector
-        :return: cluster label of input vector
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Data to predict
+
+        Returns
+        -------
+        U : array of shape (n_samples, n_clusters)
+            Membership probabilities
         """
-        return [
-            self._nearest_centroids(sample, self.fit_cent[0])
-            for index, sample in enumerate(x)
-        ]
+        if self.centroids_ is None:
+            raise ValueError("Model not fitted. Call fit() first.")
 
-    def get_clusters_index_cent(self):
-        return self.fit_clus, self.fit_cent
+        X = jnp.asarray(X)
+        return self._predict_proba(X)
 
-    def fit(self):
+    @partial(jit, static_argnums=(0,))
+    def _get_typicality(self, X: chex.Array) -> chex.Array:
+        """Compute V matrix (typicality values) for new data"""
+        V = self._compute_V_matrix(X, self.centroids_, self.beta_)
+        return V
+
+    def get_typicality(self, X: chex.Array) -> chex.Array:
         """
+        Get typicality values for samples
 
-        :return: fits the model to the input data set
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Data to compute typicality for
+
+        Returns
+        -------
+        V : array of shape (n_samples, n_clusters)
+            Typicality values
         """
-        return self.get_centroids_()
+        if self.centroids_ is None:
+            raise ValueError("Model not fitted. Call fit() first.")
 
-    def get_distance_space(self, x):
-
-        """
-
-        :param x: array-like: input vector
-        :return:  distance space of the input vector
-        """
-
-        distance_space = np.array(
-            [[euclidean_distance(sample, centroid)
-              for centroid in self.get_clusters_index_cent()[1][0]]
-             for index, sample in enumerate(x)]
-        )
-
-        return distance_space
-
-    def predict_tipicality(self, x):
-        """
-
-        :param x: array-like: input vector
-        :return: confidence of the input vector
-        """
-        initial_v_matrix = np.zeros((len(x), self.num_clusters))
-        for i in range(len(x)):
-            for j in range(self.num_clusters):
-                exponent = np.exp(-(euclidean_distance(self.fit_cent[0][j], x[i]) / self.b[0]))
-                vik_new = exponent
-                initial_v_matrix[i][j] = vik_new
-        return initial_v_matrix
-
-    def predict_proba(self, x):
-        """
-
-        :param x: array-like: input vector
-        :return:  confidence of the input vector
-        """
-        v_matrix = self.predict_tipicality(x)
-        z = self.compute_z_list(v_matrix=v_matrix, a=self.a[0])
-        for i in range(len(x)):
-            for j in range(self.num_clusters):
-                try:
-                    uik_new = v_matrix[i][j] / z[i]
-                    v_matrix[i][j] = uik_new
-                except IndexError:
-                    pass
-        return v_matrix
-
-    # Classification aspect
-    def get_prototypes(self, labels):
-        """
-
-        :param labels: labels of the input data set
-        :return: array-like: components needed for GNPC classifier design
-        """
-        self.fit()
-        clusters_indices, centroids = self.fit_clus[0], self.fit_cent[0]
-        clusters = [labels[cluster_with_indices] for cluster_with_indices in clusters_indices]
-        max_occurrence = [dict(Counter(cluster)) for _, cluster in enumerate(clusters)]
-        reposition_centroids = np.argsort([max(count, key=count.get) for count in max_occurrence])
-        prototypes = centroids[reposition_centroids]
-        return prototypes, centroids
-
-    def final_centroids(self):
-        """
-
-        :return: learned centroids
-        """
-
-        return self.fit_cent[0]
+        X = jnp.asarray(X)
+        return self._get_typicality(X)

@@ -63,8 +63,11 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
+# Old docs (replaced by sphinx-docs/)
+docs/
+
+# Sphinx build output
+sphinx-docs/_build/
 
 # PyBuilder
 target/
@@ -123,3 +126,13 @@ requirements-docker.in
 requirements-frozen-docker.txt
 requirements.in
 
+# Reference repos
+other/
+
+# Generated outputs
+*.png
+prosemble_models_reference.docx
+generate_supervised_doc.py
+
+# Nix build output
+result

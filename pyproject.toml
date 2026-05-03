@@ -32,6 +32,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/naotoo1/prosemble"
+Documentation = "https://prosemble.readthedocs.io"
 Repository = "https://github.com/naotoo1/prosemble"
 Issues = "https://github.com/naotoo1/prosemble/issues"
 
@@ -90,11 +91,14 @@ jax-cuda12 = [
     "chex>=0.1.85",
     "optax>=0.2.0",
 ]
+docs = [
+    "Sphinx",
+    "furo",
+    "sphinx-copybutton",
+]
 all = [
     "numpy",
     "scikit-learn",
-    "pandas",
-    "scipy",
     "matplotlib",
     "black",
     "black[jupyter]",

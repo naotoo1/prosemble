@@ -3,7 +3,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/badge/pypi-1.0.0-orange.svg)](https://pypi.org/project/prosemble/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://github.com/naotoo1/prosemble/actions/workflows/build-test-ubuntu.yml/badge.svg)](https://github.com/naotoo1/prosemble/actions)
+[![CI](https://github.com/naotoo1/prosemble/actions/workflows/ci.yml/badge.svg)](https://github.com/naotoo1/prosemble/actions/workflows/ci.yml)
+[![Documentation](https://readthedocs.org/projects/prosemble/badge/?version=latest)](https://prosemble.readthedocs.io/en/latest/)
 
 ## Description
 
@@ -34,10 +35,12 @@ pip install -e ".[all]"
 
 ## Documentation
 
-The documentation is available at [sphinx-docs/](sphinx-docs/). To build locally:
+The full documentation is available at [prosemble.readthedocs.io](https://prosemble.readthedocs.io).
+
+To build locally:
 
 ```bash
-cd sphinx-docs && uv run make html
+cd sphinx-docs && make html
 ```
 
 ## Examples

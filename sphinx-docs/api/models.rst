@@ -50,6 +50,14 @@ Supervised LVQ
    :members: fit, predict, predict_proba
    :undoc-members:
 
+.. autoclass:: prosemble.models.GLVQ1
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.GLVQ21
+   :members: fit, predict
+   :undoc-members:
+
 Deep and Siamese Variants
 --------------------------
 
@@ -203,6 +211,14 @@ Utility Models
    :undoc-members:
 
 .. autoclass:: prosemble.models.NPC
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.Kmeans
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SOM
    :members: fit, predict
    :undoc-members:
 

@@ -7,7 +7,7 @@ from prosemble.core.vis import plot_decision_boundary_2d, plot_lvq_summary
 # Load data
 dataset = load_iris_jax()
 X = dataset.input_data
-y = dataset.target_data
+y = dataset.labels
 
 # Fit GLVQ
 model = GLVQ(

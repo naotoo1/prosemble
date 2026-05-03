@@ -1,13 +1,13 @@
 """
 K-Nearest Neighbors classification example using Iris Data with JAX.
 
-This example demonstrates KNN_JAX with pure JAX implementation.
+This example demonstrates KNN with pure JAX implementation.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import KNN_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import KNN
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -22,7 +22,7 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup KNN model
-knn = KNN_JAX(n_neighbors=5)
+knn = KNN(n_neighbors=5)
 
 # Fit model
 print("\nTraining KNN...")
@@ -36,11 +36,11 @@ print(f"\nTrain predictions: {train_labels.shape}")
 print(f"Test predictions: {test_labels.shape}")
 
 # Probabilities
-train_proba = knn.get_proba(X_train)
-test_proba = knn.get_proba(X_test)
+train_proba = jnp.max(knn.predict_proba(X_train), axis=1)
+test_proba = jnp.max(knn.predict_proba(X_test), axis=1)
 
-print(f"\nTrain probabilities (confidence): {train_proba.shape}")
-print(f"Test probabilities (confidence): {test_proba.shape}")
+print(f"\nTrain probabilities (max confidence): {train_proba.shape}")
+print(f"Test probabilities (max confidence): {test_proba.shape}")
 
 # Full probability distribution
 train_proba_full = knn.predict_proba(X_train)

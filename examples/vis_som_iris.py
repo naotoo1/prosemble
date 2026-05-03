@@ -10,7 +10,7 @@ from prosemble.core.vis import (
 # Load data
 dataset = load_iris_jax()
 X = dataset.input_data
-y = dataset.target_data
+y = dataset.labels
 
 # Fit
 model = HeskesSOM(

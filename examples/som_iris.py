@@ -1,14 +1,14 @@
 """
 Self-Organizing Maps (SOM) example using Iris Data with JAX.
 
-This example demonstrates SOM_JAX with pure JAX implementation.
+This example demonstrates SOM with pure JAX implementation.
 SOM creates a low-dimensional representation of high-dimensional data.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import SOM_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import SOM
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -23,7 +23,7 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup SOM model
-som = SOM_JAX(
+som = SOM(
     grid_size=10,
     max_iter=1000,
     learning_rate=0.5,

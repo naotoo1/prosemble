@@ -1,13 +1,13 @@
 """
 Kernel Possibilistic C-Means clustering example using Iris Data with JAX.
 
-This example demonstrates KPCM_JAX with pure JAX implementation.
+This example demonstrates KPCM with pure JAX implementation.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import KPCM_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import KPCM
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -22,14 +22,14 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup KPCM model
-kpcm = KPCM_JAX(
+kpcm = KPCM(
     n_clusters=3,
     fuzzifier=2.0,
     k=1.0,
     sigma=1.0,
     max_iter=100,
     epsilon=1e-5,
-    init_method='fcm',
+    init_method='kfcm',
     random_seed=42,
     plot_steps=True
 )

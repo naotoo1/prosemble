@@ -1,13 +1,13 @@
 """
 Kernel Improved Possibilistic C-Means 2 clustering example using Iris Data with JAX.
 
-This example demonstrates KIPCM2_JAX with pure JAX implementation.
+This example demonstrates KIPCM2 with pure JAX implementation.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import KIPCM2_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import KIPCM2
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -22,7 +22,7 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup KIPCM2 model
-kipcm2 = KIPCM2_JAX(
+kipcm2 = KIPCM2(
     n_clusters=3,
     fuzzifier=2.0,
     tipifier=2.0,

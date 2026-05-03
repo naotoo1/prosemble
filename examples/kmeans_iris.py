@@ -1,14 +1,14 @@
 """
 K-means++ clustering example using Iris Data with JAX.
 
-This example demonstrates KMeansPlusPlus_JAX (K-means++ initialization)
+This example demonstrates KMeansPlusPlus (K-means++ initialization)
 with pure JAX implementation.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import KMeansPlusPlus_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import KMeansPlusPlus
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -23,7 +23,7 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup K-means++ model
-kmeans = KMeansPlusPlus_JAX(
+kmeans = KMeansPlusPlus(
     n_clusters=3,
     max_iter=100,
     epsilon=1e-5,

@@ -1,13 +1,13 @@
 """
 Improved Possibilistic C-Means clustering example using Iris Data with JAX.
 
-This example demonstrates IPCM_JAX with pure JAX implementation.
+This example demonstrates IPCM with pure JAX implementation.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import IPCM_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import IPCM
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -22,7 +22,7 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup IPCM model
-ipcm = IPCM_JAX(
+ipcm = IPCM(
     n_clusters=3,
     fuzzifier=2.0,
     tipifier=2.0,

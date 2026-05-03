@@ -13,13 +13,13 @@ X = dataset.input_data
 y = dataset.labels
 
 # Fit FCM
-model = FCM(n_clusters=3, m=2.0, max_iter=150, random_seed=42)
+model = FCM(n_clusters=3, fuzzifier=2.0, max_iter=150, random_seed=42)
 model.fit(X)
-print(f"Trained {model.n_iter_} iterations, loss={model.loss_:.4f}")
+print(f"Trained {model.n_iter_} iterations, objective={model.objective_:.4f}")
 
 # Get results
-U = np.array(model.membership_matrix_)
-centers = np.array(model.cluster_centers_)
+U = np.array(model.predict_proba(X))
+centers = np.array(model.final_centroids())
 preds = np.array(model.predict(X))
 X_np = np.array(X)
 y_np = np.array(y)
@@ -51,7 +51,7 @@ fig.colorbar(im, ax=ax, shrink=0.8)
 
 # 3. Loss curve
 ax = axes[2]
-ax.plot(model.loss_history_, color='steelblue', linewidth=1.5)
+ax.plot(model.get_objective_history(), color='steelblue', linewidth=1.5)
 ax.set_title('Convergence')
 ax.set_xlabel('Iteration')
 ax.set_ylabel('Loss')

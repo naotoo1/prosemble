@@ -1,14 +1,14 @@
 """
 Noise Possibilistic C-Means (NPC) classification example using Iris Data with JAX.
 
-This example demonstrates NPC_JAX with pure JAX implementation.
+This example demonstrates NPC with pure JAX implementation.
 NPC is a supervised prototype-based classifier.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import NPC_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import NPC
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -23,7 +23,7 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup NPC model
-npc = NPC_JAX(
+npc = NPC(
     n_classes=3,
     max_iter=10,
     tol=0.8,

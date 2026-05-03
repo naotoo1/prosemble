@@ -6,21 +6,20 @@ clusters and outliers effectively.
 """
 
 import jax.numpy as jnp
-from prosemble.datasets import DATA_JAX
-from prosemble.models.jax import PFCM_JAX
+from prosemble.datasets import load_iris_jax
+from prosemble.models import PFCM
 
 # Load Iris dataset (JAX arrays directly)
-data = DATA_JAX(random=42)
-dataset = data.iris
+dataset = load_iris_jax()
 X_jax, y = dataset.input_data, dataset.labels
 
-print("Running PFCM_JAX on Iris dataset...")
+print("Running PFCM on Iris dataset...")
 print(f"Data shape: {X_jax.shape}")
 print(f"Number of clusters: 3")
 print()
 
 # Create and fit PFCM model with visualization
-model = PFCM_JAX(
+model = PFCM(
     n_clusters=3,
     fuzzifier=2.0,
     eta=2.0,
@@ -34,7 +33,7 @@ model = PFCM_JAX(
     plot_steps=True,
     show_confidence=True,
     show_pca_variance=True,
-    save_plot_path='pfcm_jax_iris_final.png'
+    save_plot_path='pfcm_iris_final.png'
 )
 
 model.fit(X_jax)
@@ -49,7 +48,7 @@ print()
 # Get predictions
 labels = model.predict(X_jax)
 U = model.predict_proba(X_jax)
-T = model.get_typicality(X_jax)
+T = model.predict_typicality(X_jax)
 
 print(f"Predicted labels shape: {labels.shape}")
 print(f"Unique labels: {jnp.unique(labels)}")

@@ -1,13 +1,13 @@
 """
 Fuzzy Possibilistic C-Means clustering example using Iris Data with JAX.
 
-This example demonstrates FPCM_JAX with pure JAX implementation.
+This example demonstrates FPCM with pure JAX implementation.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import FPCM_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import FPCM
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -22,7 +22,7 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup FPCM model
-fpcm = FPCM_JAX(
+fpcm = FPCM(
     n_clusters=3,
     fuzzifier=2.0,
     eta=2.0,

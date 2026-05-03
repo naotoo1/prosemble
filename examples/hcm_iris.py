@@ -1,13 +1,13 @@
 """
 Hard C-Means clustering example using Iris Data with JAX.
 
-This example demonstrates HCM_JAX with pure JAX implementation.
+This example demonstrates HCM with pure JAX implementation.
 """
 
 import jax.numpy as jnp
 from prosemble.datasets import load_iris_jax
-from prosemble.core.utils_jax import train_test_split_jax
-from prosemble.models.jax import HCM_JAX
+from prosemble.core.utils import train_test_split_jax
+from prosemble.models import HCM
 
 # Load data (JAX arrays directly)
 dataset = load_iris_jax()
@@ -22,7 +22,7 @@ print(f"Dataset: {X.shape}")
 print(f"Train: {X_train.shape}, Test: {X_test.shape}")
 
 # Setup HCM model
-hcm = HCM_JAX(
+hcm = HCM(
     n_clusters=3,
     max_iter=100,
     epsilon=1e-5,

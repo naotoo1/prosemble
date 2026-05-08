@@ -48,6 +48,12 @@ try:
     from .image_lvq import ImageGLVQ, ImageGMLVQ, ImageGTLVQ
     from .image_cbc import ImageCBC
 
+    # One-class RSLVQ models
+    from .oc_rslvq import OCRSLVQ
+    from .oc_mrslvq import OCMRSLVQ, OCLMRSLVQ
+    from .oc_rslvq_ng import OCRSLVQ_NG
+    from .oc_mrslvq_ng import OCMRSLVQ_NG, OCLMRSLVQ_NG
+
     # Unsupervised topology models
     from .neural_gas import NeuralGas
     from .growing_neural_gas import GrowingNeuralGas
@@ -73,6 +79,10 @@ try:
         'SiameseGTLVQ': SiameseGTLVQ,
         'ImageGLVQ': ImageGLVQ, 'ImageGMLVQ': ImageGMLVQ,
         'ImageGTLVQ': ImageGTLVQ, 'ImageCBC': ImageCBC,
+        # One-class RSLVQ
+        'OCRSLVQ': OCRSLVQ, 'OCMRSLVQ': OCMRSLVQ, 'OCLMRSLVQ': OCLMRSLVQ,
+        'OCRSLVQ_NG': OCRSLVQ_NG, 'OCMRSLVQ_NG': OCMRSLVQ_NG,
+        'OCLMRSLVQ_NG': OCLMRSLVQ_NG,
         # Unsupervised topology
         'NeuralGas': NeuralGas, 'GrowingNeuralGas': GrowingNeuralGas,
         'KohonenSOM': KohonenSOM, 'HeskesSOM': HeskesSOM,
@@ -108,6 +118,9 @@ __all__ = [
     'LVQMLN', 'PLVQ',
     'SiameseGLVQ', 'SiameseGMLVQ', 'SiameseGTLVQ',
     'ImageGLVQ', 'ImageGMLVQ', 'ImageGTLVQ', 'ImageCBC',
+    # One-class RSLVQ
+    'OCRSLVQ', 'OCMRSLVQ', 'OCLMRSLVQ',
+    'OCRSLVQ_NG', 'OCMRSLVQ_NG', 'OCLMRSLVQ_NG',
     # Unsupervised topology
     'NeuralGas', 'GrowingNeuralGas', 'KohonenSOM', 'HeskesSOM',
     # Status

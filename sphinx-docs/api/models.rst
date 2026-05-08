@@ -114,6 +114,52 @@ Supervised Neural Gas
    :members: fit, predict, predict_proba
    :undoc-members:
 
+One-Class GLVQ
+--------------
+
+.. autoclass:: prosemble.models.OCGLVQ
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCGRLVQ
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCGMLVQ
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCLGMLVQ
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCGTLVQ
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+One-Class GLVQ with Neural Gas
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: prosemble.models.OCGLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCGRLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCGMLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCLGMLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCGTLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
 One-Class RSLVQ
 ---------------
 
@@ -129,6 +175,9 @@ One-Class RSLVQ
    :members: fit, predict, decision_function, predict_with_reject
    :undoc-members:
 
+One-Class RSLVQ with Neural Gas
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. autoclass:: prosemble.models.OCRSLVQ_NG
    :members: fit, predict, decision_function, predict_with_reject
    :undoc-members:
@@ -138,6 +187,29 @@ One-Class RSLVQ
    :undoc-members:
 
 .. autoclass:: prosemble.models.OCLMRSLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+SVQ-OCC
+-------
+
+.. autoclass:: prosemble.models.SVQOCC
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SVQOCC_R
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SVQOCC_M
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SVQOCC_LM
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.SVQOCC_T
    :members: fit, predict, decision_function, predict_with_reject
    :undoc-members:
 

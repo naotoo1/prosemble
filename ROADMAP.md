@@ -13,12 +13,26 @@ Released with:
 - `partial_fit()` for incremental/online learning
 - `jax.export` for deployment
 
-## v1.1 — Post-Launch Polish
+## v1.1 — One-Class Classification & Neural Gas Extensions
 
+- One-class GLVQ family: OCGLVQ, OCGRLVQ, OCGMLVQ, OCLGMLVQ, OCGTLVQ
+- One-class GLVQ with Neural Gas: OCGLVQ_NG, OCGRLVQ_NG, OCGMLVQ_NG, OCLGMLVQ_NG, OCGTLVQ_NG
+- One-class RSLVQ family: OCRSLVQ, OCMRSLVQ, OCLMRSLVQ
+- One-class RSLVQ with Neural Gas: OCRSLVQ_NG, OCMRSLVQ_NG, OCLMRSLVQ_NG
+- SVQ-OCC family: SVQOCC, SVQOCC_R, SVQOCC_M, SVQOCC_LM, SVQOCC_T
+
+## v1.2 — Supervised NG Extensions
+
+- Supervised probabilistic NG: RSLVQ_NG, MRSLVQ_NG, LMRSLVQ_NG
+- Supervised NG variants: SMNG, SLNG, STNG
+
+## v1.3 — Model Selection & Polish
+
+- JAX-native Pipeline and GridSearchCV
 - `score(X, y)` — sklearn-style evaluation method
+- `cross_val_score` wrapper around `k_fold_split_jax`
 - Mixed precision for clustering models (FCM, PCM, etc.)
 - Advanced examples showcasing all features
-- `cross_val_score` wrapper around `k_fold_split_jax`
 
 ## v2.0 — Multi-Device & Scale
 

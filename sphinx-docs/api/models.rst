@@ -114,6 +114,33 @@ Supervised Neural Gas
    :members: fit, predict, predict_proba
    :undoc-members:
 
+One-Class RSLVQ
+---------------
+
+.. autoclass:: prosemble.models.OCRSLVQ
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCMRSLVQ
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCLMRSLVQ
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCRSLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCMRSLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCLMRSLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject
+   :undoc-members:
+
 Fuzzy Clustering
 ----------------
 

@@ -315,10 +315,123 @@ per-feature relevance weights (like GRLVQ).
    # Inspect relevances (SRNG learns feature weights like GRLVQ)
    print(model.relevances_)
 
-.. note::
+Cross-Entropy Neural Gas (CELVQ-NG Family)
+-------------------------------------------
 
-   Additional supervised NG variants with matrix, local, and tangent metrics
-   (SMNG, SLNG, STNG) are planned for v1.1.
+The CELVQ-NG family combines cross-entropy loss over all-class softmax logits
+with Neural Gas rank-based neighborhood cooperation. Unlike SRNG (which uses
+pairwise GLVQ :math:`\mu` cost), CELVQ-NG considers all classes simultaneously
+via softmax, providing better calibrated probabilities and gradient flow to
+all prototypes.
+
+Neural Gas cooperation replaces the hard per-class ``min`` pooling in CELVQ
+with NG-weighted soft pooling: for each class, prototypes are ranked by
+distance and weighted by :math:`h_k = \exp(-\text{rank} / \gamma)`. When
+:math:`\gamma \to 0`, CELVQ-NG recovers standard CELVQ.
+
+**CELVQ_NG** — Euclidean distance (base variant):
+
+.. code-block:: python
+
+   from prosemble.models import CELVQ_NG
+
+   model = CELVQ_NG(
+       n_prototypes_per_class=3,
+       gamma_init=5.0,        # initial neighborhood range
+       gamma_final=0.01,      # final (narrower)
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+   proba = model.predict_proba(X_test)  # calibrated probabilities
+
+**MCELVQ_NG** — Global Omega matrix metric learning:
+
+.. code-block:: python
+
+   from prosemble.models import MCELVQ_NG
+
+   model = MCELVQ_NG(
+       n_prototypes_per_class=3,
+       latent_dim=2,          # project to 2D
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
+   # Learned metric matrices
+   print(model.omega_matrix.shape)   # (n_features, latent_dim)
+   print(model.lambda_matrix)        # Omega^T @ Omega — feature importance
+
+**LCELVQ_NG** — Per-prototype local Omega matrices:
+
+.. code-block:: python
+
+   from prosemble.models import LCELVQ_NG
+
+   model = LCELVQ_NG(
+       n_prototypes_per_class=2,
+       latent_dim=2,
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
+   # Each prototype has its own Omega_k
+   print(model.omegas_.shape)  # (n_prototypes, n_features, latent_dim)
+
+**TCELVQ_NG** — Tangent subspace distance:
+
+.. code-block:: python
+
+   from prosemble.models import TCELVQ_NG
+
+   model = TCELVQ_NG(
+       n_prototypes_per_class=2,
+       subspace_dim=1,        # 1D invariance subspace
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
+   # Learned orthogonal tangent bases
+   print(model.omegas_.shape)  # (n_prototypes, n_features, subspace_dim)
+
+The tangent variant measures distance orthogonal to learned invariance
+subspaces: :math:`d(x, w_k) = \|(I - \Omega_k \Omega_k^T)(x - w_k)\|^2`.
+Best suited for high-dimensional data with invariance structure (images,
+spectra, signals).
+
+.. list-table:: CELVQ-NG Family Summary
+   :header-rows: 1
+   :widths: 20 30 25 25
+
+   * - Model
+     - Distance Metric
+     - Learnable Parameters
+     - Best For
+   * - CELVQ_NG
+     - Euclidean
+     - Prototypes only
+     - General-purpose, fast training
+   * - MCELVQ_NG
+     - :math:`\|\Omega(x-w)\|^2`
+     - Global :math:`\Omega` matrix
+     - Feature selection, dimensionality reduction
+   * - LCELVQ_NG
+     - :math:`\|\Omega_k(x-w_k)\|^2`
+     - Per-prototype :math:`\Omega_k`
+     - Heterogeneous feature spaces
+   * - TCELVQ_NG
+     - :math:`\|(I-\Omega_k\Omega_k^T)(x-w_k)\|^2`
+     - Tangent bases :math:`\Omega_k`
+     - High-dimensional data with invariances
 
 Common Patterns
 ---------------

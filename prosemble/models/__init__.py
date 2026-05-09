@@ -37,6 +37,10 @@ try:
     from .local_matrix_lvq import LGMLVQ
     from .tangent_lvq import GTLVQ
     from .crossentropy_lvq import CELVQ
+    from .celvq_ng import CELVQ_NG
+    from .mcelvq_ng import MCELVQ_NG
+    from .lcelvq_ng import LCELVQ_NG
+    from .tcelvq_ng import TCELVQ_NG
     from .lvq1 import LVQ1
     from .lvq21 import LVQ21
     from .median_lvq import MedianLVQ
@@ -85,7 +89,8 @@ try:
         'GLVQ': GLVQ, 'GLVQ1': GLVQ1, 'GLVQ21': GLVQ21,
         'GRLVQ': GRLVQ, 'SRNG': SRNG,
         'GMLVQ': GMLVQ, 'LGMLVQ': LGMLVQ,
-        'GTLVQ': GTLVQ, 'CELVQ': CELVQ,
+        'GTLVQ': GTLVQ, 'CELVQ': CELVQ, 'CELVQ_NG': CELVQ_NG,
+        'MCELVQ_NG': MCELVQ_NG, 'LCELVQ_NG': LCELVQ_NG, 'TCELVQ_NG': TCELVQ_NG,
         'LVQ1': LVQ1, 'LVQ21': LVQ21, 'MedianLVQ': MedianLVQ,
         'SLVQ': SLVQ, 'RSLVQ': RSLVQ,
         'CBC': CBC,
@@ -135,7 +140,7 @@ __all__ = [
     'GLVQ', 'GLVQ1', 'GLVQ21',
     'GRLVQ', 'SRNG',
     'GMLVQ', 'LGMLVQ', 'GTLVQ',
-    'CELVQ',
+    'CELVQ', 'CELVQ_NG', 'MCELVQ_NG', 'LCELVQ_NG', 'TCELVQ_NG',
     'LVQ1', 'LVQ21', 'MedianLVQ',
     'SLVQ', 'RSLVQ',
     'CBC',

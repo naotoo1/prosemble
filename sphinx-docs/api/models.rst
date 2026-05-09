@@ -114,6 +114,25 @@ Supervised Neural Gas
    :members: fit, predict, predict_proba
    :undoc-members:
 
+Cross-Entropy Neural Gas
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: prosemble.models.CELVQ_NG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.MCELVQ_NG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.LCELVQ_NG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.TCELVQ_NG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
 One-Class GLVQ
 --------------
 

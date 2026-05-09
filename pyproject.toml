@@ -1,6 +1,6 @@
 [project]
 name = "prosemble"
-version = "1.1.0"
+version = "1.1.1"
 description = "A python project for prototype-based machine learning models"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -48,7 +48,7 @@ exclude = ["docs*"]
 universal = true
 
 [tool.bumpversion]
-current_version = "1.1.0"
+current_version = "1.1.1"
 commit = true
 tag = true
 

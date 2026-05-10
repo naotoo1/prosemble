@@ -31,7 +31,8 @@ import jax.numpy as jnp
 import numpy as np
 from jax import jit
 
-from prosemble.models.prototype_base import SupervisedPrototypeModel
+from prosemble.models.celvq_ng_mixin import CELVQNGMixin
+from prosemble.models.crossentropy_lvq import CELVQ
 from prosemble.core.competitions import wtac
 from prosemble.core.initializers import random_omega_init
 from prosemble.core.utils import orthogonalize
@@ -48,7 +49,7 @@ def _predict_tcelvq_ng_jit(X, prototypes, omegas, proto_labels):
     return wtac(distances, proto_labels)
 
 
-class TCELVQ_NG(SupervisedPrototypeModel):
+class TCELVQ_NG(CELVQNGMixin, CELVQ):
     """Tangent Cross-Entropy LVQ with Neural Gas neighborhood cooperation.
 
     Combines three key ideas:
@@ -88,138 +89,42 @@ class TCELVQ_NG(SupervisedPrototypeModel):
         Final gamma value after training.
     """
 
-    def __init__(self, subspace_dim=2, gamma_init=None, gamma_final=0.01,
-                 gamma_decay=None, **kwargs):
+    def __init__(self, subspace_dim=2, **kwargs):
         super().__init__(**kwargs)
         self.subspace_dim = subspace_dim
-        self.gamma_init = gamma_init
-        self.gamma_final = gamma_final
-        self.gamma_decay = gamma_decay
         self.omegas_ = None
-        self.gamma_ = None
-
-        # Ensure gamma is frozen from optimizer (not trainable)
-        if self.freeze_params is None:
-            self.freeze_params = ['gamma']
-        elif 'gamma' not in self.freeze_params:
-            self.freeze_params = list(self.freeze_params) + ['gamma']
 
     def _get_resume_params(self, params):
+        params = super()._get_resume_params(params)
         params['omegas'] = self.omegas_
-        gamma = self.gamma_ if self.gamma_ is not None else (
-            self._gamma_init_actual if hasattr(self, '_gamma_init_actual') else 1.0
-        )
-        params['gamma'] = jnp.array(gamma, dtype=jnp.float32)
         return params
 
-    def _init_state(self, X, y, key):
+    def _init_metric_params(self, params, X, prototypes, key):
         n_features = X.shape[1]
-        key1, key2 = jax.random.split(key)
-
-        prototypes, proto_labels = self._init_prototypes(
-            X, y, self.n_prototypes_per_class, key1
-        )
         n_protos = prototypes.shape[0]
-
-        # Initialize each Omega as random orthogonal
-        keys = jax.random.split(key2, n_protos)
+        keys = jax.random.split(key, n_protos)
         omegas = jnp.stack([
             random_omega_init(n_features, self.subspace_dim, k) for k in keys
         ])  # (p, d, subspace_dim)
+        params['omegas'] = omegas
+        return params
 
-        # Compute gamma_init from prototype count if not set
-        if isinstance(self.n_prototypes_per_class, int):
-            max_per_class = self.n_prototypes_per_class
-        elif isinstance(self.n_prototypes_per_class, dict):
-            max_per_class = max(self.n_prototypes_per_class.values())
-        else:
-            max_per_class = max(self.n_prototypes_per_class)
-        gamma_init = self.gamma_init if self.gamma_init is not None else max_per_class / 2.0
-        gamma_init = max(gamma_init, self.gamma_final + 1e-6)
-        self._gamma_init_actual = gamma_init
-
-        # Compute decay factor
-        if self.gamma_decay is not None:
-            self._gamma_decay = self.gamma_decay
-        else:
-            self._gamma_decay = (self.gamma_final / gamma_init) ** (1.0 / self.max_iter)
-
-        params = {
-            'prototypes': prototypes,
-            'omegas': omegas,
-            'gamma': jnp.array(gamma_init, dtype=jnp.float32),
-        }
-        opt_state = self._optimizer.init(params)
-        from prosemble.models.prototype_base import SupervisedState
-        state = SupervisedState(
-            prototypes=prototypes,
-            opt_state=opt_state,
-            loss=jnp.array(float('inf')),
-            iteration=0,
-            converged=False,
-        )
-        return state, params, proto_labels
-
-    def _compute_loss(self, params, X, y, proto_labels):
-        prototypes = params['prototypes']
-        omegas = params['omegas']  # (p, d, s)
-        gamma = params['gamma']
-        n_classes = self.n_classes_
-
-        # 1. Tangent distance: d(x, w_k) = ||(I - Omega_k Omega_k^T)(x - w_k)||^2
-        diff = X[:, None, :] - prototypes[None, :, :]  # (n, p, d)
-        proj_onto_subspace = jnp.einsum('npd,pds->nps', diff, omegas)  # (n, p, s)
-        reconstruction = jnp.einsum('nps,pds->npd', proj_onto_subspace, omegas)  # (n, p, d)
+    def _compute_distances(self, params, X):
+        diff = X[:, None, :] - params['prototypes'][None, :, :]  # (n, p, d)
+        proj_onto_subspace = jnp.einsum('npd,pds->nps', diff, params['omegas'])  # (n, p, s)
+        reconstruction = jnp.einsum('nps,pds->npd', proj_onto_subspace, params['omegas'])  # (n, p, d)
         tangent_diff = diff - reconstruction  # (n, p, d)
-        distances = jnp.sum(tangent_diff ** 2, axis=2)  # (n, p)
-
-        # 2. NG-weighted per-class distance pooling
-        INF = jnp.finfo(distances.dtype).max
-        class_dists_list = []
-
-        for c in range(n_classes):
-            # Mask: which prototypes belong to class c
-            class_mask = (proto_labels == c)  # (p,)
-
-            # Distances to class c prototypes (INF for non-class)
-            d_class = jnp.where(class_mask[None, :], distances, INF)  # (n, p)
-
-            # Rank within class c (double argsort)
-            order = jnp.argsort(d_class, axis=1)
-            ranks = jnp.argsort(order, axis=1).astype(jnp.float32)  # (n, p)
-
-            # NG neighborhood function
-            h = jnp.exp(-ranks / (gamma + 1e-10))  # (n, p)
-            h = jnp.where(class_mask[None, :], h, 0.0)  # zero non-class
-
-            # Normalize within class
-            C = jnp.sum(h, axis=1, keepdims=True)  # (n, 1)
-            h_normalized = h / (C + 1e-10)  # (n, p)
-
-            # NG-weighted class distance
-            weighted_dist = jnp.sum(h_normalized * distances, axis=1)  # (n,)
-            class_dists_list.append(weighted_dist)
-
-        # 3. Stack into (n, n_classes)
-        class_dists = jnp.stack(class_dists_list, axis=1)  # (n, n_classes)
-
-        # 4. Cross-entropy loss
-        logits = -class_dists  # negate: smaller distance = larger logit
-        log_probs = jax.nn.log_softmax(logits, axis=1)
-        target_one_hot = jax.nn.one_hot(y, n_classes)
-        return -jnp.mean(jnp.sum(target_one_hot * log_probs, axis=1))
+        return jnp.sum(tangent_diff ** 2, axis=2)  # (n, p)
 
     def _post_update(self, params):
         # Decay gamma AND re-orthogonalize tangent bases
-        new_gamma = params['gamma'] * self._gamma_decay
-        new_gamma = jnp.maximum(new_gamma, self.gamma_final)
+        params = super()._post_update(params)
         omegas = jax.vmap(orthogonalize)(params['omegas'])
-        return {**params, 'gamma': new_gamma, 'omegas': omegas}
+        return {**params, 'omegas': omegas}
 
     def _extract_results(self, params, proto_labels, loss_history, n_iter, **kwargs):
         super()._extract_results(params, proto_labels, loss_history, n_iter, **kwargs)
         self.omegas_ = params['omegas']
-        self.gamma_ = float(params['gamma'])
 
     def predict(self, X):
         """Predict using tangent distance."""
@@ -270,21 +175,14 @@ class TCELVQ_NG(SupervisedPrototypeModel):
         arrays = super()._get_fitted_arrays()
         if self.omegas_ is not None:
             arrays['omegas_'] = np.asarray(self.omegas_)
-        if self.gamma_ is not None:
-            arrays['gamma_'] = np.asarray(self.gamma_)
         return arrays
 
     def _set_fitted_arrays(self, arrays):
         super()._set_fitted_arrays(arrays)
         if 'omegas_' in arrays:
             self.omegas_ = jnp.asarray(arrays['omegas_'])
-        if 'gamma_' in arrays:
-            self.gamma_ = float(arrays['gamma_'])
 
     def _get_hyperparams(self):
         hp = super()._get_hyperparams()
         hp['subspace_dim'] = self.subspace_dim
-        hp['gamma_init'] = self.gamma_init
-        hp['gamma_final'] = self.gamma_final
-        hp['gamma_decay'] = self.gamma_decay
         return hp

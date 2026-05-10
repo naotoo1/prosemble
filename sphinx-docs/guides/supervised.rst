@@ -235,6 +235,68 @@ log-likelihood training with confidence-based rejection.
    )
    model.fit(X_train, y_train)
 
+Probabilistic LVQ with Neural Gas (RSLVQ-NG Family)
+----------------------------------------------------
+
+The RSLVQ-NG family combines RSLVQ's Gaussian mixture probabilistic
+assignment with Neural Gas rank-based neighborhood cooperation. All
+prototypes participate in the loss, weighted by both their Gaussian
+probability and NG rank.
+
+**RSLVQ_NG** — Euclidean distance (base variant):
+
+.. code-block:: python
+
+   from prosemble.models import RSLVQ_NG
+
+   model = RSLVQ_NG(
+       n_prototypes_per_class=3,
+       sigma=1.0,
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
+**MRSLVQ_NG** — Global Omega matrix metric learning:
+
+.. code-block:: python
+
+   from prosemble.models import MRSLVQ_NG
+
+   model = MRSLVQ_NG(
+       n_prototypes_per_class=2,
+       latent_dim=2,
+       sigma=1.0,
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=100,
+       lr=0.001,
+   )
+   model.fit(X_train, y_train)
+
+   # Learned metric matrices
+   print(model.omega_matrix.shape)   # (n_features, latent_dim)
+   print(model.lambda_matrix)        # Omega^T @ Omega
+
+**LMRSLVQ_NG** — Per-prototype local Omega matrices:
+
+.. code-block:: python
+
+   from prosemble.models import LMRSLVQ_NG
+
+   model = LMRSLVQ_NG(
+       n_prototypes_per_class=2,
+       latent_dim=2,
+       sigma=1.0,
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=100,
+       lr=0.001,
+   )
+   model.fit(X_train, y_train)
+
 Median LVQ
 ----------
 

@@ -58,6 +58,18 @@ Supervised LVQ
    :members: fit, predict, predict_proba
    :undoc-members:
 
+.. autoclass:: prosemble.models.RSLVQ_NG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.MRSLVQ_NG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
+.. autoclass:: prosemble.models.LMRSLVQ_NG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
 .. autoclass:: prosemble.models.GLVQ1
    :members: fit, predict
    :undoc-members:

@@ -33,6 +33,9 @@ try:
     from .glvq import GLVQ, GLVQ1, GLVQ21
     from .relevance_lvq import GRLVQ
     from .srng import SRNG
+    from .smng import SMNG
+    from .slng import SLNG
+    from .stng import STNG
     from .matrix_lvq import GMLVQ
     from .local_matrix_lvq import LGMLVQ
     from .tangent_lvq import GTLVQ
@@ -90,7 +93,7 @@ try:
         'KPFCM': KPFCM, 'KIPCM': KIPCM, 'KIPCM2': KIPCM2,
         # Supervised LVQ
         'GLVQ': GLVQ, 'GLVQ1': GLVQ1, 'GLVQ21': GLVQ21,
-        'GRLVQ': GRLVQ, 'SRNG': SRNG,
+        'GRLVQ': GRLVQ, 'SRNG': SRNG, 'SMNG': SMNG, 'SLNG': SLNG, 'STNG': STNG,
         'GMLVQ': GMLVQ, 'LGMLVQ': LGMLVQ,
         'GTLVQ': GTLVQ, 'CELVQ': CELVQ, 'CELVQ_NG': CELVQ_NG,
         'MCELVQ_NG': MCELVQ_NG, 'LCELVQ_NG': LCELVQ_NG, 'TCELVQ_NG': TCELVQ_NG,
@@ -143,7 +146,7 @@ __all__ = [
     'PCM', 'PFCM', 'SOM',
     # Supervised LVQ family
     'GLVQ', 'GLVQ1', 'GLVQ21',
-    'GRLVQ', 'SRNG',
+    'GRLVQ', 'SRNG', 'SMNG', 'SLNG', 'STNG',
     'GMLVQ', 'LGMLVQ', 'GTLVQ',
     'CELVQ', 'CELVQ_NG', 'MCELVQ_NG', 'LCELVQ_NG', 'TCELVQ_NG',
     'LVQ1', 'LVQ21', 'MedianLVQ',

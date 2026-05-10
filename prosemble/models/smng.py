@@ -48,6 +48,7 @@ class SMNG(SupervisedPrototypeModel):
     """Supervised Matrix Neural Gas.
 
     Combines three key ideas:
+
     - GLVQ loss: (d+ - d-) / (d+ + d-) for margin-based classification
     - Neural Gas cooperation: all same-class prototypes participate in
       the loss, weighted by rank via exp(-rank / gamma)

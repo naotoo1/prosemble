@@ -409,6 +409,63 @@ per-feature relevance weights (like GRLVQ).
    # Inspect relevances (SRNG learns feature weights like GRLVQ)
    print(model.relevances_)
 
+Supervised Matrix Neural Gas (SMNG, SLNG, STNG)
+------------------------------------------------
+
+The SMNG family extends SRNG with matrix metric adaptation while keeping
+Neural Gas neighborhood cooperation. All same-class prototypes participate
+in the loss weighted by rank.
+
+**SMNG** — Global Omega matrix (like GMLVQ + Neural Gas):
+
+.. code-block:: python
+
+   from prosemble.models import SMNG
+
+   model = SMNG(
+       n_prototypes_per_class=3,
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=200,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+   print(model.omega_matrix.shape)   # (n_features, latent_dim)
+   print(model.lambda_matrix.shape)  # (n_features, n_features)
+
+**SLNG** — Per-prototype Omega matrices (like LGMLVQ + Neural Gas):
+
+.. code-block:: python
+
+   from prosemble.models import SLNG
+
+   model = SLNG(
+       n_prototypes_per_class=3,
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=200,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+   print(model.omegas_.shape)  # (n_protos, n_features, latent_dim)
+
+**STNG** — Per-prototype tangent subspaces (like GTLVQ + Neural Gas):
+
+.. code-block:: python
+
+   from prosemble.models import STNG
+
+   model = STNG(
+       n_prototypes_per_class=3,
+       subspace_dim=2,
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=200,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+   print(model.omegas_.shape)  # (n_protos, n_features, subspace_dim)
+
 Cross-Entropy Neural Gas (CELVQ-NG Family)
 -------------------------------------------
 

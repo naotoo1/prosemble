@@ -45,6 +45,7 @@ try:
     from .lvq21 import LVQ21
     from .median_lvq import MedianLVQ
     from .probabilistic_lvq import SLVQ, RSLVQ
+    from .matrix_rslvq import MRSLVQ, LMRSLVQ
     from .cbc import CBC
     from .lvqmln import LVQMLN
     from .plvq import PLVQ
@@ -93,6 +94,7 @@ try:
         'MCELVQ_NG': MCELVQ_NG, 'LCELVQ_NG': LCELVQ_NG, 'TCELVQ_NG': TCELVQ_NG,
         'LVQ1': LVQ1, 'LVQ21': LVQ21, 'MedianLVQ': MedianLVQ,
         'SLVQ': SLVQ, 'RSLVQ': RSLVQ,
+        'MRSLVQ': MRSLVQ, 'LMRSLVQ': LMRSLVQ,
         'CBC': CBC,
         'LVQMLN': LVQMLN, 'PLVQ': PLVQ,
         'SiameseGLVQ': SiameseGLVQ, 'SiameseGMLVQ': SiameseGMLVQ,
@@ -142,7 +144,7 @@ __all__ = [
     'GMLVQ', 'LGMLVQ', 'GTLVQ',
     'CELVQ', 'CELVQ_NG', 'MCELVQ_NG', 'LCELVQ_NG', 'TCELVQ_NG',
     'LVQ1', 'LVQ21', 'MedianLVQ',
-    'SLVQ', 'RSLVQ',
+    'SLVQ', 'RSLVQ', 'MRSLVQ', 'LMRSLVQ',
     'CBC',
     'LVQMLN', 'PLVQ',
     'SiameseGLVQ', 'SiameseGMLVQ', 'SiameseGTLVQ',

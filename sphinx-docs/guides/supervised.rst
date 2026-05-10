@@ -203,6 +203,38 @@ log-likelihood training with confidence-based rejection.
    )
    model.fit(X_train, y_train)
 
+**MRSLVQ** — Matrix RSLVQ with global Omega metric learning:
+
+.. code-block:: python
+
+   from prosemble.models import MRSLVQ
+
+   model = MRSLVQ(
+       n_prototypes_per_class=1,
+       latent_dim=2,
+       sigma=1.0,
+       max_iter=100,
+       lr=0.001,
+   )
+   model.fit(X_train, y_train)
+   print(model.omega_matrix.shape)   # (n_features, latent_dim)
+   print(model.lambda_matrix)        # Omega^T @ Omega
+
+**LMRSLVQ** — Local Matrix RSLVQ with per-prototype Omega matrices:
+
+.. code-block:: python
+
+   from prosemble.models import LMRSLVQ
+
+   model = LMRSLVQ(
+       n_prototypes_per_class=1,
+       latent_dim=2,
+       sigma=1.0,
+       max_iter=100,
+       lr=0.001,
+   )
+   model.fit(X_train, y_train)
+
 Median LVQ
 ----------
 

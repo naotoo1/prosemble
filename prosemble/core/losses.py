@@ -241,6 +241,61 @@ def rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0):
     return jnp.mean(-jnp.log(likelihood + 1e-10))
 
 
+@jit
+def ng_rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0, gamma=1.0):
+    """RSLVQ loss with Neural Gas rank-based neighborhood cooperation.
+
+    Combines Gaussian mixture prototype probabilities with NG rank weights
+    to create a neighborhood-cooperative probabilistic assignment:
+
+        p(k|x) = exp(-d_k / 2σ²) / Σ exp(-d_j / 2σ²)   [Gaussian]
+        h_k = exp(-rank_k / γ) / Σ exp(-rank_j / γ)      [NG weights]
+        w_k = p(k|x) · h_k / Σ p(j|x) · h_j             [combined]
+
+    The loss is -log(Σ w_k for correct class / Σ w_k for all).
+
+    Parameters
+    ----------
+    distances : array of shape (n, p)
+        Squared distances from samples to prototypes.
+    target_labels : array of shape (n,)
+        True class labels for samples.
+    prototype_labels : array of shape (p,)
+        Class labels assigned to prototypes.
+    sigma : float
+        Bandwidth of Gaussian mixture.
+    gamma : float
+        Neural Gas neighborhood range.
+
+    Returns
+    -------
+    scalar
+        Mean negative log-likelihood with NG cooperation.
+    """
+    # 1. Gaussian mixture probabilities (numerically stable)
+    log_probs = -distances / (2.0 * sigma ** 2)
+    log_norm = jnp.max(log_probs, axis=1, keepdims=True)
+    probs = jnp.exp(log_probs - log_norm)
+    probs = probs / (jnp.sum(probs, axis=1, keepdims=True) + 1e-10)
+
+    # 2. NG rank-based weighting (double argsort for ranks)
+    order = jnp.argsort(distances, axis=1)
+    ranks = jnp.argsort(order, axis=1).astype(jnp.float32)
+    h = jnp.exp(-ranks / (gamma + 1e-10))
+    h = h / (jnp.sum(h, axis=1, keepdims=True) + 1e-10)
+
+    # 3. Combined weights (Gaussian × NG), renormalized
+    weighted_probs = h * probs
+    weighted_probs = weighted_probs / (jnp.sum(weighted_probs, axis=1, keepdims=True) + 1e-10)
+
+    # 4. Sum correct-class weighted probabilities
+    same_class = (target_labels[:, None] == prototype_labels[None, :])
+    correct = jnp.sum(weighted_probs * same_class, axis=1)
+
+    # 5. RSLVQ objective: -log(P_correct)
+    return jnp.mean(-jnp.log(correct + 1e-10))
+
+
 # --- Cross-Entropy LVQ Loss ---
 
 @partial(jit, static_argnums=(3,))

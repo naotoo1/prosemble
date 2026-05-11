@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'Prosemble'
 copyright = '2024, Nana Abeka Otoo'
 author = 'Nana Abeka Otoo'
-release = '1.0.0'
+release = '2.0.0'
 
 # -- General configuration ---------------------------------------------------
 extensions = [

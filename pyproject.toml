@@ -1,6 +1,6 @@
 [project]
 name = "prosemble"
-version = "2.0.0"
+version = "2.1.0"
 description = "A python project for prototype-based machine learning models"
 readme = "README.md"
 requires-python = ">=3.11"

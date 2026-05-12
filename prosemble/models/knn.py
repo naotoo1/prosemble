@@ -26,11 +26,11 @@ class KNN:
     k nearest training samples.
 
     Algorithm:
-    1. For each test sample:
-       a. Compute distances to all training samples
-       b. Find k nearest neighbors
-       c. Predict label as mode (most common) of k neighbors' labels
-       d. Compute probability as frequency of predicted label
+
+    1. For each test sample, compute distances to all training samples,
+       find k nearest neighbors, predict label as mode (most common)
+       of k neighbors' labels, and compute probability as frequency
+       of predicted label.
 
     Parameters
     ----------

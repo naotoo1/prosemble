@@ -462,7 +462,7 @@ outlier=1):
 - ``model.loss_history_`` — loss per iteration
 - ``model.visibility_radii`` — same as ``thetas_``
 
-**NG-specific attributes** (OC-*-NG and SVQ-OCC models):
+**NG-specific attributes** (OC-\*-NG and SVQ-OCC models):
 
 - ``model.gamma_`` — final gamma / lambda value after training
 

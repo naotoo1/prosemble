@@ -30,9 +30,10 @@ class RSLVQ_NG(SupervisedPrototypeModel):
     """Robust Soft LVQ with Neural Gas Cooperation.
 
     Combines:
-    - RSLVQ probabilistic loss: -log(P(correct|x))
+
+    - RSLVQ probabilistic loss: ``-log(P(correct|x))``
     - Neural Gas cooperation: all prototypes weighted by rank via
-      exp(-rank / gamma)
+      ``exp(-rank / gamma)``
     - Euclidean distance
 
     The NG neighborhood modulates RSLVQ's Gaussian probabilities,

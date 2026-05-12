@@ -158,10 +158,11 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
 
     References
     ----------
-    .. [1] Bezdek, J. C. (1981). Pattern Recognition with Fuzzy Objective
-           Function Algorithms. Plenum Press, New York.
-    .. [2] Dunn, J. C. (1973). A Fuzzy Relative of the ISODATA Process and
-           Its Use in Detecting Compact Well-Separated Clusters.
+    Bezdek, J. C. (1981). Pattern Recognition with Fuzzy Objective
+    Function Algorithms. Plenum Press, New York.
+
+    Dunn, J. C. (1973). A Fuzzy Relative of the ISODATA Process and
+    Its Use in Detecting Compact Well-Separated Clusters.
     """
 
     _hyperparams = ('fuzzifier', 'init_method')
@@ -471,7 +472,7 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
         This function is JIT-compiled and used in lax.scan for fast looping.
 
         Algorithm:
-        ----------
+
         1. Update U matrix given current centroids
         2. Compute new centroids given updated U
         3. Compute objective function

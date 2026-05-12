@@ -6,13 +6,16 @@ Best Matching Unit (BMU) definition that accounts for the neighborhood
 function, and a pure batch update rule (no learning rate). This
 guarantees monotonic decrease of a well-defined energy function.
 
-Energy function:
+Energy function::
+
     E = Σ_x Σ_k h(k, c*(x)) * ||x - w_k||^2
 
-Modified BMU:
+Modified BMU::
+
     c*(x) = argmin_c Σ_k h(k, c) * ||x - w_k||^2
 
-Batch update:
+Batch update::
+
     w_k = Σ_x h(k, c*(x)) * x / Σ_x h(k, c*(x))
 
 References
@@ -51,6 +54,7 @@ class HeskesSOM(UnsupervisedPrototypeModel):
     Guarantees monotonic decrease of the Heskes energy function.
 
     Differences from KohonenSOM:
+
     - BMU is chosen to minimize neighborhood-weighted distance sum,
       not raw distance to closest prototype.
     - Prototypes are updated via weighted average (no learning rate).

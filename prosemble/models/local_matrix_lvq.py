@@ -33,7 +33,8 @@ class LGMLVQ(SupervisedPrototypeModel):
     """Localized Generalized Matrix Learning Vector Quantization.
 
     Each prototype k has its own Omega_k matrix. The distance from
-    sample x to prototype w_k is:
+    sample x to prototype w_k is::
+
         d(x, w_k) = (x - w_k)^T Omega_k^T Omega_k (x - w_k)
 
     Parameters

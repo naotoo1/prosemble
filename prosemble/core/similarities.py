@@ -108,10 +108,10 @@ def rank_scaled_gaussian(distances, lambd=1.0):
     array of shape (n, m)
         Rank-scaled similarity values in (0, 1].
 
-    References
-    ----------
-    .. [1] Used in Probabilistic LVQ (PLVQ) as a conditional
-           distribution P(x|prototype).
+    Notes
+    -----
+    Used in Probabilistic LVQ (PLVQ) as a conditional
+    distribution P(x|prototype).
     """
     order = jnp.argsort(distances, axis=1)
     ranks = jnp.argsort(order, axis=1).astype(distances.dtype)

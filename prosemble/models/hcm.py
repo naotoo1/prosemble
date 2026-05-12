@@ -42,12 +42,14 @@ class HCM(ScanFitMixin, FuzzyClusteringBase):
     the nearest centroid. This is the classic K-Means algorithm.
 
     Algorithm:
+
     1. Initialize centroids randomly or from data
-    2. Assign each point to nearest centroid: label_i = argmin_j ||x_i - v_j||²
-    3. Update centroids as mean of assigned points: v_j = (1/|C_j|) Σ_{i∈C_j} x_i
+    2. Assign each point to nearest centroid
+    3. Update centroids as mean of assigned points
     4. Repeat until convergence
 
-    Objective function:
+    Objective function::
+
         J = Σ_i ||x_i - v_{label_i}||²
 
     Parameters

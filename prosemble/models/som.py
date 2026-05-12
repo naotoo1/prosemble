@@ -28,12 +28,11 @@ class SOM:
     topological relationships.
 
     Algorithm:
+
     1. Initialize grid of neurons with random weights
-    2. For each iteration:
-       a. Select random sample from data
-       b. Find Best Matching Unit (BMU) - neuron closest to sample
-       c. Update BMU and its neighbors towards the sample
-       d. Decay learning rate and neighborhood range
+    2. For each iteration, select random sample from data,
+       find Best Matching Unit (BMU), update BMU and its neighbors
+       towards the sample, and decay learning rate and neighborhood range.
 
     Parameters
     ----------

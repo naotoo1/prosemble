@@ -4,7 +4,7 @@ JAX-based distance functions for Prosemble.
 This module provides GPU-accelerated, vectorized distance computations
 using JAX. All functions are JIT-compiled for maximum performance.
 
-Mathematical Background:
+Mathematical Background
 -----------------------
 Distance metrics are fundamental to prototype-based learning algorithms.
 This implementation focuses on:
@@ -37,7 +37,8 @@ def euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
     Uses the identity: ||x - y||² = ||x||² + ||y||² - 2⟨x, y⟩
     This is more efficient than explicit broadcasting for large matrices.
 
-    Mathematical Formula:
+    Mathematical Formula::
+
         D[i,j] = ||X[i] - Y[j]|| = sqrt(Σ_k (X[i,k] - Y[j,k])²)
 
     Args:
@@ -45,7 +46,7 @@ def euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
         Y: Array of shape (m, d) - m samples with d features
 
     Returns:
-        D: Array of shape (n, m) where D[i,j] = ||X[i] - Y[j]||
+        D: Array of shape (n, m) where ``D[i,j] = ||X[i] - Y[j]||``
 
     Complexity:
         Time: O(nmd) - single matrix multiplication
@@ -95,7 +96,8 @@ def squared_euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Arra
     More efficient than euclidean_distance_matrix(X, Y)**2 because it avoids
     the sqrt operation entirely.
 
-    Mathematical Formula:
+    Mathematical Formula::
+
         D²[i,j] = ||X[i] - Y[j]||² = Σ_k (X[i,k] - Y[j,k])²
 
     Args:
@@ -103,7 +105,7 @@ def squared_euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Arra
         Y: Array of shape (m, d)
 
     Returns:
-        D²: Array of shape (n, m) where D²[i,j] = ||X[i] - Y[j]||²
+        D²: Array of shape (n, m) where ``D²[i,j] = ||X[i] - Y[j]||²``
 
     Complexity:
         Time: O(nmd)
@@ -139,7 +141,8 @@ def manhattan_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
     """
     Compute pairwise Manhattan (L1) distances.
 
-    Mathematical Formula:
+    Mathematical Formula::
+
         D[i,j] = ||X[i] - Y[j]||₁ = Σ_k |X[i,k] - Y[j,k]|
 
     Args:
@@ -190,7 +193,8 @@ def lpnorm_distance_matrix(
     """
     Compute pairwise L-p norm distances.
 
-    Mathematical Formula:
+    Mathematical Formula::
+
         D[i,j] = ||X[i] - Y[j]||_p = (Σ_k |X[i,k] - Y[j,k]|^p)^(1/p)
 
     Special Cases:
@@ -220,7 +224,7 @@ def lpnorm_distance_matrix(
     Notes:
         - For p=1, use manhattan_distance_matrix for better performance
         - For p=2, use euclidean_distance_matrix for better performance
-        - For p=inf, computes max(|x - y|)
+        - For p=inf, computes ``max(|x - y|)``
     """
     chex.assert_rank(X, 2)
     chex.assert_rank(Y, 2)
@@ -248,7 +252,8 @@ def omega_distance_matrix(
     """
     Compute distances in projected space using projection matrix Omega.
 
-    Mathematical Formula:
+    Mathematical Formula::
+
         D[i,j] = ||X[i]Ω - Y[j]Ω||²
 
     where Ω is a projection matrix that transforms the feature space.
@@ -308,7 +313,8 @@ def lomega_distance_matrix(
     """
     Compute distances using multiple projection matrices (Local Omega).
 
-    Mathematical Formula:
+    Mathematical Formula::
+
         D[i,j] = Σ_p ||X[i]Ω_p - Y[j]Ω_p||²
 
     where Ω_p are multiple projection matrices (one per prototype or cluster).
@@ -416,10 +422,10 @@ def tangent_distance_matrix(
     D : array of shape (n, m)
         Squared tangent distances.
 
-    References
-    ----------
-    .. [1] Saralajew, S., & Villmann, T. (2016). Adaptive tangent
-           distances in generalized learning vector quantization.
+    Notes
+    -----
+    Based on Saralajew, S., & Villmann, T. (2016). Adaptive tangent
+    distances in generalized learning vector quantization.
     """
     chex.assert_rank(X, 2)
     chex.assert_rank(Y, 2)
@@ -459,7 +465,8 @@ def gaussian_kernel_matrix(
     """
     Compute Gaussian (RBF) kernel matrix.
 
-    Mathematical Formula:
+    Mathematical Formula::
+
         K[i,j] = exp(-||X[i] - Y[j]||² / (2σ²))
 
     The Gaussian kernel maps data to infinite-dimensional Hilbert space,
@@ -540,7 +547,8 @@ def polynomial_kernel_matrix(
     """
     Compute polynomial kernel matrix.
 
-    Mathematical Formula:
+    Mathematical Formula::
+
         K[i,j] = (⟨X[i], Y[j]⟩ + c)^d
 
     where d is degree and c is coef0.

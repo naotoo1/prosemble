@@ -38,6 +38,11 @@ class GLVQ(SupervisedPrototypeModel):
         Parameter for transfer function (e.g., sigmoid steepness).
     optimizer : str or optax optimizer
         Optimizer ('adam', 'sgd', or optax object).
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, beta=10.0, **kwargs):
@@ -63,6 +68,20 @@ class GLVQ1(SupervisedPrototypeModel):
     """GLVQ with LVQ1-style loss (gradient-based).
 
     Loss: d+ when correct, -d- when wrong.
+
+    Parameters
+    ----------
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def _compute_loss(self, params, X, y, proto_labels):
@@ -74,6 +93,20 @@ class GLVQ21(SupervisedPrototypeModel):
     """GLVQ with LVQ2.1-style loss (gradient-based, unnormalized).
 
     Loss: d+ - d- (no normalization by d+ + d-).
+
+    Parameters
+    ----------
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def _compute_loss(self, params, X, y, proto_labels):

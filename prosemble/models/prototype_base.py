@@ -227,6 +227,19 @@ class SupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC):
         - 'sync_period': int (default 6) — sync every k steps
         - 'slow_step_size': float (default 0.5) — interpolation factor
         Default: None (no lookahead).
+    lr_scheduler : str or optax.Schedule, optional
+        Learning rate schedule. Supported strings: 'exponential_decay',
+        'cosine_decay', 'warmup_cosine_decay', 'warmup_exponential_decay',
+        'warmup_constant', 'polynomial', 'linear', 'piecewise_constant',
+        'sgdr'. Or pass a custom optax.Schedule. Default: None.
+    lr_scheduler_kwargs : dict, optional
+        Keyword arguments passed to the learning rate scheduler
+        (e.g. ``decay_rate``, ``transition_steps``). Default: None.
+    prototypes_initializer : str or callable, optional
+        How to initialize prototypes. Supported strings: 'stratified_random'
+        (default), 'class_mean', 'class_conditional_mean', 'stratified_noise',
+        'random_normal', 'uniform', 'zeros', 'ones', 'fill_value'.
+        Or pass a callable ``(X, y, n_per_class, key) -> (protos, labels)``.
     mixed_precision : str or None, optional
         Compute dtype for mixed precision training. 'float16' or 'bfloat16'.
         Master weights stay in float32; forward/backward pass runs in lower
@@ -1691,6 +1704,10 @@ class UnsupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC)
         If True (default), use jax.lax.scan for training (faster, JIT-compiled,
         but runs all max_iter iterations even after convergence).
         If False, use a Python for-loop with true early stopping.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore parameters from the lowest-loss epoch. Default: False.
     """
 
     def __init__(

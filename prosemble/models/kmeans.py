@@ -58,6 +58,10 @@ class KMeansPlusPlus:
         Number of iterations run
     objective_ : float
         Final objective function value
+
+    See Also
+    --------
+    HCM : Hard C-Means model used internally after initialization.
     """
 
     def __init__(

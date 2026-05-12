@@ -43,6 +43,11 @@ class OCGRLVQ(OCGLVQ):
     ----------
     relevances_ : array of shape (n_features,)
         Learned per-feature relevance weights (softmax-normalized).
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, **kwargs):

@@ -85,6 +85,12 @@ class MRSLVQ_NG(SupervisedPrototypeModel):
 
     Parameters
     ----------
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Learning rate.
     sigma : float
         Bandwidth of Gaussian mixture.
     latent_dim : int, optional
@@ -97,12 +103,11 @@ class MRSLVQ_NG(SupervisedPrototypeModel):
         Per-step multiplicative decay. Default: computed from max_iter.
     rejection_confidence : float, optional
         Minimum class probability for confident prediction (0 to 1).
-    n_prototypes_per_class : int
-        Prototypes per class.
-    max_iter : int
-        Maximum training iterations.
-    lr : float
-        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, sigma=1.0, latent_dim=None, gamma_init=None,
@@ -301,6 +306,12 @@ class LMRSLVQ_NG(SupervisedPrototypeModel):
 
     Parameters
     ----------
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Learning rate.
     sigma : float
         Bandwidth of Gaussian mixture.
     latent_dim : int, optional
@@ -313,12 +324,11 @@ class LMRSLVQ_NG(SupervisedPrototypeModel):
         Per-step multiplicative decay. Default: computed from max_iter.
     rejection_confidence : float, optional
         Minimum class probability for confident prediction (0 to 1).
-    n_prototypes_per_class : int
-        Prototypes per class.
-    max_iter : int
-        Maximum training iterations.
-    lr : float
-        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, sigma=1.0, latent_dim=None, gamma_init=None,

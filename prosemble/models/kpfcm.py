@@ -28,6 +28,11 @@ class KPFCM(ScanFitMixin, FuzzyClusteringBase):
 
     KPFCM combines fuzzy membership (U) and typicality (T) in kernel space
     with weights a and b.
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'sigma', 'a', 'b', 'eta', 'k', 'init_method')

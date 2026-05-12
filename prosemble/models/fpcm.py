@@ -110,6 +110,11 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     >>> labels = model.predict(X)
     >>> U = model.predict_proba(X)
     >>> T = model.get_typicality(X)
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'eta', 'init_method')

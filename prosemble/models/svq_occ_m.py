@@ -50,6 +50,11 @@ class SVQOCC_M(SVQOCC):
     ----------
     omega_ : array of shape (n_features, latent_dim)
         Learned projection matrix.
+
+    See Also
+    --------
+    SVQOCC : Full SVQ-OCC parameter documentation.
+    SupervisedPrototypeModel : Full list of base parameters.
     """
 
     def __init__(self, latent_dim=None, **kwargs):

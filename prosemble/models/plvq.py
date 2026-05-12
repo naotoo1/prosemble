@@ -71,6 +71,11 @@ class PLVQ(SupervisedPrototypeModel):
         Maximum training iterations.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, hidden_sizes=None, latent_dim=2,

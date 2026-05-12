@@ -79,6 +79,11 @@ class SVQOCC(SupervisedPrototypeModel):
         Maximum training iterations.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     _valid_costs = ('contrastive', 'brier', 'cross_entropy')

@@ -47,6 +47,14 @@ class FuzzyClusteringBase(MetadataCollectorMixin, QuantizationMixin, ABC):
         Whether to show PCA variance in visualization
     save_plot_path : str, optional
         Path to save final plot
+    distance_fn : callable, optional
+        Pairwise distance function. Default: squared Euclidean.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool, default=False
+        If True, restore centroids from the lowest-objective epoch.
+    callbacks : list, optional
+        List of Callback objects for monitoring/visualization.
 
     Class Attributes (for subclasses)
     ----------------------------------

@@ -205,12 +205,20 @@ class LVQMLN(SupervisedPrototypeModel):
         Activation function: 'sigmoid', 'relu', 'tanh', 'leaky_relu', 'selu'.
     beta : float
         Transfer function parameter for GLVQ loss.
+    bb_lr : float, optional
+        Separate learning rate for the backbone network. If None,
+        uses the same lr as prototypes. Default: None.
     n_prototypes_per_class : int
         Prototypes per class.
     max_iter : int
         Maximum training iterations.
     lr : float
         Learning rate for both backbone and prototypes.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, hidden_sizes=None, latent_dim=2,

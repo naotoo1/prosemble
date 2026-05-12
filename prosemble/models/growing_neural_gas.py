@@ -41,8 +41,11 @@ class GrowingNeuralGas(UnsupervisedPrototypeModel):
         Insert a new node every this many steps.
     error_decay : float
         Error decay factor applied to all nodes.
-    random_seed : int
-        Random seed.
+
+    See Also
+    --------
+    UnsupervisedPrototypeModel : Full list of base parameters (distance_fn,
+        callbacks, use_scan, patience, etc.).
     """
 
     def __init__(self, max_nodes=100, lr_winner=0.1, lr_neighbor=0.01,

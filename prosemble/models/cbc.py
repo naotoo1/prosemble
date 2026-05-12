@@ -56,10 +56,22 @@ class CBC(SupervisedPrototypeModel):
         Bandwidth for Gaussian similarity.
     margin : float
         Margin for the margin loss.
+    components_initializer : callable, optional
+        Initializer for component vectors. Default: None.
+    reasonings_initializer : callable, optional
+        Initializer for reasoning matrix. Default: None.
+    similarity_fn : callable, optional
+        Similarity function for component detection. Default: None
+        (uses Gaussian similarity).
     max_iter : int
         Maximum training iterations.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, n_components=5, n_classes=2, sigma=1.0,

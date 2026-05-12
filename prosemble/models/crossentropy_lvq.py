@@ -31,6 +31,11 @@ class CELVQ(SupervisedPrototypeModel):
         Maximum training iterations.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def _compute_loss(self, params, X, y, proto_labels):

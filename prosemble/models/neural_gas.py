@@ -55,8 +55,11 @@ class NeuralGas(UnsupervisedPrototypeModel):
         Initial neighborhood range.
     lambda_final : float
         Final neighborhood range.
-    random_seed : int
-        Random seed.
+
+    See Also
+    --------
+    UnsupervisedPrototypeModel : Full list of base parameters (distance_fn,
+        callbacks, use_scan, patience, etc.).
     """
 
     def __init__(self, lr_init=0.5, lr_final=0.01,

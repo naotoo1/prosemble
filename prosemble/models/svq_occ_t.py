@@ -54,6 +54,11 @@ class SVQOCC_T(SVQOCC):
     ----------
     omegas_ : array of shape (n_prototypes, n_features, subspace_dim)
         Learned per-prototype orthonormal tangent bases.
+
+    See Also
+    --------
+    SVQOCC : Full SVQ-OCC parameter documentation.
+    SupervisedPrototypeModel : Full list of base parameters.
     """
 
     def __init__(self, subspace_dim=2, **kwargs):

@@ -54,6 +54,11 @@ class OCRSLVQ(OCGLVQ):
     ----------
     thetas_ : array of shape (n_prototypes,)
         Learned per-prototype acceptance thresholds.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, sigma=1.0, **kwargs):

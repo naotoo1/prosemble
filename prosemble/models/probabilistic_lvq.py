@@ -45,6 +45,11 @@ class SLVQ(SupervisedPrototypeModel):
         Maximum training iterations.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, sigma=1.0, rejection_confidence=None, **kwargs):
@@ -111,6 +116,11 @@ class RSLVQ(SupervisedPrototypeModel):
         Maximum training iterations.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, sigma=1.0, rejection_confidence=None, **kwargs):

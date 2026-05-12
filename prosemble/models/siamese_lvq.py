@@ -53,12 +53,22 @@ class SiameseGLVQ(SupervisedPrototypeModel):
         Activation: 'sigmoid', 'relu', 'tanh', 'leaky_relu', 'selu'.
     beta : float
         Transfer function parameter for GLVQ loss.
+    bb_lr : float, optional
+        Separate learning rate for the backbone network. Default: None.
+    both_path_gradients : bool
+        If True, compute gradients through both input and prototype
+        paths. Default: True.
     n_prototypes_per_class : int
         Prototypes per class.
     max_iter : int
         Maximum training iterations.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, hidden_sizes=None, latent_dim=2,
@@ -201,6 +211,22 @@ class SiameseGMLVQ(SupervisedPrototypeModel):
         Backbone activation.
     beta : float
         GLVQ transfer parameter.
+    bb_lr : float, optional
+        Separate learning rate for the backbone network. Default: None.
+    both_path_gradients : bool
+        If True, compute gradients through both input and prototype
+        paths. Default: True.
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, hidden_sizes=None, latent_dim=2,
@@ -352,6 +378,22 @@ class SiameseGTLVQ(SupervisedPrototypeModel):
         Backbone activation.
     beta : float
         GLVQ transfer parameter.
+    bb_lr : float, optional
+        Separate learning rate for the backbone network. Default: None.
+    both_path_gradients : bool
+        If True, compute gradients through both input and prototype
+        paths. Default: True.
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, hidden_sizes=None, latent_dim=4,

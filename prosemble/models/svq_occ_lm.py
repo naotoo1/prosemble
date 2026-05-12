@@ -50,6 +50,11 @@ class SVQOCC_LM(SVQOCC):
     ----------
     omegas_ : array of shape (n_prototypes, n_features, latent_dim)
         Learned per-prototype projection matrices.
+
+    See Also
+    --------
+    SVQOCC : Full SVQ-OCC parameter documentation.
+    SupervisedPrototypeModel : Full list of base parameters.
     """
 
     def __init__(self, latent_dim=None, **kwargs):

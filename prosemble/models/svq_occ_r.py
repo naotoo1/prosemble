@@ -61,6 +61,11 @@ class SVQOCC_R(SVQOCC):
     ----------
     relevances_ : array of shape (n_features,)
         Learned per-feature relevance weights (softmax-normalized).
+
+    See Also
+    --------
+    SVQOCC : Full SVQ-OCC parameter documentation.
+    SupervisedPrototypeModel : Full list of base parameters.
     """
 
     def __init__(self, **kwargs):

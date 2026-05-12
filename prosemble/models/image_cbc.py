@@ -58,14 +58,17 @@ class ImageCBC(SupervisedPrototypeModel):
         Number of output classes.
     sigma : float
         Bandwidth for Gaussian similarity.
-    margin : float
-        Margin for the margin loss.
     activation : str
         CNN activation.
     max_iter : int
         Training epochs.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, input_shape=(28, 28, 1), channels=None,

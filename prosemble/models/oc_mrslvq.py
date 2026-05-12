@@ -60,6 +60,11 @@ class OCMRSLVQ(OCGLVQ):
         Learned projection matrix.
     thetas_ : array of shape (n_prototypes,)
         Learned per-prototype visibility thresholds.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, sigma=1.0, latent_dim=None, **kwargs):
@@ -230,6 +235,11 @@ class OCLMRSLVQ(OCGLVQ):
         Learned per-prototype projection matrices.
     thetas_ : array of shape (n_prototypes,)
         Learned per-prototype visibility thresholds.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, sigma=1.0, latent_dim=None, **kwargs):

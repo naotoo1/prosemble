@@ -53,12 +53,20 @@ class ImageGLVQ(SupervisedPrototypeModel):
         CNN activation: 'relu', 'sigmoid', 'tanh', etc.
     beta : float
         GLVQ transfer function parameter.
+    bb_lr : float, optional
+        Separate learning rate for the backbone network. If None,
+        uses the same lr as prototypes. Default: None.
     n_prototypes_per_class : int
         Prototypes per class.
     max_iter : int
         Training epochs.
     lr : float
         Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, input_shape=(28, 28, 1), channels=None,
@@ -216,7 +224,20 @@ class ImageGMLVQ(SupervisedPrototypeModel):
     omega_dim : int, optional
         Omega mapping dimension. If None, uses latent_dim.
     activation : str
+        CNN activation function.
     beta : float
+        GLVQ transfer function parameter.
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Training epochs.
+    lr : float
+        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, input_shape=(28, 28, 1), channels=None,
@@ -348,13 +369,28 @@ class ImageGTLVQ(SupervisedPrototypeModel):
     input_shape : tuple
         (height, width, channels).
     channels : list of int
+        CNN channels per layer.
     kernel_sizes : list of int
+        Kernel sizes per conv layer.
     latent_dim : int
         CNN output dimension.
     subspace_dim : int
         Tangent subspace dimension per prototype.
     activation : str
+        CNN activation function.
     beta : float
+        GLVQ transfer function parameter.
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Training epochs.
+    lr : float
+        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, input_shape=(28, 28, 1), channels=None,

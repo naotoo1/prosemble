@@ -29,6 +29,11 @@ class KIPCM2(FuzzyClusteringBase):
     """Kernel Improved Possibilistic C-Means 2 with JAX.
 
     KIPCM2 uses exponential T update and modified objective in kernel space.
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'tipifier', 'sigma', 'init_method')

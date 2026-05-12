@@ -29,6 +29,11 @@ class KIPCM(FuzzyClusteringBase):
     """Kernel Improved Possibilistic C-Means with JAX.
 
     KIPCM uses two-phase approach in kernel space with product-based centroids.
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'tipifier', 'k', 'sigma', 'init_method')

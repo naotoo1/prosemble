@@ -140,6 +140,11 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
         - Initialization from FCM (init_method='fcm') is recommended as it provides
           better starting points than random initialization.
         - All computations are JIT-compiled and can run on GPU if available.
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'k', 'init_method')

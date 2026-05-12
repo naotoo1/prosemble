@@ -144,7 +144,7 @@ is highest, automatically focusing model capacity on complex data regions.
 .. note::
 
    **Riemannian Neural Gas** (Neural Gas on manifolds: SO(n), SPD(n),
-   Grassmannian) is planned for **v1.1**.
+   Grassmannian) is available via ``prosemble.models.RiemannianNeuralGas``.
 
 Choosing a Model
 ----------------

@@ -53,6 +53,6 @@ Verify Installation
 
    >>> import prosemble
    >>> print(prosemble.__version__)
-   1.0.0
+   2.0.0
    >>> import jax
    >>> print(jax.devices())  # Check available devices

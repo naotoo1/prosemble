@@ -135,15 +135,15 @@ Supervised Neural Gas
    :undoc-members:
 
 .. autoclass:: prosemble.models.SMNG
-   :members: fit, predict
+   :members: fit, predict, predict_proba
    :undoc-members:
 
 .. autoclass:: prosemble.models.SLNG
-   :members: fit, predict
+   :members: fit, predict, predict_proba
    :undoc-members:
 
 .. autoclass:: prosemble.models.STNG
-   :members: fit, predict
+   :members: fit, predict, predict_proba
    :undoc-members:
 
 Cross-Entropy Neural Gas

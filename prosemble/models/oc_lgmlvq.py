@@ -46,6 +46,11 @@ class OCLGMLVQ(OCGLVQ):
     ----------
     omegas_ : array of shape (n_prototypes, n_features, latent_dim)
         Learned per-prototype projection matrices.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, latent_dim=None, **kwargs):

@@ -28,6 +28,11 @@ class KFPCM(ScanFitMixin, FuzzyClusteringBase):
     KFPCM maintains two matrices (U and T) in kernel space. U has row-sum-to-1
     constraint (standard FCM), while T has column-sum-to-1 constraint per the
     original Pal, Pal & Bezdek (1997) FPCM formulation.
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'eta', 'sigma', 'init_method')

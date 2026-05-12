@@ -37,10 +37,11 @@ class LVQ1(SupervisedPrototypeModel):
         Maximum training iterations.
     lr : float
         Learning rate.
-    epsilon : float
-        Convergence threshold.
-    random_seed : int
-        Random seed.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, **kwargs):

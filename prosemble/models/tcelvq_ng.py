@@ -82,12 +82,10 @@ class TCELVQ_NG(CELVQNGMixin, CELVQ):
         Per-step multiplicative decay factor for gamma.
         Default: computed from max_iter so gamma reaches gamma_final.
 
-    Attributes
-    ----------
-    omegas_ : array of shape (n_prototypes, n_features, subspace_dim)
-        Learned tangent subspace bases after training.
-    gamma_ : float
-        Final gamma value after training.
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, subspace_dim=2, **kwargs):

@@ -48,6 +48,11 @@ class OCGTLVQ(OCGLVQ):
     ----------
     omegas_ : array of shape (n_prototypes, n_features, subspace_dim)
         Learned per-prototype orthonormal tangent bases.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, subspace_dim=2, **kwargs):

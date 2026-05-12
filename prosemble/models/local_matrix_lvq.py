@@ -49,6 +49,15 @@ class LGMLVQ(SupervisedPrototypeModel):
         Learning rate.
     beta : float
         Transfer function steepness.
+    transfer_fn : callable, optional
+        Transfer function for loss shaping. Default: identity.
+    margin : float
+        Margin added to the loss. Default: 0.0.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, latent_dim=None, beta=10.0, **kwargs):

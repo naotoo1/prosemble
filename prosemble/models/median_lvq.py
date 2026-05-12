@@ -36,8 +36,11 @@ class MedianLVQ(SupervisedPrototypeModel):
         Prototypes per class.
     max_iter : int
         Maximum training iterations.
-    random_seed : int
-        Random seed.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, **kwargs):

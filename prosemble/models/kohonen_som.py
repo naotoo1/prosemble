@@ -53,8 +53,11 @@ class KohonenSOM(UnsupervisedPrototypeModel):
         Final learning rate.
     max_iter : int
         Number of training epochs.
-    random_seed : int
-        Random seed.
+
+    See Also
+    --------
+    UnsupervisedPrototypeModel : Full list of base parameters (distance_fn,
+        callbacks, use_scan, patience, etc.).
     """
 
     def __init__(self, grid_height=10, grid_width=10,

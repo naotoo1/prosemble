@@ -106,6 +106,11 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
     >>> model = KFCM(n_clusters=2, sigma=1.0, random_seed=42)
     >>> model.fit(X)
     >>> labels = model.predict(X)
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'sigma', 'init_method')

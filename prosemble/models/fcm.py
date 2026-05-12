@@ -163,6 +163,11 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
 
     Dunn, J. C. (1973). A Fuzzy Relative of the ISODATA Process and
     Its Use in Detecting Compact Well-Separated Clusters.
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'init_method')

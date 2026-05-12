@@ -119,6 +119,11 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     >>> model = AFCM(n_clusters=2, fuzzifier=2.0, a=1.0, b=1.0, k=1.0, random_seed=42)
     >>> model.fit(X)
     >>> labels = model.predict(X)
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'a', 'b', 'k', 'init_method')

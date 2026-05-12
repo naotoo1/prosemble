@@ -130,6 +130,11 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
 
     n_iter_ : int
         Number of iterations performed
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'a', 'b', 'eta', 'k', 'init_method')

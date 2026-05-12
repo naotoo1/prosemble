@@ -76,6 +76,15 @@ class SLNG(SupervisedPrototypeModel):
     gamma_decay : float, optional
         Per-step multiplicative decay factor for gamma.
         Default: computed from max_iter so gamma reaches gamma_final.
+    transfer_fn : callable, optional
+        Transfer function for loss shaping. Default: identity.
+    margin : float
+        Margin added to the loss. Default: 0.0.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, latent_dim=None, beta=10.0, gamma_init=None,

@@ -46,6 +46,11 @@ class OCGTLVQ_NG(NGCooperationMixin, OCGTLVQ):
         Learned per-prototype orthonormal tangent bases.
     gamma_ : float
         Final gamma value after training.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def _compute_distances(self, params, X):

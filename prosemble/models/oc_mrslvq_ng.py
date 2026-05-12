@@ -64,6 +64,11 @@ class OCMRSLVQ_NG(OCRSLVQNGMixin, OCMRSLVQ):
         Learned per-prototype acceptance thresholds.
     gamma_ : float
         Final gamma value after training.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def _compute_distances(self, params, X):
@@ -110,6 +115,11 @@ class OCLMRSLVQ_NG(OCRSLVQNGMixin, OCLMRSLVQ):
         Learned per-prototype acceptance thresholds.
     gamma_ : float
         Final gamma value after training.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def _compute_distances(self, params, X):

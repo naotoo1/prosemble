@@ -65,6 +65,11 @@ class OCGLVQ(SupervisedPrototypeModel):
     ----------
     thetas_ : array of shape (n_prototypes,)
         Learned per-prototype visibility thresholds.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, n_prototypes=3, target_label=None, beta=10.0,

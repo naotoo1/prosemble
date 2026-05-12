@@ -46,6 +46,11 @@ class OCLGMLVQ_NG(NGCooperationMixin, OCLGMLVQ):
         Learned per-prototype projection matrices.
     gamma_ : float
         Final gamma value after training.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def _compute_distances(self, params, X):

@@ -42,6 +42,12 @@ class RSLVQ_NG(SupervisedPrototypeModel):
 
     Parameters
     ----------
+    n_prototypes_per_class : int
+        Prototypes per class.
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Learning rate.
     sigma : float
         Bandwidth of Gaussian mixture.
     gamma_init : float, optional
@@ -52,12 +58,11 @@ class RSLVQ_NG(SupervisedPrototypeModel):
         Per-step multiplicative decay. Default: computed from max_iter.
     rejection_confidence : float, optional
         Minimum class probability for confident prediction (0 to 1).
-    n_prototypes_per_class : int
-        Prototypes per class.
-    max_iter : int
-        Maximum training iterations.
-    lr : float
-        Learning rate.
+
+    See Also
+    --------
+    SupervisedPrototypeModel : Full list of base parameters (optimizer,
+        distance_fn, lr_scheduler, callbacks, patience, etc.).
     """
 
     def __init__(self, sigma=1.0, gamma_init=None, gamma_final=0.01,

@@ -120,6 +120,11 @@ class IPCM2(FuzzyClusteringBase):
     >>> model = IPCM2(n_clusters=2, random_seed=42)
     >>> model.fit(X)
     >>> labels = model.predict(X)
+
+    See Also
+    --------
+    FuzzyClusteringBase : Full list of base parameters (distance_fn,
+        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'tipifier', 'init_method')

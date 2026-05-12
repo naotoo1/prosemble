@@ -56,8 +56,11 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
         Final neighborhood range. Default: 0.01.
     tau : float
         Safety factor for injectivity radius bound. Default: 0.9.
-    random_seed : int
-        Random seed.
+
+    See Also
+    --------
+    UnsupervisedPrototypeModel : Full list of base parameters (distance_fn,
+        callbacks, use_scan, patience, etc.).
     """
 
     def __init__(self, manifold, lr_init=0.3, lr_final=0.01,

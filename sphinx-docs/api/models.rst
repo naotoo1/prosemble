@@ -280,7 +280,7 @@ Fuzzy Clustering
    :undoc-members:
 
 .. autoclass:: prosemble.models.PFCM
-   :members: fit, predict, predict_proba, get_typicality
+   :members: fit, predict, predict_proba, predict_typicality
    :undoc-members:
 
 .. autoclass:: prosemble.models.AFCM

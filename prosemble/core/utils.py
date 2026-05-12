@@ -385,7 +385,7 @@ def prototype_priors(prototype_labels, n_classes=None):
     is uniform (1/n_prototypes) and the class prior is the fraction
     of prototypes assigned to each class.
 
-    P(class=k) = |{j : label_j = k}| / n_prototypes
+    ``P(class=k) = |{j : label_j = k}| / n_prototypes``
 
     Parameters
     ----------

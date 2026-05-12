@@ -52,14 +52,16 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     - Standard FCM U update
 
     Algorithm:
+
     1. Initialize U using FCM
-    2. Compute γ_j = k·Σ_i(u_ij^m · d_ij) / Σ_i(u_ij^m)  [Euclidean distance!]
-    3. Update T: t_ij = exp(-b·d²_ij/γ_j)
-    4. Update U: Standard FCM
-    5. Update centroids: v_j = Σ_i[a·u_ij^m + b·t_ij]x_i / Σ_i[a·u_ij^m + b·t_ij]
+    2. Compute gamma parameters using Euclidean distance
+    3. Update T using exponential update
+    4. Update U using standard FCM rule
+    5. Update centroids using combined fuzzy-possibilistic weights
     6. Repeat until convergence
 
-    Objective function:
+    Objective function::
+
         J = Σ_i Σ_j [d²_ij · (a·u_ij^m + b·t_ij)] +
             Σ_j[γ_j · Σ_i(t_ij·log(t_ij) - t_ij)]
 

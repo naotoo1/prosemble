@@ -76,11 +76,12 @@ class MRSLVQ_NG(SupervisedPrototypeModel):
     """Matrix Robust Soft LVQ with Neural Gas Cooperation.
 
     Combines:
-    - RSLVQ probabilistic loss: -log(P(correct|x))
+
+    - RSLVQ probabilistic loss: ``-log(P(correct|x))``
     - Neural Gas cooperation: all prototypes weighted by rank via
-      exp(-rank / gamma)
+      ``exp(-rank / gamma)``
     - Global Omega matrix for metric adaptation:
-      d(x, w) = (x - w)^T Omega^T Omega (x - w)
+      ``d(x, w) = (x - w)^T Omega^T Omega (x - w)``
 
     Parameters
     ----------

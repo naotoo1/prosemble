@@ -39,11 +39,12 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
     Kernel distance: d_K(x, v) = 2(1 - K(x, v))
 
     Algorithm:
+
     1. Initialize U using KFCM
-    2. Compute γ_j using kernel distance
-    3. Update T: t_ij = exp(-b·d_K(x_i, v_j)/γ_j)
-    4. Update U: Standard KFCM update
-    5. Update centroids: kernel-weighted with a·U^m + b·T
+    2. Compute gamma parameters using kernel distance
+    3. Update T using exponential kernel update
+    4. Update U using standard KFCM rule
+    5. Update centroids (kernel-weighted with combined weights)
     6. Repeat until convergence
 
     Parameters

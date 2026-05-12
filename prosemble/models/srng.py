@@ -28,10 +28,11 @@ class SRNG(SupervisedPrototypeModel):
     """Supervised Relevance Neural Gas.
 
     Combines three key ideas:
-    - GLVQ loss: (d+ - d-) / (d+ + d-) for margin-based classification
+
+    - GLVQ loss: ``(d+ - d-) / (d+ + d-)`` for margin-based classification
     - Neural Gas cooperation: all same-class prototypes participate in
-      the loss, weighted by rank via exp(-rank / gamma)
-    - Relevance weighting: per-feature lambda_j learned during training
+      the loss, weighted by rank via ``exp(-rank / gamma)``
+    - Relevance weighting: per-feature ``lambda_j`` learned during training
 
     The neighborhood range gamma decays during training from gamma_init
     to gamma_final. When gamma -> 0, SRNG recovers standard GRLVQ.

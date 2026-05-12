@@ -25,6 +25,7 @@ class MedianLVQ(SupervisedPrototypeModel):
     """Median Learning Vector Quantization.
 
     Prototypes are always actual data points. The algorithm alternates:
+
     1. E-step: compute soft assignments (GLVQ-like weights)
     2. M-step: for each prototype, find the data point that minimizes
        the weighted sum of distances

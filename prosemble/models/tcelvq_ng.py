@@ -53,10 +53,11 @@ class TCELVQ_NG(CELVQNGMixin, CELVQ):
     """Tangent Cross-Entropy LVQ with Neural Gas neighborhood cooperation.
 
     Combines three key ideas:
+
     - Cross-entropy loss: softmax over all-class NG-weighted distances
     - Neural Gas cooperation: all same-class prototypes participate,
-      weighted by rank via exp(-rank / gamma)
-    - Tangent subspaces: d(x, w_k) = ||(I - Omega_k Omega_k^T)(x - w_k)||^2
+      weighted by rank via ``exp(-rank / gamma)``
+    - Tangent subspaces: ``d(x, w_k) = ||(I - Omega_k Omega_k^T)(x - w_k)||^2``
       measures distance in the orthogonal complement of each prototype's
       learned invariance subspace
 

@@ -52,18 +52,21 @@ class IPCM2(FuzzyClusteringBase):
     - Different objective function
 
     Algorithm (Phase 0):
+
     1. Initialize U using FCM, T = 0
-    2. Compute γ_j = Σ_i(u_ij^m_f · d²_ij) / Σ_i(u_ij^m_f)
-    3. Update T: t_ij = exp(-d²_ij/γ_j)
+    2. Compute gamma parameters from fuzzy membership
+    3. Update T using exponential update
     4. Update U with modified distance
-    5. Update centroids: v_j = Σ_i[u_ij^m_f · t_ij]x_i / Σ_i[u_ij^m_f · t_ij]
+    5. Update centroids using combined U and T weights
     6. Repeat until convergence
 
     Algorithm (Phase 1):
-    7. Recompute γ_j = Σ_i(u_ij^m_f · t_ij^m_p · d²_ij) / Σ_i(u_ij^m_f · t_ij^m_p)
+
+    7. Recompute gamma using both U and T
     8. Continue iterations with new gamma
 
-    Objective function:
+    Objective function::
+
         J = Σ_i Σ_j [u_ij^m_f · t_ij · d²_ij] +
             Σ_j[γ_j · Σ_i((t_ij·log(t_ij) - t_ij + 1) · u_ij^m_f)]
 

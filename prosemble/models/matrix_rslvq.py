@@ -71,7 +71,8 @@ class MRSLVQ(SupervisedPrototypeModel):
     """Matrix Robust Soft Learning Vector Quantization.
 
     Combines the RSLVQ probabilistic loss with a learned global linear
-    mapping Omega (d x latent_dim) for metric adaptation:
+    mapping Omega (d x latent_dim) for metric adaptation::
+
         d(x, w) = (x - w)^T Omega^T Omega (x - w)
 
     The relevance matrix Lambda = Omega^T Omega captures feature
@@ -234,7 +235,8 @@ class LMRSLVQ(SupervisedPrototypeModel):
     """Localized Matrix Robust Soft Learning Vector Quantization.
 
     Each prototype k has its own Omega_k matrix. The distance from
-    sample x to prototype w_k is:
+    sample x to prototype w_k is::
+
         d(x, w_k) = (x - w_k)^T Omega_k^T Omega_k (x - w_k)
 
     Combined with the RSLVQ probabilistic loss for metric-adaptive

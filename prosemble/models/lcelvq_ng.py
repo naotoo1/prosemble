@@ -49,10 +49,11 @@ class LCELVQ_NG(CELVQNGMixin, CELVQ):
     """Localized Matrix Cross-Entropy LVQ with Neural Gas cooperation.
 
     Combines three key ideas:
+
     - Cross-entropy loss: softmax over all-class NG-weighted distances
     - Neural Gas cooperation: all same-class prototypes participate,
-      weighted by rank via exp(-rank / gamma)
-    - Per-prototype Omega_k: d(x, w_k) = ||Omega_k(x - w_k)||^2 learns
+      weighted by rank via ``exp(-rank / gamma)``
+    - Per-prototype Omega_k: ``d(x, w_k) = ||Omega_k(x - w_k)||^2`` learns
       local metrics adapted to each prototype's region
 
     The neighborhood range gamma decays during training from gamma_init

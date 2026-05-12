@@ -41,21 +41,23 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
     KFCM uses a Gaussian kernel to map data into a high-dimensional feature space
     where clustering is performed. This allows handling non-linearly separable data.
 
-    Kernel:
+    Kernel::
+
         K(x, y) = exp(-||x - y||² / σ²)
 
-    Kernel distance in feature space:
+    Kernel distance in feature space::
+
         ||φ(x) - φ(y)||² = 2(1 - K(x, y))
 
     Algorithm:
+
     1. Initialize U randomly
-    2. Update centroids (kernel-weighted):
-       v_j = Σ_i[u_ij^m · K(x_i, v_j) · x_i] / Σ_i[u_ij^m · K(x_i, v_j)]
-    3. Update U using kernel distance:
-       u_ij = 1 / Σ_k[(1 - K(x_i, v_j)) / (1 - K(x_i, v_k))]^(1/(m-1))
+    2. Update centroids (kernel-weighted)
+    3. Update U using kernel distance
     4. Repeat until convergence
 
-    Objective function:
+    Objective function::
+
         J = 2·Σ_i Σ_j [u_ij^m · (1 - K(x_i, v_j))]
 
     Parameters

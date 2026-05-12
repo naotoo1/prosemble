@@ -48,10 +48,11 @@ class MCELVQ_NG(CELVQNGMixin, CELVQ):
     """Matrix Cross-Entropy LVQ with Neural Gas neighborhood cooperation.
 
     Combines three key ideas:
+
     - Cross-entropy loss: softmax over all-class NG-weighted distances
     - Neural Gas cooperation: all same-class prototypes participate,
-      weighted by rank via exp(-rank / gamma)
-    - Global Omega projection: d(x, w) = ||Omega(x - w)||^2 learns
+      weighted by rank via ``exp(-rank / gamma)``
+    - Global Omega projection: ``d(x, w) = ||Omega(x - w)||^2`` learns
       feature correlations and a discriminative subspace
 
     The neighborhood range gamma decays during training from gamma_init

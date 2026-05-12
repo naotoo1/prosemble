@@ -26,6 +26,7 @@ class NPC:
     prototypes based on accuracy metric. Uses softmin for probability estimation.
 
     Algorithm:
+
     1. Initialize prototypes (one per class)
     2. Predict labels using nearest prototype
     3. Compute accuracy

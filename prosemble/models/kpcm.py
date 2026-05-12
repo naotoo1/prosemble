@@ -44,21 +44,24 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     KPCM extends PCM to kernel space using Gaussian kernel, allowing handling
     of non-linearly separable data while maintaining possibilistic properties.
 
-    Kernel:
+    Kernel::
+
         K(x, y) = exp(-||x - y||² / σ²)
 
-    Kernel distance:
+    Kernel distance::
+
         d_K(x, v) = 2(1 - K(x, v))
 
     Algorithm:
+
     1. Initialize using KFCM
-    2. Compute γ_j = k·Σ_i(u_ij^m · d_K(x_i, v_j)) / Σ_i(u_ij^m)
-    3. Update T: t_ij = 1 / (1 + (d_K(x_i, v_j)/γ_j)^(1/(m-1)))
-    4. Update centroids (kernel-weighted):
-       v_j = Σ_i[t_ij^m · K(x_i, v_j) · x_i] / Σ_i[t_ij^m · K(x_i, v_j)]
+    2. Compute gamma parameters
+    3. Update typicality matrix T
+    4. Update centroids (kernel-weighted)
     5. Repeat until convergence
 
-    Objective function:
+    Objective function::
+
         J = Σ_i Σ_j [t_ij^m · d_K(x_i, v_j)] + Σ_j[γ_j · Σ_i(1 - t_ij)^m]
 
     Parameters

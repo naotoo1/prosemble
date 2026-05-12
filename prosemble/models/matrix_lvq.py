@@ -34,7 +34,8 @@ class GMLVQ(SupervisedPrototypeModel):
     """Generalized Matrix Learning Vector Quantization.
 
     Learns a global linear mapping Omega (d x latent_dim) such that
-    distances are computed in the transformed space:
+    distances are computed in the transformed space::
+
         d(x, w) = (x - w)^T Omega^T Omega (x - w)
 
     The relevance matrix Lambda = Omega^T Omega captures feature

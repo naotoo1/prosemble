@@ -37,11 +37,12 @@ class BGPC:
     BGPC uses exponential weighting with time-decaying alpha and beta parameters.
 
     Algorithm:
-    1. V_ij = exp(-d(x_i, v_j) / β)
-    2. Compute Z_i based on V_i values and α
-    3. U_ij = V_ij / Z_i
-    4. Update centroids: v_j = Σ_i u_ij·x_i / Σ_i u_ij
-    5. Update β and α with decay schedules
+
+    1. Compute membership weights using exponential distance
+    2. Normalize memberships using partition function Z
+    3. Update centroids as weighted mean of data
+    4. Update beta and alpha with decay schedules
+    5. Repeat until convergence
 
     Parameters
     ----------

@@ -9,24 +9,20 @@ a data point belongs to a cluster, independent of other clusters. This makes PCM
 less sensitive to outliers and noise compared to FCM.
 
 Mathematical formulation:
-    Objective function:
-        J = Σᵢ Σⱼ tᵢⱼᵐ ||xᵢ - vⱼ||² + Σⱼ γⱼ Σᵢ (1 - tᵢⱼ)ᵐ
 
-    where:
-        - tᵢⱼ is the typicality of point xᵢ to cluster j
-        - vⱼ is the centroid of cluster j
-        - m is the fuzzifier (m > 1)
-        - γⱼ is a scale parameter for cluster j
+Objective function::
 
-    Update equations:
-        Centroids:
-            vⱼ = (Σᵢ tᵢⱼᵐ xᵢ) / (Σᵢ tᵢⱼᵐ)
+    J = Σ_i Σ_j t_ij^m ||x_i - v_j||² + Σ_j γ_j Σ_i (1 - t_ij)^m
 
-        Gamma:
-            γⱼ = k · (Σᵢ tᵢⱼᵐ ||xᵢ - vⱼ||²) / (Σᵢ tᵢⱼᵐ)
+where ``t_ij`` is the typicality of point ``x_i`` to cluster j,
+``v_j`` is the centroid of cluster j, m is the fuzzifier (m > 1),
+and ``γ_j`` is a scale parameter for cluster j.
 
-        Typicality:
-            tᵢⱼ = 1 / (1 + (||xᵢ - vⱼ||² / γⱼ)^(1/(m-1)))
+Update equations::
+
+    Centroids:  v_j = (Σ_i t_ij^m x_i) / (Σ_i t_ij^m)
+    Gamma:      γ_j = k · (Σ_i t_ij^m ||x_i - v_j||²) / (Σ_i t_ij^m)
+    Typicality: t_ij = 1 / (1 + (||x_i - v_j||² / γ_j)^(1/(m-1)))
 
 References:
     Krishnapuram, R., & Keller, J. M. (1993).

@@ -45,13 +45,15 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     constraint per the original Pal, Pal & Bezdek (1997) formulation.
 
     Algorithm:
+
     1. Initialize U and T (randomly or using FCM)
-    2. Update centroids: v_j = Σ_i[u_ij^m + t_ij^η]x_i / Σ_i[u_ij^m + t_ij^η]
+    2. Update centroids using combined fuzzy and typicality weights
     3. Update U using FCM rule with fuzzifier m (row-normalized)
-    4. Update T with column-normalization: t_ij ∝ (1/d_ij²)^(1/(η-1)), Σ_i t_ij = 1
+    4. Update T with column-normalization
     5. Repeat until convergence
 
-    Objective function:
+    Objective function::
+
         J = Σ_i Σ_j [u_ij^m + t_ij^η] ||x_i - v_j||²
 
     Reference:

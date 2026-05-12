@@ -28,6 +28,7 @@ class KMeansPlusPlus:
     better convergence properties than random initialization.
 
     Algorithm:
+
     1. Choose first center uniformly at random from data points
     2. For each data point x, compute D(x), the distance to nearest center
     3. Choose next center with probability proportional to D(x)²

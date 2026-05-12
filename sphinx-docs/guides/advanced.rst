@@ -5,10 +5,6 @@ Prosemble leverages JAX for GPU acceleration, JIT compilation, and
 functional training loops. This guide covers all advanced features
 available for supervised prototype models and fuzzy clustering models.
 
-.. contents:: On this page
-   :local:
-   :depth: 2
-
 JIT-Compiled Inference
 -----------------------
 

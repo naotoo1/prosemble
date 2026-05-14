@@ -62,9 +62,17 @@ class NeuralGas(UnsupervisedPrototypeModel):
         callbacks, use_scan, patience, etc.).
     """
 
-    def __init__(self, lr_init=0.5, lr_final=0.01,
-                 lambda_init=None, lambda_final=0.01, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, n_prototypes, lr_init=0.5, lr_final=0.01,
+                 lambda_init=None, lambda_final=0.01,
+                 max_iter=100, lr=0.01, epsilon=1e-6, random_seed=42,
+                 distance_fn=None, callbacks=None, use_scan=True,
+                 patience=None, restore_best=False):
+        super().__init__(
+            n_prototypes=n_prototypes, max_iter=max_iter, lr=lr,
+            epsilon=epsilon, random_seed=random_seed, distance_fn=distance_fn,
+            callbacks=callbacks, use_scan=use_scan, patience=patience,
+            restore_best=restore_best,
+        )
         self.lr_init = lr_init
         self.lr_final = lr_final
         self.lambda_init = lambda_init  # defaults to n_prototypes/2

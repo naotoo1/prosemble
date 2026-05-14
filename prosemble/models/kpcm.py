@@ -134,11 +134,14 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
         epsilon: float = 1e-5,
         init_method: str = 'kfcm',
         random_seed: int = 42,
+        distance_fn=None,
+        patience: int | None = None,
+        restore_best: bool = False,
         plot_steps: bool = False,
         show_confidence: bool = True,
         show_pca_variance: bool = True,
         save_plot_path: str | None = None,
-        **kwargs
+        callbacks=None,
     ):
         # Validate model-specific parameters
         if fuzzifier <= 1.0:
@@ -155,10 +158,14 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
             max_iter=max_iter,
             epsilon=epsilon,
             random_seed=random_seed,
+            distance_fn=distance_fn,
+            patience=patience,
+            restore_best=restore_best,
             plot_steps=plot_steps,
             show_confidence=show_confidence,
             show_pca_variance=show_pca_variance,
-            save_plot_path=save_plot_path, **kwargs
+            save_plot_path=save_plot_path,
+            callbacks=callbacks,
         )
 
         self.fuzzifier = fuzzifier

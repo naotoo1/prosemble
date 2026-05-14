@@ -222,8 +222,32 @@ class LVQMLN(SupervisedPrototypeModel):
     """
 
     def __init__(self, hidden_sizes=None, latent_dim=2,
-                 activation='sigmoid', beta=10.0, bb_lr=None, **kwargs):
-        super().__init__(**kwargs)
+                 activation='sigmoid', beta=10.0, bb_lr=None,
+                 n_prototypes_per_class=1, max_iter=100, lr=0.01,
+                 epsilon=1e-6, random_seed=42, distance_fn=None,
+                 optimizer='adam', transfer_fn=None, margin=0.0,
+                 callbacks=None, use_scan=True, batch_size=None,
+                 lr_scheduler=None, lr_scheduler_kwargs=None,
+                 prototypes_initializer=None, patience=None,
+                 restore_best=False, class_weight=None,
+                 gradient_accumulation_steps=None, ema_decay=None,
+                 freeze_params=None, lookahead=None,
+                 mixed_precision=None):
+        super().__init__(
+            n_prototypes_per_class=n_prototypes_per_class,
+            max_iter=max_iter, lr=lr, epsilon=epsilon,
+            random_seed=random_seed, distance_fn=distance_fn,
+            optimizer=optimizer, transfer_fn=transfer_fn, margin=margin,
+            callbacks=callbacks, use_scan=use_scan, batch_size=batch_size,
+            lr_scheduler=lr_scheduler,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
+            prototypes_initializer=prototypes_initializer,
+            patience=patience, restore_best=restore_best,
+            class_weight=class_weight,
+            gradient_accumulation_steps=gradient_accumulation_steps,
+            ema_decay=ema_decay, freeze_params=freeze_params,
+            lookahead=lookahead, mixed_precision=mixed_precision,
+        )
         self.hidden_sizes = hidden_sizes or [10]
         self.latent_dim = latent_dim
         self.activation = activation

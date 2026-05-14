@@ -50,9 +50,15 @@ class GrowingNeuralGas(UnsupervisedPrototypeModel):
 
     def __init__(self, max_nodes=100, lr_winner=0.1, lr_neighbor=0.01,
                  max_age=50, insert_interval=100, error_decay=0.995,
-                 **kwargs):
-        kwargs.setdefault('n_prototypes', 2)  # start with 2
-        super().__init__(**kwargs)
+                 n_prototypes=2, max_iter=100, lr=0.01, epsilon=1e-6,
+                 random_seed=42, distance_fn=None, callbacks=None,
+                 use_scan=True, patience=None, restore_best=False):
+        super().__init__(
+            n_prototypes=n_prototypes, max_iter=max_iter, lr=lr,
+            epsilon=epsilon, random_seed=random_seed, distance_fn=distance_fn,
+            callbacks=callbacks, use_scan=use_scan, patience=patience,
+            restore_best=restore_best,
+        )
         self.max_nodes = max_nodes
         self.lr_winner = lr_winner
         self.lr_neighbor = lr_neighbor

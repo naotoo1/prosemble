@@ -80,10 +80,17 @@ class HeskesSOM(UnsupervisedPrototypeModel):
     """
 
     def __init__(self, grid_height=10, grid_width=10,
-                 sigma_init=None, sigma_final=0.5, **kwargs):
+                 sigma_init=None, sigma_final=0.5,
+                 max_iter=100, lr=0.01, epsilon=1e-6, random_seed=42,
+                 distance_fn=None, callbacks=None, use_scan=True,
+                 patience=None, restore_best=False):
         n_prototypes = grid_height * grid_width
-        kwargs['n_prototypes'] = n_prototypes
-        super().__init__(**kwargs)
+        super().__init__(
+            n_prototypes=n_prototypes, max_iter=max_iter, lr=lr,
+            epsilon=epsilon, random_seed=random_seed, distance_fn=distance_fn,
+            callbacks=callbacks, use_scan=use_scan, patience=patience,
+            restore_best=restore_best,
+        )
         self.grid_height = grid_height
         self.grid_width = grid_width
         self.sigma_init = sigma_init

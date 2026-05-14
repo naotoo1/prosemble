@@ -63,11 +63,18 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
         callbacks, use_scan, patience, etc.).
     """
 
-    def __init__(self, manifold, lr_init=0.3, lr_final=0.01,
+    def __init__(self, manifold, n_prototypes, lr_init=0.3, lr_final=0.01,
                  lambda_init=None, lambda_final=0.01,
-                 tau=0.9, **kwargs):
+                 tau=0.9, max_iter=100, lr=0.01, epsilon=1e-6,
+                 random_seed=42, distance_fn=None, callbacks=None,
+                 patience=None, restore_best=False):
         # RNG uses Python loop — funm may not be scan-compatible
-        super().__init__(use_scan=False, **kwargs)
+        super().__init__(
+            n_prototypes=n_prototypes, max_iter=max_iter, lr=lr,
+            epsilon=epsilon, random_seed=random_seed, distance_fn=distance_fn,
+            callbacks=callbacks, use_scan=False, patience=patience,
+            restore_best=restore_best,
+        )
         self.manifold = manifold
         self.lr_init = lr_init
         self.lr_final = lr_final

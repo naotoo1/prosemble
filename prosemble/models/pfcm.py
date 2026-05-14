@@ -1,12 +1,12 @@
 """
 JAX implementation of Possibilistic Fuzzy C-Means (PFCM) clustering algorithm.
 
-PFCM combines FCM and PCM by using both fuzzy membership (U) and typicality (T) matrices.
+PFCM combines FCM and PCM by using both fuzzy membership (:math:`U`) and typicality (:math:`T`) matrices.
 It provides better clustering by simultaneously considering membership and typicality.
 
 Mathematical Background:
 -----------------------
-PFCM uses both membership and typicality with weighting parameters a and b.
+PFCM uses both membership and typicality with weighting parameters :math:`a` and :math:`b`.
 
 Objective Function:
 
@@ -85,15 +85,15 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzzification parameter for membership (m). Must be > 1.
+        Fuzzification parameter for membership (:math:`m`). Must be > 1.
     eta : float, default=2.0
-        Fuzzification parameter for typicality (eta). Must be > 1.
+        Fuzzification parameter for typicality (:math:`\\eta`). Must be > 1.
     a : float, default=1.0
         Weight for fuzzy membership term. Must be >= 0.
     b : float, default=1.0
         Weight for typicality term. Must be >= 0.
     k : float, default=1.0
-        Parameter for gamma computation. Must be > 0.
+        Parameter for :math:`\\gamma` computation. Must be > 0.
     init_method : str, default='fcm'
         Initialization method: 'fcm' or 'random'.
     n_clusters : int
@@ -202,7 +202,7 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
 
     @partial(jit, static_argnums=(0,))
     def _initialize_matrices(self, X: chex.Array, key: chex.PRNGKey) -> tuple[chex.Array, chex.Array]:
-        """Initialize U and T matrices."""
+        """Initialize :math:`U` and :math:`T` matrices."""
         n_samples = X.shape[0]
 
         # Initialize both U and T using Dirichlet

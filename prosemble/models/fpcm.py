@@ -40,16 +40,16 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     """
     Fuzzy Possibilistic C-Means clustering with JAX.
 
-    FPCM maintains TWO matrices: U (fuzzy membership) and T (typicality).
-    U has row-sum-to-1 constraint (standard FCM), while T has column-sum-to-1
+    FPCM maintains TWO matrices: :math:`U` (fuzzy membership) and :math:`T` (typicality).
+    :math:`U` has row-sum-to-1 constraint (standard FCM), while :math:`T` has column-sum-to-1
     constraint per the original Pal, Pal & Bezdek (1997) formulation.
 
     Algorithm:
 
-    1. Initialize U and T (randomly or using FCM)
+    1. Initialize :math:`U` and :math:`T` (randomly or using FCM)
     2. Update centroids using combined fuzzy and typicality weights
-    3. Update U using FCM rule with fuzzifier m (row-normalized)
-    4. Update T with column-normalization
+    3. Update :math:`U` using FCM rule with fuzzifier :math:`m` (row-normalized)
+    4. Update :math:`T` with column-normalization
     5. Repeat until convergence
 
     Objective function:
@@ -65,11 +65,11 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzziness parameter for U matrix (must be > 1.0).
+        Fuzziness parameter for :math:`U` matrix (must be > 1.0).
     eta : float, default=2.0
-        Fuzziness parameter for T matrix (must be > 1.0).
+        Fuzziness parameter for :math:`T` matrix (must be > 1.0).
     init_method : {'random', 'fcm'}, default='fcm'
-        Method for initializing U and T matrices.
+        Method for initializing :math:`U` and :math:`T` matrices.
     n_clusters : int
         Number of clusters (must be >= 2).
     max_iter : int
@@ -176,13 +176,13 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
         self.T_ = None
 
     def _initialize_matrices(self, X: chex.Array):
-        """Initialize U and T matrices.
+        """Initialize :math:`U` and :math:`T` matrices.
 
         Args:
             X: Input data, shape (n_samples, n_features)
 
         Returns:
-            Tuple of (U, T, centroids)
+            Tuple of (:math:`U`, :math:`T`, centroids)
         """
         n_samples = X.shape[0]
 

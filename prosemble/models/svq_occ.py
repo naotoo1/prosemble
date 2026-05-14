@@ -351,14 +351,14 @@ class SVQOCC(SupervisedPrototypeModel):
         else:  # uniform
             p_k = jnp.ones_like(sq_distances) / n_protos
 
-        # Sigmoid approximation of Heaviside: sgd_σ(d, θ_k) = σ((θ_k - d) / σ)
+        # Sigmoid approximation of Heaviside: sgd_sigma(d, theta_k) = sigma((theta_k - d) / sigma)
         # Keep thetas positive
         thetas_pos = jnp.maximum(thetas, 1e-6)
         heaviside = jax.nn.sigmoid(
             (thetas_pos[None, :] - sq_distances) / (self.sigma + 1e-10)
         )
 
-        # Local responsibility: r(x, w_k) = p(w_k|x) · H(θ_k - d(x, w_k))
+        # Local responsibility: r(x, w_k) = p(w_k|x) * H(theta_k - d(x, w_k))
         responsibility = p_k * heaviside
 
         # Summed responsibility per sample
@@ -381,7 +381,7 @@ class SVQOCC(SupervisedPrototypeModel):
             C = 1.0 - numerator / denominator
 
         elif self.cost_function == 'brier':
-            # Brier Score: mean (y - Σ_k r)²
+            # Brier Score: mean (y - sum_k r)^2
             C = jnp.mean((y_binary - total_resp) ** 2)
 
         else:  # cross_entropy

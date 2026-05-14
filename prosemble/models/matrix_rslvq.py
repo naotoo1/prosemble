@@ -1,11 +1,15 @@
 """
 Matrix Robust Soft LVQ (MRSLVQ) and Localized Matrix RSLVQ (LMRSLVQ).
 
-RSLVQ with learned linear transformation(s) Omega for metric adaptation.
-MRSLVQ uses a single global Omega; LMRSLVQ uses per-prototype Omega_k.
+RSLVQ with learned linear transformation(s) :math:`\\Omega` for metric adaptation.
+MRSLVQ uses a single global :math:`\\Omega`; LMRSLVQ uses per-prototype
+:math:`\\Omega_k`.
 
-Distance: d(x, w_k) = (x - w_k)^T Omega^T Omega (x - w_k)
-Loss: -log(P(correct_class|x) / P(all|x))  [RSLVQ objective]
+.. math::
+
+    d(x, w_k) = (x - w_k)^T \\Omega^T \\Omega (x - w_k)
+
+Loss: :math:`-\\log(P(\\text{correct class}|x) / P(\\text{all}|x))` (RSLVQ objective).
 
 References
 ----------
@@ -31,7 +35,7 @@ from prosemble.core.pooling import stratified_min_pooling
 
 @jit
 def _predict_mrslvq_jit(X, prototypes, omega, proto_labels):
-    """JIT-compiled MRSLVQ prediction with learned Omega metric."""
+    """JIT-compiled MRSLVQ prediction with learned :math:`\\Omega` metric."""
     diff = X[:, None, :] - prototypes[None, :, :]
     projected = jnp.einsum('npd,dl->npl', diff, omega)
     distances = jnp.sum(projected ** 2, axis=2)
@@ -50,7 +54,7 @@ def _predict_proba_mrslvq_jit(X, prototypes, omega, proto_labels, n_classes):
 
 @jit
 def _predict_lmrslvq_jit(X, prototypes, omegas, proto_labels):
-    """JIT-compiled LMRSLVQ prediction with per-prototype Omega metrics."""
+    """JIT-compiled LMRSLVQ prediction with per-prototype :math:`\\Omega` metrics."""
     diff = X[:, None, :] - prototypes[None, :, :]
     projected = jnp.einsum('npd,pdl->npl', diff, omegas)
     distances = jnp.sum(projected ** 2, axis=2)
@@ -71,11 +75,13 @@ class MRSLVQ(SupervisedPrototypeModel):
     """Matrix Robust Soft Learning Vector Quantization.
 
     Combines the RSLVQ probabilistic loss with a learned global linear
-    mapping Omega (d x latent_dim) for metric adaptation::
+    mapping :math:`\\Omega` (d x latent_dim) for metric adaptation:
 
-        d(x, w) = (x - w)^T Omega^T Omega (x - w)
+    .. math::
 
-    The relevance matrix Lambda = Omega^T Omega captures feature
+        d(x, w) = (x - w)^T \\Omega^T \\Omega (x - w)
+
+    The relevance matrix :math:`\\Lambda = \\Omega^T \\Omega` captures feature
     correlations in the probabilistic framework.
 
     Parameters
@@ -238,20 +244,20 @@ class MRSLVQ(SupervisedPrototypeModel):
 
     @property
     def omega_matrix(self):
-        """Return the learned Omega matrix."""
+        """Return the learned :math:`\\Omega` matrix."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_
 
     @property
     def lambda_matrix(self):
-        """Return Lambda = Omega^T Omega (relevance matrix)."""
+        """Return :math:`\\Lambda = \\Omega^T \\Omega` (relevance matrix)."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_.T @ self.omega_
 
     def predict(self, X):
-        """Predict using learned Omega distance."""
+        """Predict using learned :math:`\\Omega` distance."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_mrslvq_jit(
@@ -259,7 +265,7 @@ class MRSLVQ(SupervisedPrototypeModel):
         )
 
     def predict_proba(self, X):
-        """Predict class probabilities using Omega-projected distances."""
+        """Predict class probabilities using :math:`\\Omega`-projected distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_proba_mrslvq_jit(
@@ -325,10 +331,12 @@ class MRSLVQ(SupervisedPrototypeModel):
 class LMRSLVQ(SupervisedPrototypeModel):
     """Localized Matrix Robust Soft Learning Vector Quantization.
 
-    Each prototype k has its own Omega_k matrix. The distance from
-    sample x to prototype w_k is::
+    Each prototype :math:`k` has its own :math:`\\Omega_k` matrix. The distance from
+    sample :math:`x` to prototype :math:`w_k` is:
 
-        d(x, w_k) = (x - w_k)^T Omega_k^T Omega_k (x - w_k)
+    .. math::
+
+        d(x, w_k) = (x - w_k)^T \\Omega_k^T \\Omega_k (x - w_k)
 
     Combined with the RSLVQ probabilistic loss for metric-adaptive
     soft classification with local relevance learning.
@@ -494,7 +502,7 @@ class LMRSLVQ(SupervisedPrototypeModel):
         self.omegas_ = params['omegas']
 
     def predict(self, X):
-        """Predict using local Omega distances."""
+        """Predict using local :math:`\\Omega` distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_lmrslvq_jit(
@@ -502,7 +510,7 @@ class LMRSLVQ(SupervisedPrototypeModel):
         )
 
     def predict_proba(self, X):
-        """Predict class probabilities using local Omega-projected distances."""
+        """Predict class probabilities using local :math:`\\Omega`-projected distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_proba_lmrslvq_jit(

@@ -2,7 +2,7 @@
 Generalized Tangent LVQ (GTLVQ).
 
 Each prototype has a tangent subspace defined by an orthogonal basis
-Omega_k. The tangent distance projects out the tangent directions.
+:math:`\\Omega_k`. The tangent distance projects out the tangent directions.
 
 References
 ----------
@@ -35,9 +35,14 @@ def _predict_gtlvq_jit(X, prototypes, omegas, proto_labels):
 class GTLVQ(SupervisedPrototypeModel):
     """Generalized Tangent Learning Vector Quantization.
 
-    Each prototype k has a subspace basis Omega_k. The tangent
-    distance is: d(x, w_k) = ||P_k(x - w_k)||^2, where
-    P_k = I - Omega_k @ Omega_k^T is the orthogonal projector.
+    Each prototype :math:`k` has a subspace basis :math:`\\Omega_k`. The tangent
+    distance is:
+
+    .. math::
+
+        d(x, w_k) = \\|P_k(x - w_k)\\|^2
+
+    where :math:`P_k = I - \\Omega_k \\Omega_k^T` is the orthogonal projector.
 
     Parameters
     ----------
@@ -202,7 +207,7 @@ class GTLVQ(SupervisedPrototypeModel):
         )
 
     def _post_update(self, params):
-        """Re-orthogonalize Omega matrices via polar decomposition."""
+        """Re-orthogonalize :math:`\\Omega` matrices via polar decomposition."""
         omegas = jax.vmap(orthogonalize)(params['omegas'])
         return {**params, 'omegas': omegas}
 

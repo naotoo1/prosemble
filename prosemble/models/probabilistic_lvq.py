@@ -192,7 +192,10 @@ class RSLVQ(SupervisedPrototypeModel):
     """Robust Soft Learning Vector Quantization.
 
     Like SLVQ but with a more robust denominator:
-    Loss: -log(P(correct) / P(all))
+
+    .. math::
+
+        \\text{loss} = -\\log\\frac{P(\\text{correct}|x)}{P(\\text{all}|x)}
 
     Parameters
     ----------

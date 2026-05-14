@@ -33,11 +33,11 @@ class KIPCM(FuzzyClusteringBase):
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzziness parameter for U matrix (must be > 1.0).
+        Fuzziness parameter for :math:`U` matrix (must be > 1.0).
     tipifier : float, default=2.0
-        Possibilistic parameter for T matrix (must be > 1.0).
+        Possibilistic parameter for :math:`T` matrix (must be > 1.0).
     k : float, default=1.0
-        Scaling parameter for gamma in phase 1 (must be > 0).
+        Scaling parameter for :math:`\\gamma` in phase 1 (must be > 0).
     sigma : float, default=1.0
         Kernel bandwidth parameter (must be > 0).
     init_method : {'kfcm'}, default='kfcm'

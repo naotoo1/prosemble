@@ -4,10 +4,10 @@ Matrix RSLVQ with Neural Gas Cooperation (MRSLVQ_NG, LMRSLVQ_NG).
 Combines RSLVQ's probabilistic soft-assignment with Neural Gas
 neighborhood cooperation and learned linear metric adaptation.
 
-MRSLVQ_NG: global Omega matrix + NG cooperation
-LMRSLVQ_NG: per-prototype Omega matrices + NG cooperation
+MRSLVQ_NG: global :math:`\\Omega` matrix + NG cooperation
+LMRSLVQ_NG: per-prototype :math:`\\Omega_k` matrices + NG cooperation
 
-When gamma -> 0, recovers standard MRSLVQ / LMRSLVQ behavior.
+When :math:`\\gamma \\to 0`, recovers standard MRSLVQ / LMRSLVQ behavior.
 
 References
 ----------
@@ -77,18 +77,21 @@ class MRSLVQ_NG(SupervisedPrototypeModel):
 
     Combines:
 
-    - RSLVQ probabilistic loss: ``-log(P(correct|x))``
+    - RSLVQ probabilistic loss: :math:`-\\log(P(\\text{correct}|x))`
     - Neural Gas cooperation: all prototypes weighted by rank via
-      ``exp(-rank / gamma)``
-    - Global Omega matrix for metric adaptation:
-      ``d(x, w) = (x - w)^T Omega^T Omega (x - w)``
+      :math:`\\exp(-\\text{rank} / \\gamma)`
+    - Global :math:`\\Omega` matrix for metric adaptation:
+
+      .. math::
+
+          d(x, w) = (x - w)^T \\Omega^T \\Omega (x - w)
 
     Parameters
     ----------
     sigma : float
         Bandwidth for RSLVQ Gaussian mixture probability computation.
     latent_dim : int, optional
-        Dimensionality of the Omega projection space. If None, uses input dim.
+        Dimensionality of the :math:`\\Omega` projection space. If None, uses input dim.
     gamma_init : float, optional
         Initial neighborhood range for NG cooperation.
         Default: max prototypes per class / 2.
@@ -298,20 +301,20 @@ class MRSLVQ_NG(SupervisedPrototypeModel):
 
     @property
     def omega_matrix(self):
-        """Return the learned Omega matrix."""
+        """Return the learned :math:`\\Omega` matrix."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_
 
     @property
     def lambda_matrix(self):
-        """Return Lambda = Omega^T Omega (relevance matrix)."""
+        """Return :math:`\\Lambda = \\Omega^T \\Omega` (relevance matrix)."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_.T @ self.omega_
 
     def predict(self, X):
-        """Predict using learned Omega distance."""
+        """Predict using learned :math:`\\Omega` distance."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_mrslvq_ng_jit(
@@ -319,7 +322,7 @@ class MRSLVQ_NG(SupervisedPrototypeModel):
         )
 
     def predict_proba(self, X):
-        """Predict class probabilities using Omega-projected distances."""
+        """Predict class probabilities using :math:`\\Omega`-projected distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_proba_mrslvq_ng_jit(
@@ -391,7 +394,7 @@ class MRSLVQ_NG(SupervisedPrototypeModel):
 class LMRSLVQ_NG(SupervisedPrototypeModel):
     """Localized Matrix Robust Soft LVQ with Neural Gas Cooperation.
 
-    Each prototype k has its own Omega_k matrix. Combined with RSLVQ
+    Each prototype :math:`k` has its own :math:`\\Omega_k` matrix. Combined with RSLVQ
     probabilistic loss and NG rank-based neighborhood cooperation.
 
     Parameters
@@ -610,7 +613,7 @@ class LMRSLVQ_NG(SupervisedPrototypeModel):
         self.gamma_ = float(params['gamma'])
 
     def predict(self, X):
-        """Predict using local Omega distances."""
+        """Predict using local :math:`\\Omega_k` distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_lmrslvq_ng_jit(
@@ -618,7 +621,7 @@ class LMRSLVQ_NG(SupervisedPrototypeModel):
         )
 
     def predict_proba(self, X):
-        """Predict class probabilities using local Omega-projected distances."""
+        """Predict class probabilities using local :math:`\\Omega_k`-projected distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_proba_lmrslvq_ng_jit(

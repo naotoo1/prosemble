@@ -28,14 +28,14 @@ class KIPCM2State(NamedTuple):
 class KIPCM2(FuzzyClusteringBase):
     """Kernel Improved Possibilistic C-Means 2 with JAX.
 
-    KIPCM2 uses exponential T update and modified objective in kernel space.
+    KIPCM2 uses exponential :math:`T` update and modified objective in kernel space.
 
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzziness parameter for U matrix (must be > 1.0).
+        Fuzziness parameter for :math:`U` matrix (must be > 1.0).
     tipifier : float, default=2.0
-        Possibilistic parameter for T matrix (must be > 1.0).
+        Possibilistic parameter for :math:`T` matrix (must be > 1.0).
     sigma : float, default=1.0
         Kernel bandwidth parameter (must be > 0).
     init_method : {'kfcm'}, default='kfcm'
@@ -168,7 +168,7 @@ class KIPCM2(FuzzyClusteringBase):
 
     @partial(jit, static_argnums=(0,))
     def _compute_centroids(self, X: chex.Array, U: chex.Array, T: chex.Array, centroids: chex.Array) -> chex.Array:
-        """Centroids: kernel-weighted with :math:`U^m \\cdot T` (T not raised to power!)."""
+        """Centroids: kernel-weighted with :math:`U^m \\cdot T` (:math:`T` not raised to power!)."""
         K = batch_gaussian_kernel(X, centroids, self.sigma)
         U_fuzz = jnp.power(U, self.fuzzifier)
         weights = (U_fuzz * T) * K

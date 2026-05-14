@@ -111,14 +111,14 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzzification parameter (m). Must be > 1.
-        - m = 1: Hard clustering (crisp membership)
-        - m = 2: Standard fuzzy clustering
-        - m -> inf: Maximum fuzziness (equal membership)
+        Fuzzification parameter (:math:`m`). Must be > 1.
+        - :math:`m = 1`: Hard clustering (crisp membership)
+        - :math:`m = 2`: Standard fuzzy clustering
+        - :math:`m \\to \\infty`: Maximum fuzziness (equal membership)
     init_method : str, default='random'
-        Initialization method for U matrix:
+        Initialization method for :math:`U` matrix:
         - 'random': Random Dirichlet distribution
-        - 'kmeans++': K-means++ centroids then compute U
+        - 'kmeans++': K-means++ centroids then compute :math:`U`
     n_clusters : int
         Number of clusters (must be >= 2).
     max_iter : int
@@ -237,7 +237,7 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
         Initialize fuzzy membership matrix U.
 
         Uses Dirichlet distribution to ensure row sums equal 1:
-        U ~ Dir(alpha) where alpha = [1, 1, ..., 1]
+        :math:`U \\sim \\text{Dir}(\\alpha)` where :math:`\\alpha = [1, 1, \\ldots, 1]`
 
         Mathematical Property:
 
@@ -275,7 +275,7 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
             v_j = \\frac{\\sum_i u_{ij}^m x_i}{\\sum_i u_{ij}^m}
 
         Vectorized Implementation:
-            V = (U^m)^T @ X / sum((U^m)^T, axis=1, keepdims=True)
+            :math:`V = (U^m)^T X / \\sum (U^m)^T`
 
         Old Implementation (NumPy):
             ```python
@@ -347,7 +347,7 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
 
             u_{ij} = \\frac{1}{\\sum_k \\left(\\frac{d_{ij}}{d_{ik}}\\right)^{2/(m-1)}}
 
-        where :math:`d_{ij} = \\|x_i - v_j\\|` is Euclidean distance.
+        where :math:`d_{ij} = \\|x_i - v_j\\|` is the Euclidean distance.
 
         Old Implementation (NumPy):
             ```python
@@ -432,9 +432,9 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
             J = \\sum_i \\sum_j u_{ij}^m \\|x_i - v_j\\|^2
 
         Vectorized Implementation:
-            J = sum(U^m * D^2)
+            :math:`J = \\sum(U^m \\odot D^2)`
 
-        where * is element-wise product.
+        where :math:`\\odot` is the element-wise product.
 
         Old Implementation (NumPy):
             ```python

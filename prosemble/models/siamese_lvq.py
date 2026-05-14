@@ -287,8 +287,12 @@ class SiameseGMLVQ(SupervisedPrototypeModel):
     """Siamese GMLVQ — GMLVQ with a learned embedding network.
 
     Both inputs and prototypes are transformed through the same MLP,
-    then distances are computed using a learned Omega matrix in the
-    latent space: d = ||Omega(f(x) - f(w))||^2.
+    then distances are computed using a learned :math:`\\Omega` matrix in the
+    latent space:
+
+    .. math::
+
+        d = \\|\\Omega(f(x) - f(w))\\|^2
 
     Parameters
     ----------

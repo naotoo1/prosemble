@@ -6,7 +6,7 @@ neighborhood cooperation. All prototypes contribute to the loss
 via Gaussian mixture probabilities, modulated by NG rank-based
 neighborhood weights.
 
-When gamma -> 0, only the nearest prototype matters, recovering
+When :math:`\\gamma \\to 0`, only the nearest prototype matters, recovering
 standard RSLVQ behavior.
 
 References
@@ -31,14 +31,14 @@ class RSLVQ_NG(SupervisedPrototypeModel):
 
     Combines:
 
-    - RSLVQ probabilistic loss: ``-log(P(correct|x))``
+    - RSLVQ probabilistic loss: :math:`-\\log(P(\\text{correct}|x))`
     - Neural Gas cooperation: all prototypes weighted by rank via
-      ``exp(-rank / gamma)``
+      :math:`\\exp(-\\text{rank} / \\gamma)`
     - Euclidean distance
 
     The NG neighborhood modulates RSLVQ's Gaussian probabilities,
-    emphasizing nearby prototypes. Gamma decays during training from
-    gamma_init to gamma_final.
+    emphasizing nearby prototypes. :math:`\\gamma` decays during training from
+    :math:`\\gamma_{\\text{init}}` to :math:`\\gamma_{\\text{final}}`.
 
     Parameters
     ----------

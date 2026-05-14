@@ -8,13 +8,25 @@ in the orthogonal complement. Neighborhood cooperation ensures
 robust prototype placement.
 
 Cost function:
-    E_STNG = (1/N) sum_mu sum_{r: c(w_r)=c(x_mu)}
-        [h(rank_r, gamma) / C(gamma)] * Phi(mu_r)
+
+.. math::
+
+    E_{\\text{STNG}} = \\frac{1}{N} \\sum_\\mu \\sum_{r: c(w_r)=c(x_\\mu)}
+        \\frac{h(\\text{rank}_r, \\gamma)}{C(\\gamma)} \\cdot \\Phi(\\mu_r)
 
 where:
-    d(x, w_r) = ||(I - Omega_r Omega_r^T)(x - w_r)||^2  (tangent distance)
-    mu_r = (d_r - d_r^-) / (d_r + d_r^-)
-    h(rank, gamma) = exp(-rank / gamma)
+
+.. math::
+
+    d(x, w_r) = \\|(I - \\Omega_r \\Omega_r^T)(x - w_r)\\|^2 \\quad \\text{(tangent distance)}
+
+.. math::
+
+    \\mu_r = \\frac{d_r - d_r^-}{d_r + d_r^-}
+
+.. math::
+
+    h(\\text{rank}, \\gamma) = \\exp(-\\text{rank} / \\gamma)
 
 References
 ----------
@@ -52,15 +64,21 @@ class STNG(SupervisedPrototypeModel):
 
     Combines three key ideas:
 
-    - GLVQ loss: (d+ - d-) / (d+ + d-) for margin-based classification
+    - GLVQ loss: :math:`(d^+ - d^-) / (d^+ + d^-)` for margin-based classification
     - Neural Gas cooperation: all same-class prototypes participate in
-      the loss, weighted by rank via exp(-rank / gamma)
-    - Tangent subspaces: d(x, w_k) = ||(I - Omega_k Omega_k^T)(x - w_k)||^2
+      the loss, weighted by rank via :math:`\\exp(-\\text{rank} / \\gamma)`
+    - Tangent subspaces:
+
+      .. math::
+
+          d(x, w_k) = \\|(I - \\Omega_k \\Omega_k^T)(x - w_k)\\|^2
+
       measures distance in the orthogonal complement of each prototype's
       learned invariance subspace
 
-    The neighborhood range gamma decays during training from gamma_init
-    to gamma_final. When gamma -> 0, STNG recovers standard GTLVQ.
+    The neighborhood range :math:`\\gamma` decays during training from
+    :math:`\\gamma_{\\text{init}}` to :math:`\\gamma_{\\text{final}}`.
+    When :math:`\\gamma \\to 0`, STNG recovers standard GTLVQ.
 
     Parameters
     ----------

@@ -1,8 +1,12 @@
 """
 Generalized Matrix LVQ (GMLVQ).
 
-GLVQ with a learned linear transformation Omega that maps data into
-a discriminative subspace: d(x, w) = ||Omega(x - w)||^2.
+GLVQ with a learned linear transformation :math:`\\Omega` that maps data into
+a discriminative subspace:
+
+.. math::
+
+    d(x, w) = \\|\\Omega(x - w)\\|^2
 
 References
 ----------
@@ -23,7 +27,7 @@ from prosemble.core.initializers import identity_omega_init
 
 @jit
 def _predict_gmlvq_jit(X, prototypes, omega, proto_labels):
-    """JIT-compiled GMLVQ prediction with learned Omega metric."""
+    """JIT-compiled GMLVQ prediction with learned :math:`\\Omega` metric."""
     diff = X[:, None, :] - prototypes[None, :, :]
     projected = jnp.einsum('npd,dl->npl', diff, omega)
     distances = jnp.sum(projected ** 2, axis=2)
@@ -33,12 +37,14 @@ def _predict_gmlvq_jit(X, prototypes, omega, proto_labels):
 class GMLVQ(SupervisedPrototypeModel):
     """Generalized Matrix Learning Vector Quantization.
 
-    Learns a global linear mapping Omega (d x latent_dim) such that
-    distances are computed in the transformed space::
+    Learns a global linear mapping :math:`\\Omega` (d x latent_dim) such that
+    distances are computed in the transformed space:
 
-        d(x, w) = (x - w)^T Omega^T Omega (x - w)
+    .. math::
 
-    The relevance matrix Lambda = Omega^T Omega captures feature
+        d(x, w) = (x - w)^T \\Omega^T \\Omega (x - w)
+
+    The relevance matrix :math:`\\Lambda = \\Omega^T \\Omega` captures feature
     correlations.
 
     Parameters
@@ -200,20 +206,20 @@ class GMLVQ(SupervisedPrototypeModel):
 
     @property
     def omega_matrix(self):
-        """Return the learned Omega matrix."""
+        """Return the learned :math:`\\Omega` matrix."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_
 
     @property
     def lambda_matrix(self):
-        """Return Lambda = Omega^T Omega (relevance matrix)."""
+        """Return :math:`\\Lambda = \\Omega^T \\Omega` (relevance matrix)."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_.T @ self.omega_
 
     def predict(self, X):
-        """Predict using learned Omega distance."""
+        """Predict using learned :math:`\\Omega` distance."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_gmlvq_jit(

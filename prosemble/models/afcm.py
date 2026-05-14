@@ -46,17 +46,17 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     with specific parameter combinations.
 
     Key features:
-    - Centroids use :math:`a \\cdot U^m + b \\cdot T` (T to power 1, not m!)
-    - Gamma computed with Euclidean distance (not squared)
-    - Exponential T update with parameter b
-    - Standard FCM U update
+    - Centroids use :math:`a \\cdot U^m + b \\cdot T` (:math:`T` to power 1, not :math:`m`!)
+    - :math:`\\gamma` computed with Euclidean distance (not squared)
+    - Exponential :math:`T` update with parameter :math:`b`
+    - Standard FCM :math:`U` update
 
     Algorithm:
 
-    1. Initialize U using FCM
-    2. Compute gamma parameters using Euclidean distance
-    3. Update T using exponential update
-    4. Update U using standard FCM rule
+    1. Initialize :math:`U` using FCM
+    2. Compute :math:`\\gamma` parameters using Euclidean distance
+    3. Update :math:`T` using exponential update
+    4. Update :math:`U` using standard FCM rule
     5. Update centroids using combined fuzzy-possibilistic weights
     6. Repeat until convergence
 
@@ -75,7 +75,7 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     b : float, default=1.0
         Weight for typicality term (must be > 0).
     k : float, default=1.0
-        Scaling parameter for gamma (must be > 0).
+        Scaling parameter for :math:`\\gamma` (must be > 0).
     init_method : {'fcm'}, default='fcm'
         Initialization method.
     n_clusters : int
@@ -220,7 +220,7 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     def _compute_gamma(
         self, X: chex.Array, U: chex.Array, centroids: chex.Array
     ) -> chex.Array:
-        """Compute gamma using Euclidean distance (not squared!).
+        """Compute :math:`\\gamma` using Euclidean distance (not squared!).
 
         .. math::
 
@@ -242,7 +242,7 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     def _update_T(
         self, X: chex.Array, centroids: chex.Array, gamma: chex.Array
     ) -> chex.Array:
-        """Update typicality matrix with exponential and parameter b.
+        """Update typicality matrix with exponential and parameter :math:`b`.
 
         .. math::
 
@@ -294,7 +294,7 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
 
             v_j = \\frac{\\sum_i \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}\\right] x_i}{\\sum_i \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}\\right]}
 
-        Note: T is NOT raised to a power!
+        Note: :math:`T` is NOT raised to a power!
         """
         U_fuzz = jnp.power(U, self.fuzzifier)
 

@@ -36,10 +36,16 @@ class NeuralGas(UnsupervisedPrototypeModel):
     """Neural Gas.
 
     Updates all prototypes based on rank-distance:
-        h(rank, lambda) = exp(-rank / lambda)
-        w_k += lr * h(rank_k) * (x - w_k)
 
-    Both lr and lambda decay exponentially during training.
+    .. math::
+
+        h(\\text{rank}, \\lambda) = \\exp(-\\text{rank} / \\lambda)
+
+    .. math::
+
+        w_k \\leftarrow w_k + \\varepsilon \\cdot h(\\text{rank}_k) \\cdot (x - w_k)
+
+    Both :math:`\\varepsilon` and :math:`\\lambda` decay exponentially during training.
 
     Parameters
     ----------

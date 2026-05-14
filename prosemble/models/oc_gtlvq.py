@@ -183,7 +183,7 @@ class OCGTLVQ(OCGLVQ):
         thetas = params['thetas']
         omegas = params['omegas']
 
-        # Tangent distance: ||(I - Ω_k Ω_k^T)(x - w_k)||²
+        # Tangent distance: ||(I - Omega_k Omega_k^T)(x - w_k)||^2
         diff = X[:, None, :] - prototypes[None, :, :]  # (n, K, d)
         proj = jnp.einsum('nkd,kds->nks', diff, omegas)  # (n, K, s)
         recon = jnp.einsum('nks,kds->nkd', proj, omegas)  # (n, K, d)

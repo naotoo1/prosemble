@@ -55,9 +55,9 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
 
     Algorithm:
 
-    1. Initialize U randomly
+    1. Initialize :math:`U` randomly
     2. Update centroids (kernel-weighted)
-    3. Update U using kernel distance
+    3. Update :math:`U` using kernel distance
     4. Repeat until convergence
 
     Objective function:
@@ -175,7 +175,7 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
         self.U_ = None
 
     def _initialize(self, X: chex.Array):
-        """Initialize U matrix and centroids."""
+        """Initialize :math:`U` matrix and centroids."""
         n_samples = X.shape[0]
 
         # Random U matrix (Dirichlet distribution ensures row sums = 1)

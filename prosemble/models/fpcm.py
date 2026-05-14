@@ -62,28 +62,37 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
 
     Parameters
     ----------
-    n_clusters : int
-        Number of clusters (must be >= 2)
     fuzzifier : float, default=2.0
-        Fuzziness parameter for U matrix (must be > 1.0)
+        Fuzziness parameter for U matrix (must be > 1.0).
     eta : float, default=2.0
-        Fuzziness parameter for T matrix (must be > 1.0)
-    max_iter : int, default=100
-        Maximum number of iterations
-    epsilon : float, default=1e-5
-        Convergence threshold for centroid change
+        Fuzziness parameter for T matrix (must be > 1.0).
     init_method : {'random', 'fcm'}, default='fcm'
-        Method for initializing U and T matrices
-    random_seed : int, default=42
-        Random seed for reproducibility
-    plot_steps : bool, default=False
-        Whether to visualize clustering progress (2D PCA projection)
-    show_confidence : bool, default=True
-        Whether to show confidence in visualization
-    show_pca_variance : bool, default=True
-        Whether to show PCA variance in visualization
+        Method for initializing U and T matrices.
+    n_clusters : int
+        Number of clusters (must be >= 2).
+    max_iter : int
+        Maximum number of iterations.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed for reproducibility.
+    distance_fn : callable, optional
+        Pairwise distance function. Default: squared Euclidean.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore centroids from the lowest-objective epoch.
+        Default: False.
+    plot_steps : bool
+        Whether to visualize clustering progress. Default: False.
+    show_confidence : bool
+        Whether to show confidence in visualization. Default: True.
+    show_pca_variance : bool
+        Whether to show PCA variance in visualization. Default: True.
     save_plot_path : str, optional
-        Path to save final plot
+        Path to save final plot.
+    callbacks : list, optional
+        List of Callback objects for monitoring/visualization.
 
     Attributes
     ----------
@@ -110,11 +119,6 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     >>> labels = model.predict(X)
     >>> U = model.predict_proba(X)
     >>> T = model.get_typicality(X)
-
-    See Also
-    --------
-    FuzzyClusteringBase : Full list of base parameters (distance_fn,
-        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'eta', 'init_method')

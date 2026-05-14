@@ -69,47 +69,43 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
 
     Parameters
     ----------
-    n_clusters : int
-        Number of clusters
-
     fuzzifier : float, default=2.0
-        Fuzzification parameter for membership (m)
-
+        Fuzzification parameter for membership (m). Must be > 1.
     eta : float, default=2.0
-        Fuzzification parameter for typicality (η)
-
+        Fuzzification parameter for typicality (eta). Must be > 1.
     a : float, default=1.0
-        Weight for fuzzy membership term
-
+        Weight for fuzzy membership term. Must be >= 0.
     b : float, default=1.0
-        Weight for typicality term
-
+        Weight for typicality term. Must be >= 0.
     k : float, default=1.0
-        Parameter for gamma computation
-
-    max_iter : int, default=100
-        Maximum iterations
-
-    epsilon : float, default=1e-5
-        Convergence tolerance
-
+        Parameter for gamma computation. Must be > 0.
     init_method : str, default='fcm'
-        Initialization: 'fcm' or 'random'
-
-    random_seed : int, default=42
-        Random seed
-
-    plot_steps : bool, default=False
-        Enable live visualization
-
-    show_confidence : bool, default=True
-        Show confidence in visualization
-
-    show_pca_variance : bool, default=True
-        Show PCA variance in visualization
-
-    save_plot_path : str, default=None
-        Path to save final plot
+        Initialization method: 'fcm' or 'random'.
+    n_clusters : int
+        Number of clusters (must be >= 2).
+    max_iter : int
+        Maximum number of iterations.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed for reproducibility.
+    distance_fn : callable, optional
+        Pairwise distance function. Default: squared Euclidean.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore centroids from the lowest-objective epoch.
+        Default: False.
+    plot_steps : bool
+        Whether to visualize clustering progress. Default: False.
+    show_confidence : bool
+        Whether to show confidence in visualization. Default: True.
+    show_pca_variance : bool
+        Whether to show PCA variance in visualization. Default: True.
+    save_plot_path : str, optional
+        Path to save final plot.
+    callbacks : list, optional
+        List of Callback objects for monitoring/visualization.
 
     Attributes
     ----------
@@ -130,11 +126,6 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
 
     n_iter_ : int
         Number of iterations performed
-
-    See Also
-    --------
-    FuzzyClusteringBase : Full list of base parameters (distance_fn,
-        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'a', 'b', 'eta', 'k', 'init_method')

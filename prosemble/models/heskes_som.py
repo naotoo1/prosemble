@@ -67,16 +67,29 @@ class HeskesSOM(UnsupervisedPrototypeModel):
     grid_width : int
         Width of the 2D grid.
     sigma_init : float, optional
-        Initial neighborhood radius. Default: max(h, w) / 2.
+        Initial neighborhood radius. Default: max(grid_height, grid_width) / 2.
     sigma_final : float
         Final neighborhood radius.
     max_iter : int
-        Number of training epochs.
-
-    See Also
-    --------
-    UnsupervisedPrototypeModel : Full list of base parameters (distance_fn,
-        callbacks, use_scan, patience, etc.).
+        Maximum training iterations.
+    lr : float
+        Initial learning rate.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed.
+    distance_fn : callable, optional
+        Distance function.
+    callbacks : list, optional
+        Callback objects.
+    use_scan : bool
+        If True (default), use jax.lax.scan for training (faster, JIT-compiled,
+        but runs all max_iter iterations even after convergence).
+        If False, use a Python for-loop with true early stopping.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore parameters from the lowest-loss epoch. Default: False.
     """
 
     def __init__(self, grid_height=10, grid_width=10,

@@ -43,23 +43,36 @@ class NeuralGas(UnsupervisedPrototypeModel):
 
     Parameters
     ----------
-    n_prototypes : int
-        Number of prototypes.
-    max_iter : int
-        Maximum training epochs.
     lr_init : float
         Initial learning rate.
     lr_final : float
         Final learning rate.
-    lambda_init : float
-        Initial neighborhood range.
+    lambda_init : float, optional
+        Initial neighborhood range. Default: n_prototypes / 2.
     lambda_final : float
         Final neighborhood range.
-
-    See Also
-    --------
-    UnsupervisedPrototypeModel : Full list of base parameters (distance_fn,
-        callbacks, use_scan, patience, etc.).
+    n_prototypes : int
+        Number of prototypes/nodes.
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Initial learning rate.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed.
+    distance_fn : callable, optional
+        Distance function.
+    callbacks : list, optional
+        Callback objects.
+    use_scan : bool
+        If True (default), use jax.lax.scan for training (faster, JIT-compiled,
+        but runs all max_iter iterations even after convergence).
+        If False, use a Python for-loop with true early stopping.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore parameters from the lowest-loss epoch. Default: False.
     """
 
     def __init__(self, n_prototypes, lr_init=0.5, lr_final=0.01,

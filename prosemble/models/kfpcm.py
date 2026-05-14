@@ -29,10 +29,41 @@ class KFPCM(ScanFitMixin, FuzzyClusteringBase):
     constraint (standard FCM), while T has column-sum-to-1 constraint per the
     original Pal, Pal & Bezdek (1997) FPCM formulation.
 
-    See Also
-    --------
-    FuzzyClusteringBase : Full list of base parameters (distance_fn,
-        patience, restore_best, callbacks, etc.).
+    Parameters
+    ----------
+    fuzzifier : float, default=2.0
+        Fuzziness parameter for U matrix (must be > 1.0).
+    eta : float, default=2.0
+        Fuzziness parameter for T matrix (must be > 1.0).
+    sigma : float, default=1.0
+        Kernel bandwidth parameter (must be > 0).
+    init_method : {'kfcm', 'random'}, default='kfcm'
+        Initialization method.
+    n_clusters : int
+        Number of clusters (must be >= 2).
+    max_iter : int
+        Maximum number of iterations.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed for reproducibility.
+    distance_fn : callable, optional
+        Pairwise distance function. Default: squared Euclidean.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore centroids from the lowest-objective epoch.
+        Default: False.
+    plot_steps : bool
+        Whether to visualize clustering progress. Default: False.
+    show_confidence : bool
+        Whether to show confidence in visualization. Default: True.
+    show_pca_variance : bool
+        Whether to show PCA variance in visualization. Default: True.
+    save_plot_path : str, optional
+        Path to save final plot.
+    callbacks : list, optional
+        List of Callback objects for monitoring/visualization.
     """
 
     _hyperparams = ('fuzzifier', 'eta', 'sigma', 'init_method')

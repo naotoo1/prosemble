@@ -43,9 +43,7 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
         ``log_map``, ``exp_map``, ``random_point``, ``project``,
         and ``injectivity_radius``.
     n_prototypes : int
-        Number of prototypes.
-    max_iter : int
-        Maximum training epochs.
+        Number of prototypes/nodes.
     lr_init : float
         Initial learning rate. Default: 0.3.
     lr_final : float
@@ -56,11 +54,22 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
         Final neighborhood range. Default: 0.01.
     tau : float
         Safety factor for injectivity radius bound. Default: 0.9.
-
-    See Also
-    --------
-    UnsupervisedPrototypeModel : Full list of base parameters (distance_fn,
-        callbacks, use_scan, patience, etc.).
+    max_iter : int
+        Maximum training iterations.
+    lr : float
+        Initial learning rate.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed.
+    distance_fn : callable, optional
+        Distance function.
+    callbacks : list, optional
+        Callback objects.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore parameters from the lowest-loss epoch. Default: False.
     """
 
     def __init__(self, manifold, n_prototypes, lr_init=0.3, lr_final=0.01,

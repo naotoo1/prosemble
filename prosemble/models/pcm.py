@@ -74,77 +74,88 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
     the typicality of a point to one cluster is independent of its typicality
     to other clusters.
 
-    Parameters:
-        n_clusters: int
-            Number of clusters to form.
+    Parameters
+    ----------
+    fuzzifier : float, default=2.0
+        Fuzzification parameter (m > 1). Higher values result in fuzzier
+        clusters.
+    k : float, default=1.0
+        Parameter for gamma computation. Typical values are in [0.01, 1.0].
+        Lower values make the algorithm more sensitive to outliers.
+    init_method : {'fcm', 'random'}, default='fcm'
+        Initialization method:
+        - 'fcm': Initialize using FCM results (recommended)
+        - 'random': Random initialization
+    n_clusters : int
+        Number of clusters (must be >= 2).
+    max_iter : int
+        Maximum number of iterations.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed for reproducibility.
+    distance_fn : callable, optional
+        Pairwise distance function. Default: squared Euclidean.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore centroids from the lowest-objective epoch.
+        Default: False.
+    plot_steps : bool
+        Whether to visualize clustering progress. Default: False.
+    show_confidence : bool
+        Whether to show confidence in visualization. Default: True.
+    show_pca_variance : bool
+        Whether to show PCA variance in visualization. Default: True.
+    save_plot_path : str, optional
+        Path to save final plot.
+    callbacks : list, optional
+        List of Callback objects for monitoring/visualization.
 
-        fuzzifier: float, default=2.0
-            Fuzzification parameter (m > 1). Higher values result in fuzzier clusters.
+    Attributes
+    ----------
+    centroids_ : ndarray of shape (n_clusters, n_features)
+        Cluster centroids after fitting.
 
-        k: float, default=1.0
-            Parameter for gamma computation. Typical values are in [0.01, 1.0].
-            Lower values make the algorithm more sensitive to outliers.
+    T_ : ndarray of shape (n_samples, n_clusters)
+        Typicality matrix after fitting.
 
-        max_iter: int, default=100
-            Maximum number of iterations.
+    gamma_ : ndarray of shape (n_clusters,)
+        Scale parameters for each cluster.
 
-        epsilon: float, default=1e-5
-            Convergence tolerance. Algorithm stops when centroid change is below this.
+    n_iter_ : int
+        Number of iterations run.
 
-        init_method: {'fcm', 'random'}, default='fcm'
-            Initialization method:
-            - 'fcm': Initialize using FCM results (recommended)
-            - 'random': Random initialization
+    objective_ : float
+        Final objective function value.
 
-        random_seed: int, optional
-            Random seed for reproducibility.
-
-    Attributes:
-        centroids_: ndarray of shape (n_clusters, n_features)
-            Cluster centroids after fitting.
-
-        T_: ndarray of shape (n_samples, n_clusters)
-            Typicality matrix after fitting.
-
-        gamma_: ndarray of shape (n_clusters,)
-            Scale parameters for each cluster.
-
-        n_iter_: int
-            Number of iterations run.
-
-        objective_: float
-            Final objective function value.
-
-    Examples:
-        >>> import jax.numpy as jnp
-        >>> from prosemble.models import PCM
-        >>>
-        >>> # Generate sample data
-        >>> X = jnp.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8], [1, 0.6], [9, 11]])
-        >>>
-        >>> # Fit PCM model
-        >>> model = PCM(n_clusters=2, fuzzifier=2.0, k=1.0)
-        >>> model.fit(X)
-        >>>
-        >>> # Get cluster assignments
-        >>> labels = model.predict(X)
-        >>>
-        >>> # Get typicality values
-        >>> typicalities = model.predict_proba(X)
-
-    Notes:
-        - PCM is less sensitive to outliers than FCM because typicality values
-          are computed independently for each cluster.
-        - The parameter k controls the sensitivity to outliers. Smaller values
-          make the algorithm more sensitive.
-        - Initialization from FCM (init_method='fcm') is recommended as it provides
-          better starting points than random initialization.
-        - All computations are JIT-compiled and can run on GPU if available.
-
-    See Also
+    Examples
     --------
-    FuzzyClusteringBase : Full list of base parameters (distance_fn,
-        patience, restore_best, callbacks, etc.).
+    >>> import jax.numpy as jnp
+    >>> from prosemble.models import PCM
+    >>>
+    >>> # Generate sample data
+    >>> X = jnp.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8], [1, 0.6], [9, 11]])
+    >>>
+    >>> # Fit PCM model
+    >>> model = PCM(n_clusters=2, fuzzifier=2.0, k=1.0)
+    >>> model.fit(X)
+    >>>
+    >>> # Get cluster assignments
+    >>> labels = model.predict(X)
+    >>>
+    >>> # Get typicality values
+    >>> typicalities = model.predict_proba(X)
+
+    Notes
+    -----
+    - PCM is less sensitive to outliers than FCM because typicality values
+      are computed independently for each cluster.
+    - The parameter k controls the sensitivity to outliers. Smaller values
+      make the algorithm more sensitive.
+    - Initialization from FCM (init_method='fcm') is recommended as it provides
+      better starting points than random initialization.
+    - All computations are JIT-compiled and can run on GPU if available.
     """
 
     _hyperparams = ('fuzzifier', 'k', 'init_method')

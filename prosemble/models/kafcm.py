@@ -49,34 +49,43 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
 
     Parameters
     ----------
-    n_clusters : int
-        Number of clusters (must be >= 2)
     fuzzifier : float, default=2.0
-        Fuzziness parameter (must be > 1.0)
+        Fuzziness parameter (must be > 1.0).
     a : float, default=1.0
-        Weight for fuzzy membership (must be > 0)
+        Weight for fuzzy membership (must be > 0).
     b : float, default=1.0
-        Weight for typicality (must be > 0)
+        Weight for typicality (must be > 0).
     k : float, default=1.0
-        Scaling parameter for gamma (must be > 0)
+        Scaling parameter for gamma (must be > 0).
     sigma : float, default=1.0
-        Kernel bandwidth (must be > 0)
-    max_iter : int, default=100
-        Maximum iterations
-    epsilon : float, default=1e-5
-        Convergence threshold
+        Kernel bandwidth parameter (must be > 0).
     init_method : {'kfcm'}, default='kfcm'
-        Initialization method
-    random_seed : int, default=42
-        Random seed
-    plot_steps : bool, default=False
-        Whether to visualize
-    show_confidence : bool, default=True
-        Show confidence in visualization
-    show_pca_variance : bool, default=True
-        Show PCA variance
+        Initialization method.
+    n_clusters : int
+        Number of clusters (must be >= 2).
+    max_iter : int
+        Maximum number of iterations.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed for reproducibility.
+    distance_fn : callable, optional
+        Pairwise distance function. Default: squared Euclidean.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore centroids from the lowest-objective epoch.
+        Default: False.
+    plot_steps : bool
+        Whether to visualize clustering progress. Default: False.
+    show_confidence : bool
+        Whether to show confidence in visualization. Default: True.
+    show_pca_variance : bool
+        Whether to show PCA variance in visualization. Default: True.
     save_plot_path : str, optional
-        Path to save plot
+        Path to save final plot.
+    callbacks : list, optional
+        List of Callback objects for monitoring/visualization.
 
     Examples
     --------
@@ -86,11 +95,6 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
     >>> model = KAFCM(n_clusters=2, sigma=1.0, random_seed=42)
     >>> model.fit(X)
     >>> labels = model.predict(X)
-
-    See Also
-    --------
-    FuzzyClusteringBase : Full list of base parameters (distance_fn,
-        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'sigma', 'a', 'b', 'k', 'init_method')

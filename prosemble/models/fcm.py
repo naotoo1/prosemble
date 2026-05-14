@@ -94,29 +94,40 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
 
     Parameters
     ----------
-    n_clusters : int
-        Number of clusters (c)
-
     fuzzifier : float, default=2.0
         Fuzzification parameter (m). Must be > 1.
         - m = 1: Hard clustering (crisp membership)
         - m = 2: Standard fuzzy clustering
-        - m → ∞: Maximum fuzziness (equal membership)
-
-    max_iter : int, default=100
-        Maximum number of iterations
-
-    epsilon : float, default=1e-5
-        Convergence tolerance. Algorithm stops when:
-        ||V_new - V_old||_F < epsilon
-
+        - m -> inf: Maximum fuzziness (equal membership)
     init_method : str, default='random'
         Initialization method for U matrix:
         - 'random': Random Dirichlet distribution
         - 'kmeans++': K-means++ centroids then compute U
-
-    random_seed : int, default=42
-        Random seed for reproducibility
+    n_clusters : int
+        Number of clusters (must be >= 2).
+    max_iter : int
+        Maximum number of iterations.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed for reproducibility.
+    distance_fn : callable, optional
+        Pairwise distance function. Default: squared Euclidean.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore centroids from the lowest-objective epoch.
+        Default: False.
+    plot_steps : bool
+        Whether to visualize clustering progress. Default: False.
+    show_confidence : bool
+        Whether to show confidence in visualization. Default: True.
+    show_pca_variance : bool
+        Whether to show PCA variance in visualization. Default: True.
+    save_plot_path : str, optional
+        Path to save final plot.
+    callbacks : list, optional
+        List of Callback objects for monitoring/visualization.
 
     Attributes
     ----------
@@ -163,11 +174,6 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
 
     Dunn, J. C. (1973). A Fuzzy Relative of the ISODATA Process and
     Its Use in Detecting Compact Well-Separated Clusters.
-
-    See Also
-    --------
-    FuzzyClusteringBase : Full list of base parameters (distance_fn,
-        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('fuzzifier', 'init_method')

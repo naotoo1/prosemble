@@ -54,24 +54,33 @@ class HCM(ScanFitMixin, FuzzyClusteringBase):
 
     Parameters
     ----------
-    n_clusters : int
-        Number of clusters (must be >= 2)
-    max_iter : int, default=100
-        Maximum number of iterations
-    epsilon : float, default=1e-5
-        Convergence threshold for centroid change
     init_method : {'random', 'kmeans++'}, default='random'
-        Method for initializing centroids
-    random_seed : int, default=42
-        Random seed for reproducibility
-    plot_steps : bool, default=False
-        Whether to visualize clustering progress (2D PCA projection)
-    show_confidence : bool, default=True
-        Whether to show confidence in visualization
-    show_pca_variance : bool, default=True
-        Whether to show PCA variance in visualization
+        Method for initializing centroids.
+    n_clusters : int
+        Number of clusters (must be >= 2).
+    max_iter : int
+        Maximum number of iterations.
+    epsilon : float
+        Convergence threshold.
+    random_seed : int
+        Random seed for reproducibility.
+    distance_fn : callable, optional
+        Pairwise distance function. Default: squared Euclidean.
+    patience : int, optional
+        Epochs with no improvement before early stopping. Default: None.
+    restore_best : bool
+        If True, restore centroids from the lowest-objective epoch.
+        Default: False.
+    plot_steps : bool
+        Whether to visualize clustering progress. Default: False.
+    show_confidence : bool
+        Whether to show confidence in visualization. Default: True.
+    show_pca_variance : bool
+        Whether to show PCA variance in visualization. Default: True.
     save_plot_path : str, optional
-        Path to save final plot
+        Path to save final plot.
+    callbacks : list, optional
+        List of Callback objects for monitoring/visualization.
 
     Attributes
     ----------
@@ -94,11 +103,6 @@ class HCM(ScanFitMixin, FuzzyClusteringBase):
     >>> model = HCM(n_clusters=2, random_seed=42)
     >>> model.fit(X)
     >>> labels = model.predict(X)
-
-    See Also
-    --------
-    FuzzyClusteringBase : Full list of base parameters (distance_fn,
-        patience, restore_best, callbacks, etc.).
     """
 
     _hyperparams = ('init_method',)

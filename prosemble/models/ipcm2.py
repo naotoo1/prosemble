@@ -46,8 +46,8 @@ class IPCM2(FuzzyClusteringBase):
     Improved Possibilistic C-Means 2 clustering with JAX.
 
     IPCM2 is a variant of IPCM with key differences:
-    - Uses exponential T update: t_ij = exp(-d²_ij/γ_j)
-    - Centroids use U^m_f · T (T without power!)
+    - Uses exponential T update: :math:`t_{ij} = \\exp(-d_{ij}^2 / \\gamma_j)`
+    - Centroids use :math:`U^{m_f} \\cdot T` (T without power!)
     - Modified U update with exponential distance
     - Different objective function
 
@@ -65,10 +65,11 @@ class IPCM2(FuzzyClusteringBase):
     7. Recompute gamma using both U and T
     8. Continue iterations with new gamma
 
-    Objective function::
+    Objective function:
 
-        J = Σ_i Σ_j [u_ij^m_f · t_ij · d²_ij] +
-            Σ_j[γ_j · Σ_i((t_ij·log(t_ij) - t_ij + 1) · u_ij^m_f)]
+    .. math::
+
+        J = \\sum_i \\sum_j u_{ij}^{m_f} \\cdot t_{ij} \\cdot d_{ij}^2 + \\sum_j \\gamma_j \\sum_i (t_{ij} \\log t_{ij} - t_{ij} + 1) \\cdot u_{ij}^{m_f}
 
     Parameters
     ----------
@@ -214,7 +215,9 @@ class IPCM2(FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute gamma for phase 0.
 
-        γ_j = Σ_i(u_ij^m_f · d²_ij) / Σ_i(u_ij^m_f)
+        .. math::
+
+            \\gamma_j = \\frac{\\sum_i u_{ij}^{m_f} \\cdot d_{ij}^2}{\\sum_i u_{ij}^{m_f}}
         """
         D_sq = self.distance_fn(X, centroids)
         U_fuzz = jnp.power(U, self.fuzzifier)
@@ -232,7 +235,9 @@ class IPCM2(FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute gamma for phase 1.
 
-        γ_j = Σ_i(u_ij^m_f · t_ij^m_p · d²_ij) / Σ_i(u_ij^m_f · t_ij^m_p)
+        .. math::
+
+            \\gamma_j = \\frac{\\sum_i u_{ij}^{m_f} \\cdot t_{ij}^{m_p} \\cdot d_{ij}^2}{\\sum_i u_{ij}^{m_f} \\cdot t_{ij}^{m_p}}
         """
         D_sq = self.distance_fn(X, centroids)
         U_fuzz = jnp.power(U, self.fuzzifier)
@@ -253,7 +258,9 @@ class IPCM2(FuzzyClusteringBase):
     ) -> chex.Array:
         """Update typicality matrix with exponential.
 
-        t_ij = exp(-d²_ij/γ_j)
+        .. math::
+
+            t_{ij} = \\exp\\left(-\\frac{d_{ij}^2}{\\gamma_j}\\right)
         """
         D_sq = self.distance_fn(X, centroids)
         D_sq = jnp.maximum(D_sq, 1e-10)
@@ -270,12 +277,14 @@ class IPCM2(FuzzyClusteringBase):
     ) -> chex.Array:
         """Update fuzzy membership matrix (IPCM2-specific).
 
-        u_ij = (1/[γ_j·(1-exp(-d²_ij/γ_j))])^(2/(m_f-1)) / Σ_k(...)
+        .. math::
+
+            u_{ij} = \\frac{\\left(\\frac{1}{\\gamma_j (1 - \\exp(-d_{ij}^2/\\gamma_j))}\\right)^{2/(m_f-1)}}{\\sum_k \\left(\\frac{1}{\\gamma_k (1 - \\exp(-d_{ik}^2/\\gamma_k))}\\right)^{2/(m_f-1)}}
         """
         D_sq = self.distance_fn(X, centroids)
         D_sq = jnp.maximum(D_sq, 1e-10)
 
-        # Compute modified distance: γ_j·(1-exp(-d²_ij/γ_j))
+        # Compute modified distance: gamma_j*(1-exp(-d^2_ij/gamma_j))
         ratio = D_sq / gamma[None, :]
         exp_term = jnp.exp(-ratio)
         modified_dist = gamma[None, :] * (1.0 - exp_term)
@@ -302,7 +311,9 @@ class IPCM2(FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute cluster centroids.
 
-        v_j = Σ_i[u_ij^m_f · t_ij]x_i / Σ_i[u_ij^m_f · t_ij]
+        .. math::
+
+            v_j = \\frac{\\sum_i u_{ij}^{m_f} \\cdot t_{ij} \\cdot x_i}{\\sum_i u_{ij}^{m_f} \\cdot t_{ij}}
 
         Note: T is NOT raised to power m_p here!
         """
@@ -327,16 +338,17 @@ class IPCM2(FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute IPCM2 objective function.
 
-        J = Σ_i Σ_j [u_ij^m_f · t_ij · d²_ij] +
-            Σ_j[γ_j · Σ_i((t_ij·log(t_ij) - t_ij + 1) · u_ij^m_f)]
+        .. math::
+
+            J = \\sum_i \\sum_j u_{ij}^{m_f} \\cdot t_{ij} \\cdot d_{ij}^2 + \\sum_j \\gamma_j \\sum_i (t_{ij} \\log t_{ij} - t_{ij} + 1) \\cdot u_{ij}^{m_f}
         """
         D_sq = self.distance_fn(X, centroids)
         U_fuzz = jnp.power(U, self.fuzzifier)
 
-        # First term: Σ_i Σ_j [u_ij^m_f · t_ij · d²_ij]
+        # First term: sum_i sum_j [u_ij^m_f * t_ij * d^2_ij]
         term1 = jnp.sum(U_fuzz * T * D_sq)
 
-        # Second term: Σ_j[γ_j · Σ_i((t·log(t) - t + 1) · u^m_f)]
+        # Second term: sum_j[gamma_j * sum_i((t*log(t) - t + 1) * u^m_f)]
         # Handle log(0) by clamping T
         T_safe = jnp.maximum(T, 1e-10)
         entropy_like = T * jnp.log(T_safe) - T + 1.0

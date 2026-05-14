@@ -2,9 +2,11 @@
 One-Class LGMLVQ (OC-LGMLVQ).
 
 Extends OC-GLVQ with per-prototype Omega matrices (LGMLVQ-style).
-Each prototype w_k learns its own projection Ω_k:
+Each prototype :math:`w_k` learns its own projection :math:`\\Omega_k`:
 
-    d_{Ω_k}(x, w_k) = ||Ω_k(x - w_k)||²
+.. math::
+
+    d_{\\Omega_k}(x, w_k) = \\|\\Omega_k(x - w_k)\\|^2
 
 This allows each prototype to focus on different feature subspaces.
 
@@ -28,7 +30,7 @@ from prosemble.core.activations import sigmoid_beta
 class OCLGMLVQ(OCGLVQ):
     """One-Class LGMLVQ with per-prototype Omega projections.
 
-    Each prototype learns its own local metric via Ω_k, allowing
+    Each prototype learns its own local metric via :math:`\\Omega_k`, allowing
     different prototypes to attend to different feature subspaces.
 
     Parameters

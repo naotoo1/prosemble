@@ -24,12 +24,17 @@ from prosemble.core.losses import nllr_loss, rslvq_loss
 class SLVQ(SupervisedPrototypeModel):
     """Soft Learning Vector Quantization.
 
-    Uses Gaussian mixture probabilities::
+    Uses Gaussian mixture probabilities:
 
-        p(k|x) = exp(-d²/2σ²) / Σ exp(-d²/2σ²)
-        P(class|x) = Σ_{k∈class} p(k|x)
+    .. math::
 
-    Loss: ``-log(P(correct) / P(wrong))``
+        p(k|x) = \\frac{\\exp(-d^2 / 2\\sigma^2)}{\\sum_j \\exp(-d_j^2 / 2\\sigma^2)}
+
+    .. math::
+
+        P(\\text{class}|x) = \\sum_{k \\in \\text{class}} p(k|x)
+
+    Loss: :math:`-\\log(P(\\text{correct}) / P(\\text{wrong}))`
 
     Parameters
     ----------

@@ -44,11 +44,15 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     KPCM extends PCM to kernel space using Gaussian kernel, allowing handling
     of non-linearly separable data while maintaining possibilistic properties.
 
-    Kernel::
+    Kernel:
 
-        K(x, y) = exp(-||x - y||² / σ²)
+    .. math::
 
-    Kernel distance::
+        K(x, y) = \\exp\\left(-\\frac{\\|x - y\\|^2}{\\sigma^2}\\right)
+
+    Kernel distance:
+
+    .. math::
 
         d_K(x, v) = 2(1 - K(x, v))
 
@@ -60,9 +64,11 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     4. Update centroids (kernel-weighted)
     5. Repeat until convergence
 
-    Objective function::
+    Objective function:
 
-        J = Σ_i Σ_j [t_ij^m · d_K(x_i, v_j)] + Σ_j[γ_j · Σ_i(1 - t_ij)^m]
+    .. math::
+
+        J = \\sum_i \\sum_j t_{ij}^m \\cdot d_K(x_i, v_j) + \\sum_j \\gamma_j \\sum_i (1 - t_{ij})^m
 
     Parameters
     ----------
@@ -209,7 +215,9 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute scale parameters.
 
-        γ_j = k·Σ_i(u_ij^m · d_K(x_i, v_j)) / Σ_i(u_ij^m)
+        .. math::
+
+            \\gamma_j = k \\cdot \\frac{\\sum_i u_{ij}^m \\cdot d_K(x_i, v_j)}{\\sum_i u_{ij}^m}
         """
         # Compute kernel matrix
         K = batch_gaussian_kernel(X, centroids, self.sigma)
@@ -234,7 +242,9 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Update typicality matrix.
 
-        t_ij = 1 / (1 + (d_K(x_i, v_j)/γ_j)^(1/(m-1)))
+        .. math::
+
+            t_{ij} = \\frac{1}{1 + \\left(\\frac{d_K(x_i, v_j)}{\\gamma_j}\\right)^{1/(m-1)}}
         """
         # Compute kernel distance
         K = batch_gaussian_kernel(X, centroids, self.sigma)
@@ -256,7 +266,9 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute kernel-weighted centroids.
 
-        v_j = Σ_i[t_ij^m · K(x_i, v_j) · x_i] / Σ_i[t_ij^m · K(x_i, v_j)]
+        .. math::
+
+            v_j = \\frac{\\sum_i t_{ij}^m \\cdot K(x_i, v_j) \\cdot x_i}{\\sum_i t_{ij}^m \\cdot K(x_i, v_j)}
         """
         # Compute kernel matrix
         K = batch_gaussian_kernel(X, centroids, self.sigma)
@@ -282,7 +294,9 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute KPCM objective function.
 
-        J = Σ_i Σ_j [t_ij^m · d_K(x_i, v_j)] + Σ_j[γ_j · Σ_i(1 - t_ij)^m]
+        .. math::
+
+            J = \\sum_i \\sum_j t_{ij}^m \\cdot d_K(x_i, v_j) + \\sum_j \\gamma_j \\sum_i (1 - t_{ij})^m
         """
         # Compute kernel distance
         K = batch_gaussian_kernel(X, centroids, self.sigma)

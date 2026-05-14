@@ -143,7 +143,7 @@ class KIPCM2(FuzzyClusteringBase):
 
     @partial(jit, static_argnums=(0,))
     def _update_T(self, X: chex.Array, centroids: chex.Array, gamma: chex.Array) -> chex.Array:
-        """Exponential T update: t_ij = exp(-d_K(x_i, v_j)/γ_j)"""
+        """Exponential T update: :math:`t_{ij} = \\exp(-d_K(x_i, v_j) / \\gamma_j)`"""
         K = batch_gaussian_kernel(X, centroids, self.sigma)
         kernel_dist = 2.0 * (1.0 - K)
         kernel_dist = jnp.maximum(kernel_dist, 1e-10)
@@ -168,7 +168,7 @@ class KIPCM2(FuzzyClusteringBase):
 
     @partial(jit, static_argnums=(0,))
     def _compute_centroids(self, X: chex.Array, U: chex.Array, T: chex.Array, centroids: chex.Array) -> chex.Array:
-        """Centroids: kernel-weighted with U^m · T (T not raised to power!)"""
+        """Centroids: kernel-weighted with :math:`U^m \\cdot T` (T not raised to power!)."""
         K = batch_gaussian_kernel(X, centroids, self.sigma)
         U_fuzz = jnp.power(U, self.fuzzifier)
         weights = (U_fuzz * T) * K

@@ -48,9 +48,11 @@ class HCM(ScanFitMixin, FuzzyClusteringBase):
     3. Update centroids as mean of assigned points
     4. Repeat until convergence
 
-    Objective function::
+    Objective function:
 
-        J = Σ_i ||x_i - v_{label_i}||²
+    .. math::
+
+        J = \\sum_i \\|x_i - v_{l_i}\\|^2
 
     Parameters
     ----------
@@ -263,7 +265,9 @@ class HCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute HCM objective function.
 
-        Objective: J = Σ_i ||x_i - v_{label_i}||²
+        .. math::
+
+            J = \\sum_i \\|x_i - v_{l_i}\\|^2
 
         Args:
             X: Input data, shape (n_samples, n_features)

@@ -4,23 +4,27 @@ One-Class GLVQ (OC-GLVQ).
 Adapts GLVQ's hypothesis-testing principle for one-class classification.
 In standard GLVQ, the classifier function is:
 
-    μ = (d⁺ - d⁻) / (d⁺ + d⁻)
+.. math::
 
-where d⁺ is distance to nearest same-class prototype and d⁻ is distance
+    \\mu = \\frac{d^+ - d^-}{d^+ + d^-}
+
+where :math:`d^+` is distance to nearest same-class prototype and :math:`d^-` is distance
 to nearest different-class prototype. For one-class classification there
-is no competing class, so we replace d⁻ with a learned per-prototype
-visibility threshold θₖ:
+is no competing class, so we replace :math:`d^-` with a learned per-prototype
+visibility threshold :math:`\\theta_k`:
 
-    μₖ*(xᵢ) = sᵢ · (d(xᵢ, wₖ*) - θₖ*) / (d(xᵢ, wₖ*) + θₖ*)
+.. math::
 
-where k* is the nearest prototype and sᵢ = +1 for target, -1 for outlier.
+    \\mu_{k^*}(x_i) = s_i \\cdot \\frac{d(x_i, w_{k^*}) - \\theta_{k^*}}{d(x_i, w_{k^*}) + \\theta_{k^*}}
 
-- Target with d < θ: μ < 0 → f(μ) ≈ 0 → low cost (correct)
-- Target with d > θ: μ > 0 → f(μ) ≈ 1 → high cost (misclassified)
-- Outlier with d > θ: μ < 0 → f(μ) ≈ 0 → low cost (correct)
-- Outlier with d < θ: μ > 0 → f(μ) ≈ 1 → high cost (misclassified)
+where :math:`k^*` is the nearest prototype and :math:`s_i = +1` for target, :math:`-1` for outlier.
 
-The loss is E = mean(f(μ + margin)) where f is a sigmoid transfer.
+- Target with :math:`d < \\theta`: :math:`\\mu < 0 \\to f(\\mu) \\approx 0` -- low cost (correct)
+- Target with :math:`d > \\theta`: :math:`\\mu > 0 \\to f(\\mu) \\approx 1` -- high cost (misclassified)
+- Outlier with :math:`d > \\theta`: :math:`\\mu < 0 \\to f(\\mu) \\approx 0` -- low cost (correct)
+- Outlier with :math:`d < \\theta`: :math:`\\mu > 0 \\to f(\\mu) \\approx 1` -- high cost (misclassified)
+
+The loss is :math:`E = \\text{mean}(f(\\mu + \\text{margin}))` where :math:`f` is a sigmoid transfer.
 
 References
 ----------
@@ -42,8 +46,8 @@ from prosemble.core.activations import sigmoid_beta
 class OCGLVQ(SupervisedPrototypeModel):
     """One-Class Generalized Learning Vector Quantization.
 
-    Combines GLVQ's μ-based hypothesis testing with per-prototype
-    visibility thresholds θₖ for one-class classification.
+    Combines GLVQ's :math:`\\mu`-based hypothesis testing with per-prototype
+    visibility thresholds :math:`\\theta_k` for one-class classification.
 
     Parameters
     ----------
@@ -264,7 +268,7 @@ class OCGLVQ(SupervisedPrototypeModel):
         """Compute target-likeness scores.
 
         Scores near 1.0 indicate target class, near 0.0 indicate outlier.
-        The decision boundary is at score = 0.5 (where d = θ).
+        The decision boundary is at score = 0.5 (where :math:`d = \\theta`).
 
         Parameters
         ----------
@@ -353,7 +357,7 @@ class OCGLVQ(SupervisedPrototypeModel):
 
     @property
     def visibility_radii(self):
-        """Return the learned visibility radii θₖ for each prototype."""
+        """Return the learned visibility radii :math:`\\theta_k` for each prototype."""
         if self.thetas_ is None:
             raise ValueError("Model not fitted. Call fit() first.")
         return self.thetas_

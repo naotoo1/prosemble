@@ -18,10 +18,15 @@ class NGCooperationMixin:
     Instead of only the nearest prototype contributing to the loss, ALL
     prototypes participate weighted by their distance rank:
 
-        h_k = exp(-rank_k / γ)
-        E = mean(Σ_k h̃_k · f(μ_k))
+    .. math::
 
-    γ decays from gamma_init → gamma_final during training.
+        h_k = \\exp(-\\text{rank}_k / \\gamma)
+
+    .. math::
+
+        E = \\text{mean}\\left(\\sum_k \\tilde{h}_k \\cdot f(\\mu_k)\\right)
+
+    :math:`\\gamma` decays from ``gamma_init`` to ``gamma_final`` during training.
 
     Subclasses must override `_compute_distances(params, X)` to return
     a (n_samples, n_prototypes) distance matrix.

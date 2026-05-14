@@ -33,7 +33,7 @@ class NPC:
     4. If accuracy >= threshold or max_iter reached, stop
     5. Otherwise, recompute prototypes and repeat
 
-    Softmin function: softmin(x_i) = exp(-x_i) / Σ_j exp(-x_j)
+    Softmin function: :math:`\\text{softmin}(x_i) = \\exp(-x_i) / \\sum_j \\exp(-x_j)`
 
     Parameters
     ----------
@@ -174,7 +174,7 @@ class NPC:
     @partial(jit, static_argnums=(0,))
     def _softmin(self, x: chex.Array) -> chex.Array:
         """
-        Softmin function: softmin(x_i) = exp(-x_i) / Σ_j exp(-x_j)
+        Softmin function: :math:`\\text{softmin}(x_i) = \\exp(-x_i) / \\sum_j \\exp(-x_j)`.
 
         Parameters
         ----------

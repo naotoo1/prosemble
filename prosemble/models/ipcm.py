@@ -68,9 +68,11 @@ class IPCM(FuzzyClusteringBase):
     7. Recompute gamma using both U and T
     8. Continue iterations with new gamma
 
-    Objective function::
+    Objective function:
 
-        J = Σ_i Σ_j [u_ij^m_f · t_ij^m_p · d²_ij] + Σ_j[γ_j · Σ_i((1-t_ij)^m_p · u_ij^m_f)]
+    .. math::
+
+        J = \\sum_i \\sum_j u_{ij}^{m_f} \\cdot t_{ij}^{m_p} \\cdot d_{ij}^2 + \\sum_j \\gamma_j \\sum_i (1 - t_{ij})^{m_p} \\cdot u_{ij}^{m_f}
 
     Parameters
     ----------
@@ -229,7 +231,9 @@ class IPCM(FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute gamma for phase 0.
 
-        γ_j = Σ_i(u_ij^m_f · d²_ij) / Σ_i(u_ij^m_f)
+        .. math::
+
+            \\gamma_j = \\frac{\\sum_i u_{ij}^{m_f} \\cdot d_{ij}^2}{\\sum_i u_{ij}^{m_f}}
 
         Args:
             X: Input data, shape (n_samples, n_features)
@@ -259,7 +263,9 @@ class IPCM(FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute gamma for phase 1.
 
-        γ_j = k · Σ_i(u_ij^m_f · t_ij^m_p · d²_ij) / Σ_i(u_ij^m_f · t_ij^m_p)
+        .. math::
+
+            \\gamma_j = k \\cdot \\frac{\\sum_i u_{ij}^{m_f} \\cdot t_{ij}^{m_p} \\cdot d_{ij}^2}{\\sum_i u_{ij}^{m_f} \\cdot t_{ij}^{m_p}}
 
         Args:
             X: Input data, shape (n_samples, n_features)
@@ -294,7 +300,9 @@ class IPCM(FuzzyClusteringBase):
     ) -> chex.Array:
         """Update typicality matrix.
 
-        t_ij = 1 / (1 + (d²_ij/γ_j)^(1/(m_p-1)))
+        .. math::
+
+            t_{ij} = \\frac{1}{1 + \\left(\\frac{d_{ij}^2}{\\gamma_j}\\right)^{1/(m_p-1)}}
 
         Args:
             X: Input data, shape (n_samples, n_features)
@@ -323,7 +331,9 @@ class IPCM(FuzzyClusteringBase):
     ) -> chex.Array:
         """Update fuzzy membership matrix (IPCM-specific).
 
-        u_ij = (1/d²_ij · t_ij^(m_p-1))^(1/(m_f-1)) / Σ_k(...)
+        .. math::
+
+            u_{ij} = \\frac{\\left(\\frac{1}{d_{ij}^2} \\cdot t_{ij}^{m_p-1}\\right)^{1/(m_f-1)}}{\\sum_k \\left(\\frac{1}{d_{ik}^2} \\cdot t_{ik}^{m_p-1}\\right)^{1/(m_f-1)}}
 
         Args:
             X: Input data, shape (n_samples, n_features)
@@ -340,7 +350,7 @@ class IPCM(FuzzyClusteringBase):
         # Compute T^(m_p-1)
         T_pow = jnp.power(T, self.tipifier - 1.0)  # (n_samples, n_clusters)
 
-        # Compute base values: (1/d²_ij · t_ij^(m_p-1))
+        # Compute base values: (1/d^2_ij * t_ij^(m_p-1))
         base_values = (1.0 / D_sq) * T_pow  # (n_samples, n_clusters)
 
         # Compute power
@@ -361,7 +371,9 @@ class IPCM(FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute cluster centroids.
 
-        v_j = Σ_i[u_ij^m_f · t_ij^m_p]x_i / Σ_i[u_ij^m_f · t_ij^m_p]
+        .. math::
+
+            v_j = \\frac{\\sum_i u_{ij}^{m_f} \\cdot t_{ij}^{m_p} \\cdot x_i}{\\sum_i u_{ij}^{m_f} \\cdot t_{ij}^{m_p}}
 
         Args:
             X: Input data, shape (n_samples, n_features)
@@ -395,7 +407,9 @@ class IPCM(FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute IPCM objective function.
 
-        J = Σ_i Σ_j [u_ij^m_f · t_ij^m_p · d²_ij] + Σ_j[γ_j · Σ_i((1-t_ij)^m_p · u_ij^m_f)]
+        .. math::
+
+            J = \\sum_i \\sum_j u_{ij}^{m_f} \\cdot t_{ij}^{m_p} \\cdot d_{ij}^2 + \\sum_j \\gamma_j \\sum_i (1 - t_{ij})^{m_p} \\cdot u_{ij}^{m_f}
 
         Args:
             X: Input data
@@ -414,10 +428,10 @@ class IPCM(FuzzyClusteringBase):
         U_fuzz = jnp.power(U, self.fuzzifier)
         T_fuzz = jnp.power(T, self.tipifier)
 
-        # First term: Σ_i Σ_j [u_ij^m_f · t_ij^m_p · d²_ij]
+        # First term: sum_i sum_j [u_ij^m_f * t_ij^m_p * d^2_ij]
         term1 = jnp.sum(U_fuzz * T_fuzz * D_sq)
 
-        # Second term: Σ_j[γ_j · Σ_i((1-t_ij)^m_p · u_ij^m_f)]
+        # Second term: sum_j[gamma_j * sum_i((1-t_ij)^m_p * u_ij^m_f)]
         one_minus_T = 1.0 - T
         one_minus_T_fuzz = jnp.power(one_minus_T, self.tipifier)
         inner_sum = jnp.sum(one_minus_T_fuzz * U_fuzz, axis=0)  # (n_clusters,)

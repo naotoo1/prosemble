@@ -46,23 +46,23 @@ class IPCM2(FuzzyClusteringBase):
     Improved Possibilistic C-Means 2 clustering with JAX.
 
     IPCM2 is a variant of IPCM with key differences:
-    - Uses exponential T update: :math:`t_{ij} = \\exp(-d_{ij}^2 / \\gamma_j)`
-    - Centroids use :math:`U^{m_f} \\cdot T` (T without power!)
-    - Modified U update with exponential distance
+    - Uses exponential :math:`T` update: :math:`t_{ij} = \\exp(-d_{ij}^2 / \\gamma_j)`
+    - Centroids use :math:`U^{m_f} \\cdot T` (:math:`T` without power!)
+    - Modified :math:`U` update with exponential distance
     - Different objective function
 
     Algorithm (Phase 0):
 
-    1. Initialize U using FCM, T = 0
-    2. Compute gamma parameters from fuzzy membership
-    3. Update T using exponential update
-    4. Update U with modified distance
+    1. Initialize :math:`U` using FCM, :math:`T = 0`
+    2. Compute :math:`\\gamma` parameters from fuzzy membership
+    3. Update :math:`T` using exponential update
+    4. Update :math:`U` with modified distance
     5. Update centroids using combined U and T weights
     6. Repeat until convergence
 
     Algorithm (Phase 1):
 
-    7. Recompute gamma using both U and T
+    7. Recompute :math:`\\gamma` using both :math:`U` and :math:`T`
     8. Continue iterations with new gamma
 
     Objective function:
@@ -74,11 +74,11 @@ class IPCM2(FuzzyClusteringBase):
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzziness parameter for U matrix (m_f, must be > 1.0).
+        Fuzziness parameter for :math:`U` matrix (:math:`m_f`, must be > 1.0).
     tipifier : float, default=2.0
-        Possibilistic parameter for T matrix (m_p, must be > 1.0).
+        Possibilistic parameter for :math:`T` matrix (:math:`m_p`, must be > 1.0).
     init_method : {'fcm'}, default='fcm'
-        Method for initializing U matrix.
+        Method for initializing :math:`U` matrix.
     n_clusters : int
         Number of clusters (must be >= 2).
     max_iter : int
@@ -213,7 +213,7 @@ class IPCM2(FuzzyClusteringBase):
     def _compute_gamma_phase0(
         self, X: chex.Array, U: chex.Array, centroids: chex.Array
     ) -> chex.Array:
-        """Compute gamma for phase 0.
+        """Compute :math:`\\gamma` for phase 0.
 
         .. math::
 
@@ -233,7 +233,7 @@ class IPCM2(FuzzyClusteringBase):
     def _compute_gamma_phase1(
         self, X: chex.Array, U: chex.Array, T: chex.Array, centroids: chex.Array
     ) -> chex.Array:
-        """Compute gamma for phase 1.
+        """Compute :math:`\\gamma` for phase 1.
 
         .. math::
 
@@ -315,7 +315,7 @@ class IPCM2(FuzzyClusteringBase):
 
             v_j = \\frac{\\sum_i u_{ij}^{m_f} \\cdot t_{ij} \\cdot x_i}{\\sum_i u_{ij}^{m_f} \\cdot t_{ij}}
 
-        Note: T is NOT raised to power m_p here!
+        Note: :math:`T` is NOT raised to power :math:`m_p` here!
         """
         U_fuzz = jnp.power(U, self.fuzzifier)
 

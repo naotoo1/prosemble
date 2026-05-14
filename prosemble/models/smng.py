@@ -1,20 +1,32 @@
 """
 Supervised Matrix Neural Gas (SMNG).
 
-Combines GMLVQ's global linear transformation Omega with Neural Gas
+Combines GMLVQ's global linear transformation :math:`\\Omega` with Neural Gas
 neighborhood cooperation. All same-class prototypes participate in
-the loss, weighted by their rank via exp(-rank / gamma). The Omega
-matrix learns a discriminative subspace while neighborhood cooperation
+the loss, weighted by their rank via :math:`\\exp(-\\text{rank} / \\gamma)`.
+The :math:`\\Omega` matrix learns a discriminative subspace while neighborhood cooperation
 ensures robust prototype placement.
 
 Cost function:
-    E_SMNG = (1/N) sum_mu sum_{r: c(w_r)=c(x_mu)}
-        [h(rank_r, gamma) / C(gamma)] * Phi(mu_r)
+
+.. math::
+
+    E_{\\text{SMNG}} = \\frac{1}{N} \\sum_\\mu \\sum_{r: c(w_r)=c(x_\\mu)}
+        \\frac{h(\\text{rank}_r, \\gamma)}{C(\\gamma)} \\cdot \\Phi(\\mu_r)
 
 where:
-    d(x, w_r) = ||Omega(x - w_r)||^2  (global linear projection)
-    mu_r = (d_r - d_r^-) / (d_r + d_r^-)
-    h(rank, gamma) = exp(-rank / gamma)
+
+.. math::
+
+    d(x, w_r) = \\|\\Omega(x - w_r)\\|^2 \\quad \\text{(global linear projection)}
+
+.. math::
+
+    \\mu_r = \\frac{d_r - d_r^-}{d_r + d_r^-}
+
+.. math::
+
+    h(\\text{rank}, \\gamma) = \\exp(-\\text{rank} / \\gamma)
 
 References
 ----------
@@ -49,19 +61,25 @@ class SMNG(SupervisedPrototypeModel):
 
     Combines three key ideas:
 
-    - GLVQ loss: (d+ - d-) / (d+ + d-) for margin-based classification
+    - GLVQ loss: :math:`(d^+ - d^-) / (d^+ + d^-)` for margin-based classification
     - Neural Gas cooperation: all same-class prototypes participate in
-      the loss, weighted by rank via exp(-rank / gamma)
-    - Global Omega projection: d(x, w) = ||Omega(x - w)||^2 learns
-      feature correlations and a discriminative subspace
+      the loss, weighted by rank via :math:`\\exp(-\\text{rank} / \\gamma)`
+    - Global :math:`\\Omega` projection:
 
-    The neighborhood range gamma decays during training from gamma_init
-    to gamma_final. When gamma -> 0, SMNG recovers standard GMLVQ.
+      .. math::
+
+          d(x, w) = \\|\\Omega(x - w)\\|^2
+
+      learns feature correlations and a discriminative subspace
+
+    The neighborhood range :math:`\\gamma` decays during training from
+    :math:`\\gamma_{\\text{init}}` to :math:`\\gamma_{\\text{final}}`.
+    When :math:`\\gamma \\to 0`, SMNG recovers standard GMLVQ.
 
     Parameters
     ----------
     latent_dim : int, optional
-        Dimensionality of the Omega projection space. If None, uses input dim.
+        Dimensionality of the :math:`\\Omega` projection space. If None, uses input dim.
     beta : float
         Transfer function steepness parameter for sigmoid shaping.
     gamma_init : float, optional
@@ -297,20 +315,20 @@ class SMNG(SupervisedPrototypeModel):
 
     @property
     def omega_matrix(self):
-        """Return the learned Omega matrix."""
+        """Return the learned :math:`\\Omega` matrix."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_
 
     @property
     def lambda_matrix(self):
-        """Return Lambda = Omega^T Omega (relevance matrix)."""
+        """Return :math:`\\Lambda = \\Omega^T \\Omega` (relevance matrix)."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_.T @ self.omega_
 
     def predict(self, X):
-        """Predict using learned Omega distance."""
+        """Predict using learned :math:`\\Omega` distance."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_smng_jit(

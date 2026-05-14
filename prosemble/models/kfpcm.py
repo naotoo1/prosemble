@@ -25,16 +25,16 @@ class KFPCMState(NamedTuple):
 class KFPCM(ScanFitMixin, FuzzyClusteringBase):
     """Kernel Fuzzy Possibilistic C-Means with JAX.
 
-    KFPCM maintains two matrices (U and T) in kernel space. U has row-sum-to-1
-    constraint (standard FCM), while T has column-sum-to-1 constraint per the
+    KFPCM maintains two matrices (:math:`U` and :math:`T`) in kernel space. :math:`U` has row-sum-to-1
+    constraint (standard FCM), while :math:`T` has column-sum-to-1 constraint per the
     original Pal, Pal & Bezdek (1997) FPCM formulation.
 
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzziness parameter for U matrix (must be > 1.0).
+        Fuzziness parameter for :math:`U` matrix (must be > 1.0).
     eta : float, default=2.0
-        Fuzziness parameter for T matrix (must be > 1.0).
+        Fuzziness parameter for :math:`T` matrix (must be > 1.0).
     sigma : float, default=1.0
         Kernel bandwidth parameter (must be > 0).
     init_method : {'kfcm', 'random'}, default='kfcm'

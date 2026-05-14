@@ -20,12 +20,18 @@ from prosemble.core.losses import glvq_loss, glvq_loss_with_transfer, lvq1_loss,
 class GLVQ(SupervisedPrototypeModel):
     """Generalized Learning Vector Quantization.
 
-    Loss: mu = (d+ - d-) / (d+ + d-), with optional transfer function.
+    Loss:
+
+    .. math::
+
+        \\mu = \\frac{d^+ - d^-}{d^+ + d^-}
+
+    with optional transfer function.
 
     Parameters
     ----------
     beta : float
-        Parameter for transfer function (e.g., sigmoid steepness).
+        Parameter :math:`\\beta` for transfer function (e.g., sigmoid steepness).
     n_prototypes_per_class : int
         Number of prototypes per class.
     max_iter : int
@@ -147,7 +153,7 @@ class GLVQ(SupervisedPrototypeModel):
 class GLVQ1(SupervisedPrototypeModel):
     """GLVQ with LVQ1-style loss (gradient-based).
 
-    Loss: d+ when correct, -d- when wrong.
+    Loss: :math:`d^+` when correct, :math:`-d^-` when wrong.
 
     Parameters
     ----------
@@ -172,7 +178,7 @@ class GLVQ1(SupervisedPrototypeModel):
 class GLVQ21(SupervisedPrototypeModel):
     """GLVQ with LVQ2.1-style loss (gradient-based, unnormalized).
 
-    Loss: d+ - d- (no normalization by d+ + d-).
+    Loss: :math:`d^+ - d^-` (no normalization by :math:`d^+ + d^-`).
 
     Parameters
     ----------

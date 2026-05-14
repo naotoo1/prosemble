@@ -1,7 +1,7 @@
 """
 Localized Generalized Matrix LVQ (LGMLVQ).
 
-Each prototype has its own Omega matrix, enabling local
+Each prototype has its own :math:`\\Omega` matrix, enabling local
 metric adaptation in different regions of the feature space.
 
 References
@@ -22,7 +22,7 @@ from prosemble.core.initializers import identity_omega_init
 
 @jit
 def _predict_lgmlvq_jit(X, prototypes, omegas, proto_labels):
-    """JIT-compiled LGMLVQ prediction with per-prototype Omega metrics."""
+    """JIT-compiled LGMLVQ prediction with per-prototype :math:`\\Omega` metrics."""
     diff = X[:, None, :] - prototypes[None, :, :]
     projected = jnp.einsum('npd,pdl->npl', diff, omegas)
     distances = jnp.sum(projected ** 2, axis=2)
@@ -32,10 +32,12 @@ def _predict_lgmlvq_jit(X, prototypes, omegas, proto_labels):
 class LGMLVQ(SupervisedPrototypeModel):
     """Localized Generalized Matrix Learning Vector Quantization.
 
-    Each prototype k has its own Omega_k matrix. The distance from
-    sample x to prototype w_k is::
+    Each prototype :math:`k` has its own :math:`\\Omega_k` matrix. The distance from
+    sample :math:`x` to prototype :math:`w_k` is:
 
-        d(x, w_k) = (x - w_k)^T Omega_k^T Omega_k (x - w_k)
+    .. math::
+
+        d(x, w_k) = (x - w_k)^T \\Omega_k^T \\Omega_k (x - w_k)
 
     Parameters
     ----------
@@ -199,7 +201,7 @@ class LGMLVQ(SupervisedPrototypeModel):
         self.omegas_ = params['omegas']
 
     def predict(self, X):
-        """Predict using local Omega distances."""
+        """Predict using local :math:`\\Omega` distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_lgmlvq_jit(

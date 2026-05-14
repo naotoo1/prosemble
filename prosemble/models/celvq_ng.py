@@ -4,10 +4,10 @@ Cross-Entropy LVQ with Neural Gas cooperation (CELVQ-NG).
 Combines CELVQ's cross-entropy loss over all-class softmax logits with
 Neural Gas rank-based neighborhood cooperation. Instead of using the
 hard per-class minimum distance (as in CELVQ), prototypes within each
-class are weighted by their NG rank: h_k = exp(-rank / gamma). This
-replaces the hard min pooling with a soft NG-weighted pooling.
+class are weighted by their NG rank: :math:`h_k = \\exp(-\\text{rank} / \\gamma)`.
+This replaces the hard min pooling with a soft NG-weighted pooling.
 
-When gamma -> 0, only the nearest prototype per class dominates and
+When :math:`\\gamma \\to 0`, only the nearest prototype per class dominates and
 CELVQ-NG recovers standard CELVQ.
 
 References
@@ -28,7 +28,7 @@ class CELVQ_NG(CELVQNGMixin, CELVQ):
     """Cross-Entropy LVQ with Neural Gas neighborhood cooperation.
 
     For each class, prototypes are ranked by distance and weighted
-    by exp(-rank / gamma). The NG-weighted class distances become
+    by :math:`\\exp(-\\text{rank} / \\gamma)`. The NG-weighted class distances become
     logits for cross-entropy loss over all classes simultaneously.
 
     Parameters

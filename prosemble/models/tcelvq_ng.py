@@ -3,15 +3,18 @@ Tangent Cross-Entropy LVQ with Neural Gas cooperation (TCELVQ-NG).
 
 Combines CELVQ-NG's cross-entropy loss over NG-weighted softmax logits
 with per-prototype tangent subspaces. Each prototype has an orthonormal
-basis Omega_k defining invariance directions; the tangent distance
+basis :math:`\\Omega_k` defining invariance directions; the tangent distance
 measures distance in the orthogonal complement:
-    d(x, w_k) = ||(I - Omega_k Omega_k^T)(x - w_k)||^2
+
+.. math::
+
+    d(x, w_k) = \\|(I - \\Omega_k \\Omega_k^T)(x - w_k)\\|^2
 
 Neural Gas rank-based cooperation ensures robust prototype placement
 while cross-entropy over all classes provides gradient flow to all
 tangent subspaces simultaneously.
 
-When gamma -> 0, only the nearest prototype per class dominates and
+When :math:`\\gamma \\to 0`, only the nearest prototype per class dominates and
 TCELVQ-NG recovers a tangent variant of standard CELVQ.
 
 References
@@ -56,13 +59,19 @@ class TCELVQ_NG(CELVQNGMixin, CELVQ):
 
     - Cross-entropy loss: softmax over all-class NG-weighted distances
     - Neural Gas cooperation: all same-class prototypes participate,
-      weighted by rank via ``exp(-rank / gamma)``
-    - Tangent subspaces: ``d(x, w_k) = ||(I - Omega_k Omega_k^T)(x - w_k)||^2``
+      weighted by rank via :math:`\\exp(-\\text{rank} / \\gamma)`
+    - Tangent subspaces:
+
+      .. math::
+
+          d(x, w_k) = \\|(I - \\Omega_k \\Omega_k^T)(x - w_k)\\|^2
+
       measures distance in the orthogonal complement of each prototype's
       learned invariance subspace
 
-    The neighborhood range gamma decays during training from gamma_init
-    to gamma_final. When gamma -> 0, TCELVQ-NG recovers a tangent CELVQ.
+    The neighborhood range :math:`\\gamma` decays during training from
+    :math:`\\gamma_{\\text{init}}` to :math:`\\gamma_{\\text{final}}`.
+    When :math:`\\gamma \\to 0`, TCELVQ-NG recovers a tangent CELVQ.
 
     Parameters
     ----------

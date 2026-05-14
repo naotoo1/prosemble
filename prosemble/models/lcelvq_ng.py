@@ -2,15 +2,19 @@
 Localized Matrix Cross-Entropy LVQ with Neural Gas cooperation (LCELVQ-NG).
 
 Combines CELVQ-NG's cross-entropy loss over NG-weighted softmax logits
-with per-prototype Omega matrices that learn local metrics adapted to
-each prototype's region: d(x, w_k) = ||Omega_k(x - w_k)||^2.
+with per-prototype :math:`\\Omega_k` matrices that learn local metrics adapted to
+each prototype's region:
+
+.. math::
+
+    d(x, w_k) = \\|\\Omega_k(x - w_k)\\|^2
 
 Each prototype learns its own discriminative subspace while Neural Gas
 rank-based cooperation ensures robust prototype placement. The cross-
 entropy loss over all classes simultaneously provides gradient flow to
 all local matrices.
 
-When gamma -> 0, only the nearest prototype per class dominates and
+When :math:`\\gamma \\to 0`, only the nearest prototype per class dominates and
 LCELVQ-NG recovers a localized matrix variant of standard CELVQ.
 
 References
@@ -52,12 +56,18 @@ class LCELVQ_NG(CELVQNGMixin, CELVQ):
 
     - Cross-entropy loss: softmax over all-class NG-weighted distances
     - Neural Gas cooperation: all same-class prototypes participate,
-      weighted by rank via ``exp(-rank / gamma)``
-    - Per-prototype Omega_k: ``d(x, w_k) = ||Omega_k(x - w_k)||^2`` learns
-      local metrics adapted to each prototype's region
+      weighted by rank via :math:`\\exp(-\\text{rank} / \\gamma)`
+    - Per-prototype :math:`\\Omega_k`:
 
-    The neighborhood range gamma decays during training from gamma_init
-    to gamma_final. When gamma -> 0, LCELVQ-NG recovers a localized
+      .. math::
+
+          d(x, w_k) = \\|\\Omega_k(x - w_k)\\|^2
+
+      learns local metrics adapted to each prototype's region
+
+    The neighborhood range :math:`\\gamma` decays during training from
+    :math:`\\gamma_{\\text{init}}` to :math:`\\gamma_{\\text{final}}`.
+    When :math:`\\gamma \\to 0`, LCELVQ-NG recovers a localized
     matrix CELVQ.
 
     Parameters
@@ -205,7 +215,7 @@ class LCELVQ_NG(CELVQNGMixin, CELVQ):
         self.omegas_ = params['omegas']
 
     def predict(self, X):
-        """Predict using per-prototype Omega distances."""
+        """Predict using per-prototype :math:`\\Omega_k` distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_lcelvq_ng_jit(
@@ -213,9 +223,9 @@ class LCELVQ_NG(CELVQNGMixin, CELVQ):
         )
 
     def predict_proba(self, X):
-        """Predict calibrated probabilities using per-prototype Omega distances.
+        """Predict calibrated probabilities using per-prototype :math:`\\Omega_k` distances.
 
-        Uses per-class min pooling with the learned local Omega metrics,
+        Uses per-class min pooling with the learned local :math:`\\Omega_k` metrics,
         consistent with the training objective.
 
         Parameters

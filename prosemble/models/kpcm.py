@@ -59,8 +59,8 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     Algorithm:
 
     1. Initialize using KFCM
-    2. Compute gamma parameters
-    3. Update typicality matrix T
+    2. Compute :math:`\\gamma` parameters
+    3. Update typicality matrix :math:`T`
     4. Update centroids (kernel-weighted)
     5. Repeat until convergence
 
@@ -75,7 +75,7 @@ class KPCM(ScanFitMixin, FuzzyClusteringBase):
     fuzzifier : float, default=2.0
         Fuzziness parameter (must be > 1.0).
     k : float, default=1.0
-        Scaling parameter for gamma (must be > 0).
+        Scaling parameter for :math:`\\gamma` (must be > 0).
     sigma : float, default=1.0
         Kernel bandwidth parameter (must be > 0).
     init_method : {'kfcm'}, default='kfcm'

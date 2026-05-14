@@ -16,9 +16,9 @@ Objective function:
 
     J = \\sum_i \\sum_j t_{ij}^m \\|x_i - v_j\\|^2 + \\sum_j \\gamma_j \\sum_i (1 - t_{ij})^m
 
-where :math:`t_{ij}` is the typicality of point :math:`x_i` to cluster j,
-:math:`v_j` is the centroid of cluster j, :math:`m` is the fuzzifier (m > 1),
-and :math:`\\gamma_j` is a scale parameter for cluster j.
+where :math:`t_{ij}` is the typicality of point :math:`x_i` to cluster :math:`j`,
+:math:`v_j` is the centroid of cluster :math:`j`, :math:`m` is the fuzzifier (:math:`m > 1`),
+and :math:`\\gamma_j` is a scale parameter for cluster :math:`j`.
 
 Update equations:
 
@@ -87,10 +87,10 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzzification parameter (m > 1). Higher values result in fuzzier
+        Fuzzification parameter (:math:`m > 1`). Higher values result in fuzzier
         clusters.
     k : float, default=1.0
-        Parameter for gamma computation. Typical values are in [0.01, 1.0].
+        Parameter for :math:`\\gamma` computation. Typical values are in [0.01, 1.0].
         Lower values make the algorithm more sensitive to outliers.
     init_method : {'fcm', 'random'}, default='fcm'
         Initialization method:
@@ -161,7 +161,7 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
     -----
     - PCM is less sensitive to outliers than FCM because typicality values
       are computed independently for each cluster.
-    - The parameter k controls the sensitivity to outliers. Smaller values
+    - The parameter :math:`k` controls the sensitivity to outliers. Smaller values
       make the algorithm more sensitive.
     - Initialization from FCM (init_method='fcm') is recommended as it provides
       better starting points than random initialization.
@@ -315,7 +315,7 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
     @partial(jit, static_argnums=(0,))
     def _compute_gamma(self, X: chex.Array, T: chex.Array, centroids: chex.Array) -> chex.Array:
         """
-        Compute gamma parameters for each cluster.
+        Compute :math:`\\gamma` parameters for each cluster.
 
         Vectorized computation:
 

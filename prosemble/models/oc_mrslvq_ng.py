@@ -165,7 +165,7 @@ class OCMRSLVQ_NG(OCRSLVQNGMixin, OCMRSLVQ):
 class OCLMRSLVQ_NG(OCRSLVQNGMixin, OCLMRSLVQ):
     """One-Class Local Matrix RSLVQ with Neural Gas neighborhood cooperation.
 
-    Learns per-prototype Omega_k projection matrices with combined
+    Learns per-prototype :math:`\\Omega_k` projection matrices with combined
     Gaussian + NG rank-weighted loss for one-class classification.
 
     Parameters

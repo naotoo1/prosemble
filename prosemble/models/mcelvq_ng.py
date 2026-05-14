@@ -2,14 +2,18 @@
 Matrix Cross-Entropy LVQ with Neural Gas cooperation (MCELVQ-NG).
 
 Combines CELVQ-NG's cross-entropy loss over NG-weighted softmax logits
-with a global linear transformation Omega that learns a discriminative
-subspace: d(x, w) = ||Omega(x - w)||^2.
+with a global linear transformation :math:`\\Omega` that learns a discriminative
+subspace:
 
-The Omega matrix captures feature correlations and projects data into
+.. math::
+
+    d(x, w) = \\|\\Omega(x - w)\\|^2
+
+The :math:`\\Omega` matrix captures feature correlations and projects data into
 a space where cross-entropy classification is more effective. Neural Gas
 rank-based cooperation ensures robust prototype placement.
 
-When gamma -> 0, only the nearest prototype per class dominates and
+When :math:`\\gamma \\to 0`, only the nearest prototype per class dominates and
 MCELVQ-NG recovers a matrix variant of standard CELVQ.
 
 References
@@ -51,17 +55,23 @@ class MCELVQ_NG(CELVQNGMixin, CELVQ):
 
     - Cross-entropy loss: softmax over all-class NG-weighted distances
     - Neural Gas cooperation: all same-class prototypes participate,
-      weighted by rank via ``exp(-rank / gamma)``
-    - Global Omega projection: ``d(x, w) = ||Omega(x - w)||^2`` learns
-      feature correlations and a discriminative subspace
+      weighted by rank via :math:`\\exp(-\\text{rank} / \\gamma)`
+    - Global :math:`\\Omega` projection:
 
-    The neighborhood range gamma decays during training from gamma_init
-    to gamma_final. When gamma -> 0, MCELVQ-NG recovers a matrix CELVQ.
+      .. math::
+
+          d(x, w) = \\|\\Omega(x - w)\\|^2
+
+      learns feature correlations and a discriminative subspace
+
+    The neighborhood range :math:`\\gamma` decays during training from
+    :math:`\\gamma_{\\text{init}}` to :math:`\\gamma_{\\text{final}}`.
+    When :math:`\\gamma \\to 0`, MCELVQ-NG recovers a matrix CELVQ.
 
     Parameters
     ----------
     latent_dim : int, optional
-        Dimensionality of the Omega projection space. If None, uses input dim.
+        Dimensionality of the :math:`\\Omega` projection space. If None, uses input dim.
     gamma_init : float, optional
         Initial neighborhood range for NG cooperation.
         Default: max prototypes per class / 2.
@@ -202,20 +212,20 @@ class MCELVQ_NG(CELVQNGMixin, CELVQ):
 
     @property
     def omega_matrix(self):
-        """Return the learned Omega matrix."""
+        """Return the learned :math:`\\Omega` matrix."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_
 
     @property
     def lambda_matrix(self):
-        """Return Lambda = Omega^T Omega (relevance matrix)."""
+        """Return :math:`\\Lambda = \\Omega^T \\Omega` (relevance matrix)."""
         if self.omega_ is None:
             raise ValueError("Model not fitted.")
         return self.omega_.T @ self.omega_
 
     def predict(self, X):
-        """Predict using learned Omega distance."""
+        """Predict using learned :math:`\\Omega` distance."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_mcelvq_ng_jit(
@@ -223,9 +233,9 @@ class MCELVQ_NG(CELVQNGMixin, CELVQ):
         )
 
     def predict_proba(self, X):
-        """Predict calibrated probabilities using Omega-transformed distances.
+        """Predict calibrated probabilities using :math:`\\Omega`-transformed distances.
 
-        Uses NG-weighted pooling with the learned Omega metric, matching
+        Uses NG-weighted pooling with the learned :math:`\\Omega` metric, matching
         the training objective exactly.
 
         Parameters

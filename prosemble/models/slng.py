@@ -1,19 +1,31 @@
 """
 Supervised Localized Matrix Neural Gas (SLNG).
 
-Combines LGMLVQ's per-prototype Omega matrices with Neural Gas
+Combines LGMLVQ's per-prototype :math:`\\Omega` matrices with Neural Gas
 neighborhood cooperation. Each prototype learns its own local metric
 while neighborhood cooperation ensures robust prototype placement
 across the data distribution.
 
 Cost function:
-    E_SLNG = (1/N) sum_mu sum_{r: c(w_r)=c(x_mu)}
-        [h(rank_r, gamma) / C(gamma)] * Phi(mu_r)
+
+.. math::
+
+    E_{\\text{SLNG}} = \\frac{1}{N} \\sum_\\mu \\sum_{r: c(w_r)=c(x_\\mu)}
+        \\frac{h(\\text{rank}_r, \\gamma)}{C(\\gamma)} \\cdot \\Phi(\\mu_r)
 
 where:
-    d(x, w_r) = ||Omega_r(x - w_r)||^2  (per-prototype local projection)
-    mu_r = (d_r - d_r^-) / (d_r + d_r^-)
-    h(rank, gamma) = exp(-rank / gamma)
+
+.. math::
+
+    d(x, w_r) = \\|\\Omega_r(x - w_r)\\|^2 \\quad \\text{(per-prototype local projection)}
+
+.. math::
+
+    \\mu_r = \\frac{d_r - d_r^-}{d_r + d_r^-}
+
+.. math::
+
+    h(\\text{rank}, \\gamma) = \\exp(-\\text{rank} / \\gamma)
 
 References
 ----------
@@ -48,14 +60,20 @@ class SLNG(SupervisedPrototypeModel):
 
     Combines three key ideas:
 
-    - GLVQ loss: (d+ - d-) / (d+ + d-) for margin-based classification
+    - GLVQ loss: :math:`(d^+ - d^-) / (d^+ + d^-)` for margin-based classification
     - Neural Gas cooperation: all same-class prototypes participate in
-      the loss, weighted by rank via exp(-rank / gamma)
-    - Per-prototype Omega_k: d(x, w_k) = ||Omega_k(x - w_k)||^2 learns
-      local metrics adapted to each prototype's region
+      the loss, weighted by rank via :math:`\\exp(-\\text{rank} / \\gamma)`
+    - Per-prototype :math:`\\Omega_k`:
 
-    The neighborhood range gamma decays during training from gamma_init
-    to gamma_final. When gamma -> 0, SLNG recovers standard LGMLVQ.
+      .. math::
+
+          d(x, w_k) = \\|\\Omega_k(x - w_k)\\|^2
+
+      learns local metrics adapted to each prototype's region
+
+    The neighborhood range :math:`\\gamma` decays during training from
+    :math:`\\gamma_{\\text{init}}` to :math:`\\gamma_{\\text{final}}`.
+    When :math:`\\gamma \\to 0`, SLNG recovers standard LGMLVQ.
 
     Parameters
     ----------
@@ -298,7 +316,7 @@ class SLNG(SupervisedPrototypeModel):
         self.gamma_ = float(params['gamma'])
 
     def predict(self, X):
-        """Predict using per-prototype Omega distances."""
+        """Predict using per-prototype :math:`\\Omega_k` distances."""
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_slng_jit(

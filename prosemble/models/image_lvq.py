@@ -297,8 +297,11 @@ class ImageGLVQ(SupervisedPrototypeModel):
 class ImageGMLVQ(SupervisedPrototypeModel):
     """Image GMLVQ — GMLVQ with a CNN embedding network.
 
-    Like ImageGLVQ but with a learned Omega matrix in latent space:
-    d = ||Omega(CNN(x) - CNN(w))||^2.
+    Like ImageGLVQ but with a learned :math:`\\Omega` matrix in latent space:
+
+    .. math::
+
+        d = \\|\\Omega(\\text{CNN}(x) - \\text{CNN}(w))\\|^2
 
     Parameters
     ----------
@@ -541,7 +544,11 @@ class ImageGTLVQ(SupervisedPrototypeModel):
     """Image GTLVQ — GTLVQ with a CNN embedding network.
 
     Like ImageGLVQ but with per-prototype tangent subspace bases in
-    latent space: d = ||P_k(CNN(x) - CNN(w_k))||^2.
+    latent space:
+
+    .. math::
+
+        d = \\|P_k(\\text{CNN}(x) - \\text{CNN}(w_k))\\|^2
 
     Parameters
     ----------

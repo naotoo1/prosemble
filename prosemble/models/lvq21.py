@@ -24,9 +24,10 @@ class LVQ21(SupervisedPrototypeModel):
     """Learning Vector Quantization 2.1.
 
     For each sample:
-    - Find closest same-class prototype w+ and closest different-class w-
-    - w+ += lr * (x - w+)   (attract w+)
-    - w- -= lr * (x - w-)   (repel w-)
+
+    - Find closest same-class prototype :math:`w^+` and closest different-class :math:`w^-`
+    - :math:`w^+ \\leftarrow w^+ + \\eta (x - w^+)` (attract :math:`w^+`)
+    - :math:`w^- \\leftarrow w^- - \\eta (x - w^-)` (repel :math:`w^-`)
 
     Parameters
     ----------

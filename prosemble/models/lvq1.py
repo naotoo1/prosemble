@@ -23,9 +23,10 @@ class LVQ1(SupervisedPrototypeModel):
     """Learning Vector Quantization 1.
 
     For each sample:
+
     - Find nearest prototype (winner)
-    - If same class: w += lr * (x - w)  (attract)
-    - If diff class: w -= lr * (x - w)  (repel)
+    - If same class: :math:`w \\leftarrow w + \\eta (x - w)` (attract)
+    - If diff class: :math:`w \\leftarrow w - \\eta (x - w)` (repel)
 
     Uses batch updates (all samples per iteration).
 

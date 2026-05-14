@@ -20,8 +20,12 @@ from prosemble.models.prototype_base import SupervisedPrototypeModel
 class GRLVQ(SupervisedPrototypeModel):
     """Generalized Relevance Learning Vector Quantization.
 
-    Learns per-feature relevance weights lambda_j such that the
-    weighted distance is: d(x, w) = sum_j lambda_j * (x_j - w_j)^2
+    Learns per-feature relevance weights :math:`\\lambda_j` such that the
+    weighted distance is:
+
+    .. math::
+
+        d(x, w) = \\sum_j \\lambda_j (x_j - w_j)^2
 
     Parameters
     ----------

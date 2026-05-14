@@ -275,7 +275,7 @@ class OCMRSLVQ(OCGLVQ):
 
     @property
     def omega_matrix(self):
-        """Return the learned projection matrix Omega."""
+        """Return the learned projection matrix :math:`\\Omega`."""
         if self.omega_ is None:
             raise ValueError("Model not fitted. Call fit() first.")
         return self.omega_
@@ -312,7 +312,7 @@ class OCMRSLVQ(OCGLVQ):
 class OCLMRSLVQ(OCGLVQ):
     """One-Class Localized Matrix Robust Soft LVQ.
 
-    Each prototype k has its own Omega_k matrix for local metric
+    Each prototype :math:`k` has its own :math:`\\Omega_k` matrix for local metric
     adaptation, combined with probabilistic soft-weighting and
     one-class threshold detection.
 

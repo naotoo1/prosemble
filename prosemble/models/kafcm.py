@@ -40,10 +40,10 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
 
     Algorithm:
 
-    1. Initialize U using KFCM
-    2. Compute gamma parameters using kernel distance
-    3. Update T using exponential kernel update
-    4. Update U using standard KFCM rule
+    1. Initialize :math:`U` using KFCM
+    2. Compute :math:`\\gamma` parameters using kernel distance
+    3. Update :math:`T` using exponential kernel update
+    4. Update :math:`U` using standard KFCM rule
     5. Update centroids (kernel-weighted with combined weights)
     6. Repeat until convergence
 
@@ -56,7 +56,7 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
     b : float, default=1.0
         Weight for typicality (must be > 0).
     k : float, default=1.0
-        Scaling parameter for gamma (must be > 0).
+        Scaling parameter for :math:`\\gamma` (must be > 0).
     sigma : float, default=1.0
         Kernel bandwidth parameter (must be > 0).
     init_method : {'kfcm'}, default='kfcm'
@@ -182,7 +182,7 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
     def _compute_gamma(
         self, X: chex.Array, U: chex.Array, centroids: chex.Array
     ) -> chex.Array:
-        """Compute gamma using kernel distance."""
+        """Compute :math:`\\gamma` using kernel distance."""
         K = batch_gaussian_kernel(X, centroids, self.sigma)
         kernel_dist = 2.0 * (1.0 - K)
         U_fuzz = jnp.power(U, self.fuzzifier)
@@ -205,7 +205,7 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
 
     @partial(jit, static_argnums=(0,))
     def _update_U(self, X: chex.Array, centroids: chex.Array) -> chex.Array:
-        """Update U using kernel distance."""
+        """Update :math:`U` using kernel distance."""
         K = batch_gaussian_kernel(X, centroids, self.sigma)
         kernel_dist = 1.0 - K
         kernel_dist = jnp.maximum(kernel_dist, 1e-10)

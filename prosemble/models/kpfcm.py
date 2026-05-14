@@ -26,8 +26,8 @@ class KPFCMState(NamedTuple):
 class KPFCM(ScanFitMixin, FuzzyClusteringBase):
     """Kernel Possibilistic Fuzzy C-Means with JAX.
 
-    KPFCM combines fuzzy membership (U) and typicality (T) in kernel space
-    with weights a and b.
+    KPFCM combines fuzzy membership (:math:`U`) and typicality (:math:`T`) in kernel space
+    with weights :math:`a` and :math:`b`.
 
     Parameters
     ----------
@@ -40,7 +40,7 @@ class KPFCM(ScanFitMixin, FuzzyClusteringBase):
     b : float, default=1.0
         Weight for typicality term (must be > 0).
     k : float, default=1.0
-        Scaling parameter for gamma (must be > 0).
+        Scaling parameter for :math:`\\gamma` (must be > 0).
     sigma : float, default=1.0
         Kernel bandwidth parameter (must be > 0).
     init_method : {'kfcm'}, default='kfcm'

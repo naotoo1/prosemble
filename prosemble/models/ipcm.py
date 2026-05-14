@@ -46,26 +46,26 @@ class IPCM(FuzzyClusteringBase):
     Improved Possibilistic C-Means clustering with JAX.
 
     IPCM uses a two-phase approach to improve clustering performance:
-    - Phase 0: Initialize gamma using fuzzy membership only
-    - Phase 1: Refine gamma using both membership and typicality
+    - Phase 0: Initialize :math:`\\gamma` using fuzzy membership only
+    - Phase 1: Refine :math:`\\gamma` using both membership and typicality
 
     Key differences from PCM:
-    - Uses product of U^m_f and T^m_p in centroid computation
-    - Modified U update that depends on T
-    - Two-phase gamma computation
+    - Uses product of :math:`U^{m_f}` and :math:`T^{m_p}` in centroid computation
+    - Modified :math:`U` update that depends on :math:`T`
+    - Two-phase :math:`\\gamma` computation
 
     Algorithm (Phase 0):
 
-    1. Initialize U using FCM, T = 0
-    2. Compute gamma parameters from fuzzy membership
-    3. Update typicality matrix T
-    4. Update membership matrix U
+    1. Initialize :math:`U` using FCM, :math:`T = 0`
+    2. Compute :math:`\\gamma` parameters from fuzzy membership
+    3. Update typicality matrix :math:`T`
+    4. Update membership matrix :math:`U`
     5. Update centroids using combined U and T weights
     6. Repeat until convergence
 
     Algorithm (Phase 1):
 
-    7. Recompute gamma using both U and T
+    7. Recompute :math:`\\gamma` using both :math:`U` and :math:`T`
     8. Continue iterations with new gamma
 
     Objective function:
@@ -77,13 +77,13 @@ class IPCM(FuzzyClusteringBase):
     Parameters
     ----------
     fuzzifier : float, default=2.0
-        Fuzziness parameter for U matrix (m_f, must be > 1.0).
+        Fuzziness parameter for :math:`U` matrix (:math:`m_f`, must be > 1.0).
     tipifier : float, default=2.0
-        Possibilistic parameter for T matrix (m_p, must be > 1.0).
+        Possibilistic parameter for :math:`T` matrix (:math:`m_p`, must be > 1.0).
     k : float, default=1.0
-        Scaling parameter for gamma in phase 1 (must be > 0).
+        Scaling parameter for :math:`\\gamma` in phase 1 (must be > 0).
     init_method : {'fcm'}, default='fcm'
-        Method for initializing U matrix (must use FCM).
+        Method for initializing :math:`U` matrix (must use FCM).
     n_clusters : int
         Number of clusters (must be >= 2).
     max_iter : int
@@ -229,7 +229,7 @@ class IPCM(FuzzyClusteringBase):
     def _compute_gamma_phase0(
         self, X: chex.Array, U: chex.Array, centroids: chex.Array
     ) -> chex.Array:
-        """Compute gamma for phase 0.
+        """Compute :math:`\\gamma` for phase 0.
 
         .. math::
 
@@ -261,7 +261,7 @@ class IPCM(FuzzyClusteringBase):
     def _compute_gamma_phase1(
         self, X: chex.Array, U: chex.Array, T: chex.Array, centroids: chex.Array
     ) -> chex.Array:
-        """Compute gamma for phase 1.
+        """Compute :math:`\\gamma` for phase 1.
 
         .. math::
 

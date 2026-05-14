@@ -5,17 +5,20 @@ Generalizes the Neural Gas algorithm to Riemannian manifolds by
 replacing Euclidean distance with geodesic distance and using
 exponential/logarithmic maps for prototype updates:
 
-    w_i^new ← Exp_{w_i}(ε · h_λ(k_i(x, W)) · Log_{w_i}(x))
+.. math::
 
-where Exp and Log are the Riemannian exponential and logarithmic maps,
-and h_λ(k) = exp(-k/λ) is the rank-based neighborhood function.
+    w_i^{\\text{new}} \\leftarrow \\text{Exp}_{w_i}\\bigl(\\varepsilon \\cdot h_\\lambda(k_i(x, W)) \\cdot \\text{Log}_{w_i}(x)\\bigr)
+
+where :math:`\\text{Exp}` and :math:`\\text{Log}` are the Riemannian exponential and
+logarithmic maps, and :math:`h_\\lambda(k) = \\exp(-k/\\lambda)` is the rank-based
+neighborhood function.
 
 The algorithm learns prototypes that lie on the manifold, respecting
 its intrinsic geometry and curvature.
 
 References
 ----------
-.. [1] Schwarz, L., Psenickova, M., Villmann, T., & Röhrbein, F. (2026).
+.. [1] Schwarz, L., Psenickova, M., Villmann, T., & Rohrbein, F. (2026).
        Topology-Preserving Prototype Learning on Riemannian Manifolds.
        ESANN 2026.
 .. [2] Martinetz, T., Berkovich, S., & Schulten, K. (1993).

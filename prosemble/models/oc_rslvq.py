@@ -4,9 +4,17 @@ One-Class Robust Soft LVQ (OC-RSLVQ).
 Extends OC-GLVQ by replacing hard nearest-prototype assignment with
 probabilistic soft-weighting via Gaussian mixture responsibilities:
 
-    p(k|x) = exp(-d_k / 2σ²) / Σ_j exp(-d_j / 2σ²)
-    μ_k = s · (d_k - θ_k) / (d_k + θ_k)
-    loss = mean(Σ_k p(k|x) · sigmoid(μ_k + margin, β))
+.. math::
+
+    p(k|x) = \\frac{\\exp(-d_k / 2\\sigma^2)}{\\sum_j \\exp(-d_j / 2\\sigma^2)}
+
+.. math::
+
+    \\mu_k = s \\cdot \\frac{d_k - \\theta_k}{d_k + \\theta_k}
+
+.. math::
+
+    \\text{loss} = \\text{mean}\\left(\\sum_k p(k|x) \\cdot \\text{sigmoid}(\\mu_k + \\text{margin}, \\beta)\\right)
 
 Unlike OC-GLVQ which uses only the nearest prototype for each sample,
 OC-RSLVQ distributes evidence across all prototypes weighted by Gaussian

@@ -5,10 +5,21 @@ Combines OC-RSLVQ's probabilistic soft-weighting with Neural Gas
 rank-based neighborhood cooperation. Gaussian mixture responsibilities
 are modulated by NG neighborhood weights:
 
-    p(k|x) = exp(-d_k / 2σ²) / Σ_j exp(-d_j / 2σ²)
-    h_k = exp(-rank_k / γ)
-    w_k = p(k|x) · h_k / Σ_j p(j|x) · h_j
-    loss = mean(Σ_k w_k · sigmoid(μ_k + margin, β))
+.. math::
+
+    p(k|x) = \\frac{\\exp(-d_k / 2\\sigma^2)}{\\sum_j \\exp(-d_j / 2\\sigma^2)}
+
+.. math::
+
+    h_k = \\exp(-\\text{rank}_k / \\gamma)
+
+.. math::
+
+    w_k = \\frac{p(k|x) \\cdot h_k}{\\sum_j p(j|x) \\cdot h_j}
+
+.. math::
+
+    \\text{loss} = \\text{mean}\\left(\\sum_k w_k \\cdot \\text{sigmoid}(\\mu_k + \\text{margin}, \\beta)\\right)
 
 Uses standard Euclidean distance (no metric adaptation).
 

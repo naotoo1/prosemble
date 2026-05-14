@@ -46,7 +46,7 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     with specific parameter combinations.
 
     Key features:
-    - Centroids use a·U^m + b·T (T to power 1, not m!)
+    - Centroids use :math:`a \\cdot U^m + b \\cdot T` (T to power 1, not m!)
     - Gamma computed with Euclidean distance (not squared)
     - Exponential T update with parameter b
     - Standard FCM U update
@@ -60,10 +60,11 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     5. Update centroids using combined fuzzy-possibilistic weights
     6. Repeat until convergence
 
-    Objective function::
+    Objective function:
 
-        J = Σ_i Σ_j [d²_ij · (a·u_ij^m + b·t_ij)] +
-            Σ_j[γ_j · Σ_i(t_ij·log(t_ij) - t_ij)]
+    .. math::
+
+        J = \\sum_i \\sum_j \\left[d_{ij}^2 \\cdot (a \\cdot u_{ij}^m + b \\cdot t_{ij})\\right] + \\sum_j \\left[\\gamma_j \\cdot \\sum_i (t_{ij} \\log t_{ij} - t_{ij})\\right]
 
     Parameters
     ----------
@@ -221,7 +222,9 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute gamma using Euclidean distance (not squared!).
 
-        γ_j = k·Σ_i(u_ij^m · d_ij) / Σ_i(u_ij^m)
+        .. math::
+
+            \\gamma_j = k \\cdot \\frac{\\sum_i u_{ij}^m \\cdot d_{ij}}{\\sum_i u_{ij}^m}
         """
         D_sq = self.distance_fn(X, centroids)
         D = jnp.sqrt(jnp.maximum(D_sq, 1e-10))  # Euclidean distance
@@ -241,7 +244,9 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Update typicality matrix with exponential and parameter b.
 
-        t_ij = exp(-b·d²_ij/γ_j)
+        .. math::
+
+            t_{ij} = \\exp\\left(-\\frac{b \\cdot d_{ij}^2}{\\gamma_j}\\right)
         """
         D_sq = self.distance_fn(X, centroids)
         D_sq = jnp.maximum(D_sq, 1e-10)
@@ -285,13 +290,15 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute cluster centroids.
 
-        v_j = Σ_i[a·u_ij^m + b·t_ij]x_i / Σ_i[a·u_ij^m + b·t_ij]
+        .. math::
+
+            v_j = \\frac{\\sum_i \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}\\right] x_i}{\\sum_i \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}\\right]}
 
         Note: T is NOT raised to a power!
         """
         U_fuzz = jnp.power(U, self.fuzzifier)
 
-        # Combined weights: a·U^m + b·T
+        # Combined weights: a*U^m + b*T
         weights = self.a * U_fuzz + self.b * T
 
         # Compute centroids
@@ -310,17 +317,18 @@ class AFCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute AFCM objective function.
 
-        J = Σ_i Σ_j [d²_ij · (a·u_ij^m + b·t_ij)] +
-            Σ_j[γ_j · Σ_i(t_ij·log(t_ij) - t_ij)]
+        .. math::
+
+            J = \\sum_i \\sum_j \\left[d_{ij}^2 \\cdot (a \\cdot u_{ij}^m + b \\cdot t_{ij})\\right] + \\sum_j \\left[\\gamma_j \\cdot \\sum_i (t_{ij} \\log t_{ij} - t_{ij})\\right]
         """
         D_sq = self.distance_fn(X, centroids)
         U_fuzz = jnp.power(U, self.fuzzifier)
 
-        # First term: Σ_i Σ_j [d²_ij · (a·u_ij^m + b·t_ij)]
+        # First term: sum_i sum_j [d^2_ij * (a*u_ij^m + b*t_ij)]
         weights = self.a * U_fuzz + self.b * T
         term1 = jnp.sum(D_sq * weights)
 
-        # Second term: Σ_j[γ_j · Σ_i(t·log(t) - t)]
+        # Second term: sum_j[gamma_j * sum_i(t*log(t) - t)]
         T_safe = jnp.maximum(T, 1e-10)
         entropy_like = T * jnp.log(T_safe) - T
         inner_sum = jnp.sum(entropy_like, axis=0)

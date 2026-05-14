@@ -4,9 +4,11 @@ One-Class GRLVQ (OC-GRLVQ).
 Extends OC-GLVQ with per-feature adaptive relevance weighting.
 The distance becomes:
 
-    d_λ(x, w_k) = Σ_j λ_j (x_j - w_{k,j})²
+.. math::
 
-where λ = softmax(relevances) are learned per-feature weights.
+    d_\\lambda(x, w_k) = \\sum_j \\lambda_j (x_j - w_{k,j})^2
+
+where :math:`\\lambda = \\text{softmax}(\\text{relevances})` are learned per-feature weights.
 
 References
 ----------

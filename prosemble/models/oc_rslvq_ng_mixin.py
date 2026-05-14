@@ -6,15 +6,23 @@ neighborhood cooperation. Unlike the OC-GLVQ-NG mixin (which replaces
 hard nearest-prototype with NG ranking), this mixin modulates the
 existing Gaussian responsibilities with NG neighborhood weights:
 
-    p(k|x) = exp(-d_k / 2σ²) / Σ_j exp(-d_j / 2σ²)   [Gaussian]
-    h_k = exp(-rank_k / γ)                              [NG neighborhood]
-    w_k = p(k|x) · h_k / Σ_j p(j|x) · h_j             [combined]
+.. math::
 
-When γ → ∞, h_k ≈ const for all k → recovers OC-RSLVQ (pure Gaussian).
-When γ → 0, only the nearest prototype has h_k > 0 → sharpened assignment.
+    p(k|x) = \\frac{\\exp(-d_k / 2\\sigma^2)}{\\sum_j \\exp(-d_j / 2\\sigma^2)} \\quad [\\text{Gaussian}]
 
-Subclasses override `_compute_distances(params, X)` to define the
-metric-specific distance (Euclidean, global Ω, local Ω_k).
+.. math::
+
+    h_k = \\exp(-\\text{rank}_k / \\gamma) \\quad [\\text{NG neighborhood}]
+
+.. math::
+
+    w_k = \\frac{p(k|x) \\cdot h_k}{\\sum_j p(j|x) \\cdot h_j} \\quad [\\text{combined}]
+
+When :math:`\\gamma \\to \\infty`, :math:`h_k \\approx \\text{const}` for all :math:`k` -- recovers OC-RSLVQ (pure Gaussian).
+When :math:`\\gamma \\to 0`, only the nearest prototype has :math:`h_k > 0` -- sharpened assignment.
+
+Subclasses override ``_compute_distances(params, X)`` to define the
+metric-specific distance (Euclidean, global :math:`\\Omega`, local :math:`\\Omega_k`).
 """
 
 import jax.numpy as jnp

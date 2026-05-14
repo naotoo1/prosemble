@@ -36,7 +36,7 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
     KAFCM extends AFCM to kernel space, combining fuzzy and possibilistic
     approaches with kernel-based distance measures.
 
-    Kernel distance: d_K(x, v) = 2(1 - K(x, v))
+    Kernel distance: :math:`d_K(x, v) = 2(1 - K(x, v))`
 
     Algorithm:
 
@@ -195,7 +195,7 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
     def _update_T(
         self, X: chex.Array, centroids: chex.Array, gamma: chex.Array
     ) -> chex.Array:
-        """Update T: t_ij = exp(-b·d_K(x_i, v_j)/γ_j)"""
+        """Update T: :math:`t_{ij} = \\exp(-b \\cdot d_K(x_i, v_j) / \\gamma_j)`"""
         K = batch_gaussian_kernel(X, centroids, self.sigma)
         kernel_dist = 2.0 * (1.0 - K)
         kernel_dist = jnp.maximum(kernel_dist, 1e-10)
@@ -226,7 +226,7 @@ class KAFCM(ScanFitMixin, FuzzyClusteringBase):
     def _compute_centroids(
         self, X: chex.Array, U: chex.Array, T: chex.Array, centroids: chex.Array
     ) -> chex.Array:
-        """Compute centroids: kernel-weighted with a·U^m + b·T"""
+        """Compute centroids: kernel-weighted with :math:`a \\cdot U^m + b \\cdot T`."""
         K = batch_gaussian_kernel(X, centroids, self.sigma)
         U_fuzz = jnp.power(U, self.fuzzifier)
         weights = (self.a * U_fuzz + self.b * T) * K

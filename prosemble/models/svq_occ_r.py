@@ -4,11 +4,13 @@ Relevance-Weighted SVQ-OCC (SVQ-OCC-R).
 Extends SVQ-OCC with per-feature adaptive relevance weighting,
 following the GRLVQ pattern. The distance becomes:
 
-    d_λ(x, w_k) = Σ_j λ_j (x_j - w_{k,j})²
+.. math::
 
-where λ = softmax(relevances) are learned per-feature weights.
-This enables the model to identify which features are most
-discriminative for one-class classification.
+    d_{\\lambda}(x, w_k) = \\sum_j \\lambda_j (x_j - w_{k,j})^2
+
+where :math:`\\lambda = \\mathrm{softmax}(\\text{relevances})` are learned
+per-feature weights. This enables the model to identify which features
+are most discriminative for one-class classification.
 
 References
 ----------

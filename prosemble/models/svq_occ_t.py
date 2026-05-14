@@ -2,13 +2,15 @@
 Tangent SVQ-OCC (SVQ-OCC-T).
 
 Extends SVQ-OCC with per-prototype tangent subspaces (GTLVQ-style).
-Each prototype w_k learns an orthonormal basis Ω_k defining a local
-invariance subspace. The tangent distance measures the orthogonal
-complement:
+Each prototype :math:`w_k` learns an orthonormal basis :math:`\\Omega_k`
+defining a local invariance subspace. The tangent distance measures the
+orthogonal complement:
 
-    d_T(x, w_k) = ||(I - Ω_k Ω_k^T)(x - w_k)||²
+.. math::
 
-This captures local invariances — distances within the tangent subspace
+    d_T(x, w_k) = \\|(I - \\Omega_k \\Omega_k^T)(x - w_k)\\|^2
+
+This captures local invariances -- distances within the tangent subspace
 are ignored, only the perpendicular component matters.
 
 References
@@ -31,7 +33,7 @@ from prosemble.core.utils import orthogonalize
 class SVQOCC_T(SVQOCC):
     """Tangent SVQ-OCC with per-prototype tangent subspaces.
 
-    Each prototype learns an orthonormal basis Ω_k that defines
+    Each prototype learns an orthonormal basis :math:`\\Omega_k` that defines
     directions of local invariance. Only the distance orthogonal
     to this subspace is used for classification.
 

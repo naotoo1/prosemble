@@ -52,9 +52,11 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     4. Update T with column-normalization
     5. Repeat until convergence
 
-    Objective function::
+    Objective function:
 
-        J = Σ_i Σ_j [u_ij^m + t_ij^η] ||x_i - v_j||²
+    .. math::
+
+        J = \\sum_i \\sum_j \\left[u_{ij}^m + t_{ij}^\\eta\\right] \\|x_i - v_j\\|^2
 
     Reference:
         Pal, N. R., Pal, K., & Bezdek, J. C. (1997).
@@ -224,7 +226,9 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute cluster centroids.
 
-        Centroids: v_j = Σ_i[u_ij^m + t_ij^η]x_i / Σ_i[u_ij^m + t_ij^η]
+        .. math::
+
+            v_j = \\frac{\\sum_i \\left[u_{ij}^m + t_{ij}^\\eta\\right] x_i}{\\sum_i \\left[u_{ij}^m + t_{ij}^\\eta\\right]}
 
         Args:
             X: Input data, shape (n_samples, n_features)
@@ -255,7 +259,11 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Update fuzzy membership matrix using FCM rule.
 
-        Standard FCM update: u_ij = 1 / Σ_k (d_ij / d_ik)^(2/(m-1))
+        Standard FCM update:
+
+        .. math::
+
+            u_{ij} = \\frac{1}{\\sum_k \\left(\\frac{d_{ij}}{d_{ik}}\\right)^{2/(m-1)}}
 
         Args:
             X: Input data, shape (n_samples, n_features)
@@ -278,7 +286,7 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
         # For each i,j: sum over k of (D[i,j] / D[i,k])^power
         def compute_membership_row(distances_i):
             # distances_i: (n_clusters,)
-            # For each j, compute: 1 / Σ_k (d_ij / d_ik)^power
+            # For each j, compute: 1 / sum_k (d_ij / d_ik)^power
             ratios = distances_i[:, None] / distances_i[None, :]  # (n_clusters, n_clusters)
             powered_ratios = jnp.power(ratios, power)  # (n_clusters, n_clusters)
             denominators = jnp.sum(powered_ratios, axis=1)  # (n_clusters,)
@@ -299,9 +307,12 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
         """Update typicality matrix with column-sum-to-1 constraint.
 
         Per Pal, Pal & Bezdek (1997):
-            t_ij = (1/d_ij²)^(1/(η-1)) / Σ_i (1/d_ij²)^(1/(η-1))
 
-        Each column j sums to 1 across samples (Σ_i t_ij = 1).
+        .. math::
+
+            t_{ij} = \\frac{(1/d_{ij}^2)^{1/(\\eta-1)}}{\\sum_i (1/d_{ij}^2)^{1/(\\eta-1)}}
+
+        Each column j sums to 1 across samples (:math:`\\sum_i t_{ij} = 1`).
 
         Args:
             X: Input data, shape (n_samples, n_features)
@@ -328,7 +339,9 @@ class FPCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute FPCM objective function.
 
-        Objective: J = Σ_i Σ_j [u_ij^m + t_ij^η] ||x_i - v_j||²
+        .. math::
+
+            J = \\sum_i \\sum_j \\left[u_{ij}^m + t_{ij}^\\eta\\right] \\|x_i - v_j\\|^2
 
         Args:
             X: Input data, shape (n_samples, n_features)

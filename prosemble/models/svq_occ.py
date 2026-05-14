@@ -3,27 +3,38 @@ Supervised Vector Quantization One-Class Classification (SVQ-OCC).
 
 Combines Neural Gas representation learning with one-class classification
 using per-prototype visibility parameters. Each prototype is equipped with
-a local visibility range θ_k — data within θ_k of prototype w_k is
-classified as target.
+a local visibility range :math:`\\theta_k` -- data within :math:`\\theta_k`
+of prototype :math:`w_k` is classified as target.
 
 The overall cost function is:
 
-    E(X, W) = α · R(X⁺, W) + (1 − α) · C(X, W, Θ)
+.. math::
 
-where R is the Neural Gas representation cost over target data X⁺, and
-C is a classification cost using per-prototype responsibilities:
+    E(X, W) = \\alpha \\cdot R(X^+, W) + (1 - \\alpha) \\cdot C(X, W, \\Theta)
 
-    r(x, w_k, γ_k, θ_k) = p(w_k, γ_k | x) · sgd_σ(d(x, w_k), θ_k)
+where :math:`R` is the Neural Gas representation cost over target data
+:math:`X^+`, and :math:`C` is a classification cost using per-prototype
+responsibilities:
+
+.. math::
+
+    r(x, w_k, \\gamma_k, \\theta_k) = p(w_k, \\gamma_k \\mid x) \\cdot
+    \\mathrm{sgd}_{\\sigma}(d(x, w_k), \\theta_k)
 
 Three classification costs are available:
-- Contrastive Score (CS): 1 − (TP·TN − FP·FN) / ((TP+FP)(TN+FN))
-- Brier Score (BS): mean (y − Σ_k r)²
-- Cross Entropy (CE): −mean [y·log(Σr) + (1−y)·log(1−Σr)]
 
-Three response probability models p(w_k|x) are supported:
-- Gaussian: softmax(−γ·d(x, w_k))
-- Student-t: (1 + d/ν)^(−(ν+1)/2), normalized
-- Uniform: 1/K
+- Contrastive Score (CS):
+  :math:`1 - (TP \\cdot TN - FP \\cdot FN) / ((TP + FP)(TN + FN))`
+- Brier Score (BS):
+  :math:`\\mathrm{mean}\\,(y - \\sum_k r)^2`
+- Cross Entropy (CE):
+  :math:`-\\mathrm{mean}\\,[y \\cdot \\log(\\sum r) + (1 - y) \\cdot \\log(1 - \\sum r)]`
+
+Three response probability models :math:`p(w_k \\mid x)` are supported:
+
+- Gaussian: :math:`\\mathrm{softmax}(-\\gamma \\cdot d(x, w_k))`
+- Student-t: :math:`(1 + d / \\nu)^{-(\\nu + 1)/2}`, normalized
+- Uniform: :math:`1 / K`
 
 References
 ----------
@@ -44,7 +55,7 @@ class SVQOCC(SupervisedPrototypeModel):
     """Supervised Vector Quantization One-Class Classification.
 
     Combines Neural Gas representation learning with per-prototype
-    visibility parameters θ_k for one-class classification.
+    visibility parameters :math:`\\theta_k` for one-class classification.
 
     Parameters
     ----------
@@ -510,7 +521,7 @@ class SVQOCC(SupervisedPrototypeModel):
 
     @property
     def visibility_radii(self):
-        """Return the learned visibility radii θ_k for each prototype."""
+        """Return the learned visibility radii :math:`\\theta_k` for each prototype."""
         if self.thetas_ is None:
             raise ValueError("Model not fitted. Call fit() first.")
         return self.thetas_

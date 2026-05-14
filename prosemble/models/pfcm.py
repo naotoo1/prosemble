@@ -9,19 +9,34 @@ Mathematical Background:
 PFCM uses both membership and typicality with weighting parameters a and b.
 
 Objective Function:
-    J = Σᵢ Σⱼ [a·uᵢⱼᵐ + b·tᵢⱼⁿ] ||xᵢ - vⱼ||²
+
+.. math::
+
+    J = \\sum_i \\sum_j \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}^\\eta\\right] \\|x_i - v_j\\|^2
 
 Centroid Update:
-    vⱼ = Σᵢ[a·uᵢⱼᵐ + b·tᵢⱼⁿ]xᵢ / Σᵢ[a·uᵢⱼᵐ + b·tᵢⱼⁿ]
+
+.. math::
+
+    v_j = \\frac{\\sum_i \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}^\\eta\\right] x_i}{\\sum_i \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}^\\eta\\right]}
 
 Membership Update (like FCM):
-    uᵢⱼ = 1 / Σₖ(dᵢⱼ/dᵢₖ)^(2/(m-1))
+
+.. math::
+
+    u_{ij} = \\frac{1}{\\sum_k \\left(\\frac{d_{ij}}{d_{ik}}\\right)^{2/(m-1)}}
 
 Typicality Update (like PCM):
-    tᵢⱼ = 1 / (1 + (b·||xᵢ-vⱼ||²/γⱼ)^(1/(η-1)))
+
+.. math::
+
+    t_{ij} = \\frac{1}{1 + \\left(\\frac{b \\cdot \\|x_i - v_j\\|^2}{\\gamma_j}\\right)^{1/(\\eta-1)}}
 
 Gamma:
-    γⱼ = k·Σᵢ(uᵢⱼᵐ·||xᵢ-vⱼ||²) / Σᵢuᵢⱼᵐ
+
+.. math::
+
+    \\gamma_j = k \\cdot \\frac{\\sum_i u_{ij}^m \\cdot \\|x_i - v_j\\|^2}{\\sum_i u_{ij}^m}
 
 Author: Prosemble Contributors
 License: MIT
@@ -202,7 +217,9 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
         """
         Compute centroids using weighted combination of U and T.
 
-        vⱼ = Σᵢ[a·uᵢⱼᵐ + b·tᵢⱼⁿ]xᵢ / Σᵢ[a·uᵢⱼᵐ + b·tᵢⱼⁿ]
+        .. math::
+
+            v_j = \\frac{\\sum_i \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}^\\eta\\right] x_i}{\\sum_i \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}^\\eta\\right]}
         """
         U_fuzz = jnp.power(U, self.fuzzifier)  # (n, c)
         T_fuzz = jnp.power(T, self.eta)  # (n, c)
@@ -222,7 +239,9 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
         """
         Update fuzzy membership matrix (same as FCM).
 
-        uᵢⱼ = 1 / Σₖ(dᵢⱼ/dᵢₖ)^(2/(m-1))
+        .. math::
+
+            u_{ij} = \\frac{1}{\\sum_k \\left(\\frac{d_{ij}}{d_{ik}}\\right)^{2/(m-1)}}
         """
         D = self.distance_fn(X, centroids)
         D = jnp.maximum(D, 1e-10)
@@ -240,7 +259,9 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
         """
         Compute gamma parameters using fuzzy membership.
 
-        γⱼ = k·Σᵢ(uᵢⱼᵐ·||xᵢ-vⱼ||²) / Σᵢuᵢⱼᵐ
+        .. math::
+
+            \\gamma_j = k \\cdot \\frac{\\sum_i u_{ij}^m \\cdot \\|x_i - v_j\\|^2}{\\sum_i u_{ij}^m}
         """
         D_sq = self.distance_fn(X, centroids)  # (n, c)
         U_fuzz = jnp.power(U, self.fuzzifier)  # (n, c)
@@ -259,7 +280,9 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
         """
         Update typicality matrix.
 
-        tᵢⱼ = 1 / (1 + (b·||xᵢ-vⱼ||²/γⱼ)^(1/(η-1)))
+        .. math::
+
+            t_{ij} = \\frac{1}{1 + \\left(\\frac{b \\cdot \\|x_i - v_j\\|^2}{\\gamma_j}\\right)^{1/(\\eta-1)}}
         """
         D_sq = self.distance_fn(X, centroids)  # (n, c)
 
@@ -282,7 +305,9 @@ class PFCM(ScanFitMixin, FuzzyClusteringBase):
         """
         Compute PFCM objective function.
 
-        J = Σᵢ Σⱼ [a·uᵢⱼᵐ + b·tᵢⱼⁿ] ||xᵢ - vⱼ||²
+        .. math::
+
+            J = \\sum_i \\sum_j \\left[a \\cdot u_{ij}^m + b \\cdot t_{ij}^\\eta\\right] \\|x_i - v_j\\|^2
         """
         D_sq = self.distance_fn(X, centroids)
         U_fuzz = jnp.power(U, self.fuzzifier)

@@ -95,9 +95,9 @@ class BGPC:
     @partial(jit, static_argnums=(0,))
     def _compute_beta_decay(self, iteration: int) -> float:
         """
-        Compute beta decay: β(t) = 0.1 * (β_f / 0.1)^(t/T)
+        Compute beta decay: :math:`\\beta(t) = 0.1 \\cdot (\\beta_f / 0.1)^{t/T}`.
 
-        β starts at 0.1 and grows to β_f over iterations
+        :math:`\\beta` starts at 0.1 and grows to :math:`\\beta_f` over iterations.
         """
         ratio = iteration / self.max_iter
         beta = self.beta_init * jnp.power(self.beta_final / self.beta_init, ratio)
@@ -106,9 +106,9 @@ class BGPC:
     @partial(jit, static_argnums=(0,))
     def _compute_alpha_decay(self, iteration: int) -> float:
         """
-        Compute alpha decay: α(t) = (1 - β_f) * (1 + exp(t - T) + α_0)
+        Compute alpha decay: :math:`\\alpha(t) = (1 - \\beta_f)(1 + \\exp(t - T) + \\alpha_0)`.
 
-        α decays over iterations
+        :math:`\\alpha` decays over iterations.
         """
         alpha = (1 - self.beta_final) * (1 + jnp.exp(iteration - self.max_iter) + self.alpha_init)
         return alpha
@@ -116,9 +116,9 @@ class BGPC:
     @partial(jit, static_argnums=(0,))
     def _compute_V_matrix(self, X: chex.Array, centroids: chex.Array, beta: float) -> chex.Array:
         """
-        Compute V matrix: V_ij = exp(-d(x_i, v_j) / β)
+        Compute V matrix: :math:`V_{ij} = \\exp(-d(x_i, v_j) / \\beta)`.
 
-        Uses Euclidean distance (not squared)
+        Uses Euclidean distance (not squared).
         """
         D_sq = batch_squared_euclidean(X, centroids)
         D = jnp.sqrt(jnp.maximum(D_sq, 1e-10))
@@ -128,12 +128,13 @@ class BGPC:
     @partial(jit, static_argnums=(0,))
     def _compute_z_value(self, v_i: chex.Array, alpha: float) -> float:
         """
-        Compute Z_i for a single data point based on V_i values
+        Compute :math:`Z_i` for a single data point based on :math:`V_i` values.
 
         Logic from original:
-        - If Σ(v_ik^(1/α)) > 1: z_i = (Σ(v_ik^(1/α)))^α
-        - If Σ(v_ik^α) < 1: z_i = (Σ(v_ik^α))^(1/α)
-        - Otherwise: z_i = 1
+
+        - If :math:`\\sum_k v_{ik}^{1/\\alpha} > 1`: :math:`z_i = (\\sum_k v_{ik}^{1/\\alpha})^\\alpha`
+        - If :math:`\\sum_k v_{ik}^\\alpha < 1`: :math:`z_i = (\\sum_k v_{ik}^\\alpha)^{1/\\alpha}`
+        - Otherwise: :math:`z_i = 1`
         """
         v_pow_inv_alpha = jnp.power(v_i, 1.0 / alpha)
         v_pow_alpha = jnp.power(v_i, alpha)
@@ -164,7 +165,7 @@ class BGPC:
     @partial(jit, static_argnums=(0,))
     def _update_U_matrix(self, V: chex.Array, Z: chex.Array) -> chex.Array:
         """
-        Update U matrix: U_ij = V_ij / Z_i
+        Update U matrix: :math:`U_{ij} = V_{ij} / Z_i`.
         """
         U = V / (Z[:, None] + 1e-10)
         return U
@@ -172,7 +173,7 @@ class BGPC:
     @partial(jit, static_argnums=(0,))
     def _compute_centroids(self, X: chex.Array, U: chex.Array) -> chex.Array:
         """
-        Compute centroids: v_j = Σ_i u_ij·x_i / Σ_i u_ij
+        Compute centroids: :math:`v_j = \\sum_i u_{ij} x_i / \\sum_i u_{ij}`.
         """
         numerator = U.T @ X
         denominator = jnp.sum(U, axis=0, keepdims=True).T

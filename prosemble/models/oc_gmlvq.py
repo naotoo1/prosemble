@@ -4,10 +4,12 @@ One-Class GMLVQ (OC-GMLVQ).
 Extends OC-GLVQ with a global Omega matrix (GMLVQ-style metric adaptation).
 The distance becomes:
 
-    d_Ω(x, w_k) = ||Ω(x - w_k)||²
+.. math::
 
-where Ω is a learned (d × l) projection matrix. The implicit metric
-Λ = Ω^T Ω captures feature correlations for one-class classification.
+    d_\\Omega(x, w_k) = \\|\\Omega(x - w_k)\\|^2
+
+where :math:`\\Omega` is a learned :math:`(d \\times l)` projection matrix. The implicit metric
+:math:`\\Lambda = \\Omega^T \\Omega` captures feature correlations for one-class classification.
 
 References
 ----------
@@ -29,7 +31,7 @@ from prosemble.core.activations import sigmoid_beta
 class OCGMLVQ(OCGLVQ):
     """One-Class GMLVQ with global Omega projection.
 
-    Learns a global linear projection Ω that captures feature
+    Learns a global linear projection :math:`\\Omega` that captures feature
     correlations for one-class classification.
 
     Parameters
@@ -215,14 +217,14 @@ class OCGMLVQ(OCGLVQ):
 
     @property
     def omega_matrix(self):
-        """Return the learned projection matrix Ω."""
+        """Return the learned projection matrix :math:`\\Omega`."""
         if self.omega_ is None:
             raise ValueError("Model not fitted. Call fit() first.")
         return self.omega_
 
     @property
     def lambda_matrix(self):
-        """Return the implicit metric Λ = Ω^T Ω."""
+        """Return the implicit metric :math:`\\Lambda = \\Omega^T \\Omega`."""
         return self.omega_matrix.T @ self.omega_matrix
 
     def _get_quantizable_attrs(self):

@@ -41,13 +41,17 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
     KFCM uses a Gaussian kernel to map data into a high-dimensional feature space
     where clustering is performed. This allows handling non-linearly separable data.
 
-    Kernel::
+    Kernel:
 
-        K(x, y) = exp(-||x - y||² / σ²)
+    .. math::
 
-    Kernel distance in feature space::
+        K(x, y) = \\exp\\left(-\\frac{\\|x - y\\|^2}{\\sigma^2}\\right)
 
-        ||φ(x) - φ(y)||² = 2(1 - K(x, y))
+    Kernel distance in feature space:
+
+    .. math::
+
+        \\|\\varphi(x) - \\varphi(y)\\|^2 = 2(1 - K(x, y))
 
     Algorithm:
 
@@ -56,9 +60,11 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
     3. Update U using kernel distance
     4. Repeat until convergence
 
-    Objective function::
+    Objective function:
 
-        J = 2·Σ_i Σ_j [u_ij^m · (1 - K(x_i, v_j))]
+    .. math::
+
+        J = 2 \\sum_i \\sum_j u_{ij}^m (1 - K(x_i, v_j))
 
     Parameters
     ----------
@@ -190,7 +196,9 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute kernel-weighted centroids.
 
-        v_j = Σ_i[u_ij^m · K(x_i, v_j) · x_i] / Σ_i[u_ij^m · K(x_i, v_j)]
+        .. math::
+
+            v_j = \\frac{\\sum_i u_{ij}^m \\cdot K(x_i, v_j) \\cdot x_i}{\\sum_i u_{ij}^m \\cdot K(x_i, v_j)}
         """
         # Compute kernel matrix K(X, centroids)
         K = batch_gaussian_kernel(X, centroids, self.sigma)  # (n_samples, n_clusters)
@@ -214,7 +222,9 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
     def _update_U(self, X: chex.Array, centroids: chex.Array) -> chex.Array:
         """Update fuzzy membership matrix using kernel distance.
 
-        u_ij = 1 / Σ_k[(1 - K(x_i, v_j)) / (1 - K(x_i, v_k))]^(1/(m-1))
+        .. math::
+
+            u_{ij} = \\frac{1}{\\sum_k \\left(\\frac{1 - K(x_i, v_j)}{1 - K(x_i, v_k)}\\right)^{1/(m-1)}}
         """
         # Compute kernel matrix
         K = batch_gaussian_kernel(X, centroids, self.sigma)  # (n_samples, n_clusters)
@@ -248,7 +258,9 @@ class KFCM(ScanFitMixin, FuzzyClusteringBase):
     ) -> chex.Array:
         """Compute KFCM objective function.
 
-        J = 2·Σ_i Σ_j [u_ij^m · (1 - K(x_i, v_j))]
+        .. math::
+
+            J = 2 \\sum_i \\sum_j u_{ij}^m (1 - K(x_i, v_j))
         """
         # Compute kernel matrix
         K = batch_gaussian_kernel(X, centroids, self.sigma)

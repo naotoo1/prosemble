@@ -2,11 +2,13 @@
 One-Class GTLVQ (OC-GTLVQ).
 
 Extends OC-GLVQ with per-prototype tangent subspaces (GTLVQ-style).
-Each prototype w_k learns an orthonormal basis Ω_k defining a local
+Each prototype :math:`w_k` learns an orthonormal basis :math:`\\Omega_k` defining a local
 invariance subspace. The tangent distance measures the orthogonal
 complement:
 
-    d_T(x, w_k) = ||(I - Ω_k Ω_k^T)(x - w_k)||²
+.. math::
+
+    d_T(x, w_k) = \\|(I - \\Omega_k \\Omega_k^T)(x - w_k)\\|^2
 
 References
 ----------
@@ -29,7 +31,7 @@ from prosemble.core.activations import sigmoid_beta
 class OCGTLVQ(OCGLVQ):
     """One-Class GTLVQ with per-prototype tangent subspaces.
 
-    Each prototype learns an orthonormal basis Ω_k that defines
+    Each prototype learns an orthonormal basis :math:`\\Omega_k` that defines
     directions of local invariance. Only the distance orthogonal
     to this subspace is used for classification.
 

@@ -6,17 +6,23 @@ Best Matching Unit (BMU) definition that accounts for the neighborhood
 function, and a pure batch update rule (no learning rate). This
 guarantees monotonic decrease of a well-defined energy function.
 
-Energy function::
+Energy function:
 
-    E = Σ_x Σ_k h(k, c*(x)) * ||x - w_k||^2
+.. math::
 
-Modified BMU::
+    E = \\sum_x \\sum_k h(k, c^*(x)) \\cdot \\|x - w_k\\|^2
 
-    c*(x) = argmin_c Σ_k h(k, c) * ||x - w_k||^2
+Modified BMU:
 
-Batch update::
+.. math::
 
-    w_k = Σ_x h(k, c*(x)) * x / Σ_x h(k, c*(x))
+    c^*(x) = \\arg\\min_c \\sum_k h(k, c) \\cdot \\|x - w_k\\|^2
+
+Batch update:
+
+.. math::
+
+    w_k = \\frac{\\sum_x h(k, c^*(x)) \\cdot x}{\\sum_x h(k, c^*(x))}
 
 References
 ----------

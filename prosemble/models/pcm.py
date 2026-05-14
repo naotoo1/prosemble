@@ -10,19 +10,29 @@ less sensitive to outliers and noise compared to FCM.
 
 Mathematical formulation:
 
-Objective function::
+Objective function:
 
-    J = Σ_i Σ_j t_ij^m ||x_i - v_j||² + Σ_j γ_j Σ_i (1 - t_ij)^m
+.. math::
 
-where ``t_ij`` is the typicality of point ``x_i`` to cluster j,
-``v_j`` is the centroid of cluster j, m is the fuzzifier (m > 1),
-and ``γ_j`` is a scale parameter for cluster j.
+    J = \\sum_i \\sum_j t_{ij}^m \\|x_i - v_j\\|^2 + \\sum_j \\gamma_j \\sum_i (1 - t_{ij})^m
 
-Update equations::
+where :math:`t_{ij}` is the typicality of point :math:`x_i` to cluster j,
+:math:`v_j` is the centroid of cluster j, :math:`m` is the fuzzifier (m > 1),
+and :math:`\\gamma_j` is a scale parameter for cluster j.
 
-    Centroids:  v_j = (Σ_i t_ij^m x_i) / (Σ_i t_ij^m)
-    Gamma:      γ_j = k · (Σ_i t_ij^m ||x_i - v_j||²) / (Σ_i t_ij^m)
-    Typicality: t_ij = 1 / (1 + (||x_i - v_j||² / γ_j)^(1/(m-1)))
+Update equations:
+
+.. math::
+
+    v_j = \\frac{\\sum_i t_{ij}^m x_i}{\\sum_i t_{ij}^m}
+
+.. math::
+
+    \\gamma_j = k \\cdot \\frac{\\sum_i t_{ij}^m \\|x_i - v_j\\|^2}{\\sum_i t_{ij}^m}
+
+.. math::
+
+    t_{ij} = \\frac{1}{1 + \\left(\\frac{\\|x_i - v_j\\|^2}{\\gamma_j}\\right)^{1/(m-1)}}
 
 References:
     Krishnapuram, R., & Keller, J. M. (1993).
@@ -273,7 +283,10 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
         Compute cluster centroids from typicality matrix.
 
         Vectorized computation:
-            v_j = (Σᵢ tᵢⱼᵐ xᵢ) / (Σᵢ tᵢⱼᵐ)
+
+        .. math::
+
+            v_j = \\frac{\\sum_i t_{ij}^m x_i}{\\sum_i t_{ij}^m}
 
         Using matrix operations:
             V = (T^m)^T @ X / sum(T^m, axis=0)
@@ -305,7 +318,10 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
         Compute gamma parameters for each cluster.
 
         Vectorized computation:
-            γⱼ = k · (Σᵢ tᵢⱼᵐ ||xᵢ - vⱼ||²) / (Σᵢ tᵢⱼᵐ)
+
+        .. math::
+
+            \\gamma_j = k \\cdot \\frac{\\sum_i t_{ij}^m \\|x_i - v_j\\|^2}{\\sum_i t_{ij}^m}
 
         Args:
             X: Data matrix of shape (n, d)
@@ -322,10 +338,10 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
         T_fuzz = jnp.power(T, self.fuzzifier)
 
         # Weighted distances: element-wise multiply and sum over samples
-        # numerator = Σᵢ tᵢⱼᵐ ||xᵢ - vⱼ||²
+        # numerator = sum_i t_ij^m ||x_i - v_j||^2
         numerator = jnp.sum(T_fuzz * D_sq, axis=0)  # (c,)
 
-        # denominator = Σᵢ tᵢⱼᵐ
+        # denominator = sum_i t_ij^m
         denominator = jnp.sum(T_fuzz, axis=0)  # (c,)
 
         # Compute gamma with numerical stability
@@ -344,7 +360,10 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
         Update typicality matrix.
 
         Vectorized computation:
-            tᵢⱼ = 1 / (1 + (||xᵢ - vⱼ||² / γⱼ)^(1/(m-1)))
+
+        .. math::
+
+            t_{ij} = \\frac{1}{1 + \\left(\\frac{\\|x_i - v_j\\|^2}{\\gamma_j}\\right)^{1/(m-1)}}
 
         Args:
             X: Data matrix of shape (n, d)
@@ -360,7 +379,7 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
         # Compute exponent
         exponent = 1.0 / (self.fuzzifier - 1.0)
 
-        # Compute denominator: (D²ᵢⱼ / γⱼ)^(1/(m-1))
+        # Compute denominator: (D^2_ij / gamma_j)^(1/(m-1))
         # Add small epsilon to gamma to avoid division by zero
         ratio = D_sq / jnp.maximum(gamma[jnp.newaxis, :], 1e-10)  # (n, c)
         denominator = jnp.power(ratio, exponent)  # (n, c)
@@ -384,7 +403,9 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
         """
         Compute PCM objective function.
 
-        J = Σᵢ Σⱼ tᵢⱼᵐ ||xᵢ - vⱼ||² + Σⱼ γⱼ Σᵢ (1 - tᵢⱼ)ᵐ
+        .. math::
+
+            J = \\sum_i \\sum_j t_{ij}^m \\|x_i - v_j\\|^2 + \\sum_j \\gamma_j \\sum_i (1 - t_{ij})^m
 
         Args:
             X: Data matrix of shape (n, d)
@@ -395,12 +416,12 @@ class PCM(ScanFitMixin, FuzzyClusteringBase):
         Returns:
             objective: Scalar objective value
         """
-        # First term: Σᵢ Σⱼ tᵢⱼᵐ ||xᵢ - vⱼ||²
+        # First term: sum_i sum_j t_ij^m ||x_i - v_j||^2
         D_sq = self.distance_fn(X, centroids)  # (n, c)
         T_fuzz = jnp.power(T, self.fuzzifier)  # (n, c)
         term1 = jnp.sum(T_fuzz * D_sq)
 
-        # Second term: Σⱼ γⱼ Σᵢ (1 - tᵢⱼ)ᵐ
+        # Second term: sum_j gamma_j sum_i (1 - t_ij)^m
         one_minus_T = 1.0 - T  # (n, c)
         one_minus_T_fuzz = jnp.power(one_minus_T, self.fuzzifier)  # (n, c)
         sum_per_cluster = jnp.sum(one_minus_T_fuzz, axis=0)  # (c,)

@@ -49,9 +49,17 @@ class PLVQ(SupervisedPrototypeModel):
     soft assignment via Gaussian mixtures. The loss is the negative
     log-likelihood of the correct class:
 
-        p(k|x) = exp(-d(f(x), w_k)² / 2σ²) / Z
-        P(class|x) = Σ_{k∈class} p(k|x)
-        loss = -log(P(correct|x) / P(all|x))
+    .. math::
+
+        p(k|x) = \\frac{\\exp(-d(f(x), w_k)^2 / 2\\sigma^2)}{Z}
+
+    .. math::
+
+        P(\\text{class}|x) = \\sum_{k \\in \\text{class}} p(k|x)
+
+    .. math::
+
+        \\text{loss} = -\\log\\frac{P(\\text{correct}|x)}{P(\\text{all}|x)}
 
     Parameters
     ----------

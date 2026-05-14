@@ -11,21 +11,37 @@ for each cluster. Unlike hard clustering (K-Means), each point can belong to
 multiple clusters with varying degrees.
 
 Objective Function:
-    J(U, V) = Σᵢ Σⱼ uᵢⱼᵐ ||xᵢ - vⱼ||²
+
+.. math::
+
+    J(U, V) = \\sum_i \\sum_j u_{ij}^m \\|x_i - v_j\\|^2
 
 Subject to:
-    Σⱼ uᵢⱼ = 1  ∀i  (membership constraint)
-    uᵢⱼ ∈ [0,1]    (fuzzy membership)
+
+.. math::
+
+    \\sum_j u_{ij} = 1 \\quad \\forall i \\quad \\text{(membership constraint)}
+
+.. math::
+
+    u_{ij} \\in [0, 1] \\quad \\text{(fuzzy membership)}
 
 Update Rules:
-    vⱼ = Σᵢ(uᵢⱼᵐ xᵢ) / Σᵢ uᵢⱼᵐ
-    uᵢⱼ = 1 / Σₖ (dᵢⱼ/dᵢₖ)^(2/(m-1))
+
+.. math::
+
+    v_j = \\frac{\\sum_i u_{ij}^m x_i}{\\sum_i u_{ij}^m}
+
+.. math::
+
+    u_{ij} = \\frac{1}{\\sum_k \\left(\\frac{d_{ij}}{d_{ik}}\\right)^{2/(m-1)}}
 
 where:
-    - U: fuzzy membership matrix (n × c)
-    - V: cluster centroids (c × d)
-    - m: fuzzifier parameter (typically 2.0)
-    - dᵢⱼ: distance from point xᵢ to centroid vⱼ
+
+- :math:`U`: fuzzy membership matrix (n x c)
+- :math:`V`: cluster centroids (c x d)
+- :math:`m`: fuzzifier parameter (typically 2.0)
+- :math:`d_{ij}`: distance from point :math:`x_i` to centroid :math:`v_j`
 
 Author: Prosemble Contributors
 License: MIT
@@ -221,10 +237,13 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
         Initialize fuzzy membership matrix U.
 
         Uses Dirichlet distribution to ensure row sums equal 1:
-        U ~ Dir(α) where α = [1, 1, ..., 1]
+        U ~ Dir(alpha) where alpha = [1, 1, ..., 1]
 
         Mathematical Property:
-            Σⱼ uᵢⱼ = 1  ∀i
+
+        .. math::
+
+            \\sum_j u_{ij} = 1 \\quad \\forall i
 
         Args:
             X: (n, d) data matrix
@@ -250,10 +269,13 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
         Compute cluster centroids from fuzzy membership matrix.
 
         Mathematical Formula:
-            vⱼ = Σᵢ(uᵢⱼᵐ xᵢ) / Σᵢ uᵢⱼᵐ
+
+        .. math::
+
+            v_j = \\frac{\\sum_i u_{ij}^m x_i}{\\sum_i u_{ij}^m}
 
         Vectorized Implementation:
-            V = (Uᵐ)ᵀ @ X / sum((Uᵐ)ᵀ, axis=1, keepdims=True)
+            V = (U^m)^T @ X / sum((U^m)^T, axis=1, keepdims=True)
 
         Old Implementation (NumPy):
             ```python
@@ -320,9 +342,12 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
         Update fuzzy membership matrix.
 
         Mathematical Formula:
-            uᵢⱼ = 1 / Σₖ (dᵢⱼ/dᵢₖ)^(2/(m-1))
 
-        where dᵢⱼ = ||xᵢ - vⱼ|| is Euclidean distance.
+        .. math::
+
+            u_{ij} = \\frac{1}{\\sum_k \\left(\\frac{d_{ij}}{d_{ik}}\\right)^{2/(m-1)}}
+
+        where :math:`d_{ij} = \\|x_i - v_j\\|` is Euclidean distance.
 
         Old Implementation (NumPy):
             ```python
@@ -401,12 +426,15 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
         Compute FCM objective function.
 
         Mathematical Formula:
-            J = Σᵢ Σⱼ uᵢⱼᵐ ||xᵢ - vⱼ||²
+
+        .. math::
+
+            J = \\sum_i \\sum_j u_{ij}^m \\|x_i - v_j\\|^2
 
         Vectorized Implementation:
-            J = sum(Uᵐ ⊙ D²)
+            J = sum(U^m * D^2)
 
-        where ⊙ is element-wise product.
+        where * is element-wise product.
 
         Old Implementation (NumPy):
             ```python
@@ -460,7 +488,7 @@ class FCM(ScanFitMixin, FuzzyClusteringBase):
         """
         Check if centroids have converged.
 
-        Formula: ||V_new - V_old||_F < epsilon
+        Formula: :math:`\\|V_{new} - V_{old}\\|_F < \\epsilon`
 
         Uses Frobenius norm for stability.
 

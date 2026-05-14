@@ -8,9 +8,17 @@ Extends OC-GLVQ with:
 Instead of using only the nearest prototype (hard argmin like OC-GMLVQ),
 all prototypes contribute to the loss via Gaussian proximity weights:
 
-    p(k|x) = exp(-d_k / 2σ²) / Σ_j exp(-d_j / 2σ²)
-    μ_k = s · (d_k - θ_k) / (d_k + θ_k)
-    loss = mean(Σ_k p(k|x) · sigmoid(μ_k + margin, β))
+.. math::
+
+    p(k|x) = \\frac{\\exp(-d_k / 2\\sigma^2)}{\\sum_j \\exp(-d_j / 2\\sigma^2)}
+
+.. math::
+
+    \\mu_k = s \\cdot \\frac{d_k - \\theta_k}{d_k + \\theta_k}
+
+.. math::
+
+    \\text{loss} = \\text{mean}\\left(\\sum_k p(k|x) \\cdot \\text{sigmoid}(\\mu_k + \\text{margin}, \\beta)\\right)
 
 References
 ----------
@@ -274,7 +282,7 @@ class OCMRSLVQ(OCGLVQ):
 
     @property
     def lambda_matrix(self):
-        """Return the implicit metric Lambda = Omega^T Omega."""
+        """Return the implicit metric :math:`\\Lambda = \\Omega^T \\Omega`."""
         return self.omega_matrix.T @ self.omega_matrix
 
     def _get_quantizable_attrs(self):

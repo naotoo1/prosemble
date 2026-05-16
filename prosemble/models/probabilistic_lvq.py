@@ -130,7 +130,8 @@ class SLVQ(SupervisedPrototypeModel):
                  prototypes_initializer=None, patience=None,
                  restore_best=False, class_weight=None,
                  gradient_accumulation_steps=None, ema_decay=None,
-                 freeze_params=None, lookahead=None, mixed_precision=None):
+                 freeze_params=None, lookahead=None, mixed_precision=None,
+                 **kwargs):
         super().__init__(
             n_prototypes_per_class=n_prototypes_per_class,
             max_iter=max_iter, lr=lr, epsilon=epsilon,
@@ -145,6 +146,7 @@ class SLVQ(SupervisedPrototypeModel):
             gradient_accumulation_steps=gradient_accumulation_steps,
             ema_decay=ema_decay, freeze_params=freeze_params,
             lookahead=lookahead, mixed_precision=mixed_precision,
+            **kwargs,
         )
         self.sigma = sigma
         self.rejection_confidence = rejection_confidence
@@ -291,7 +293,8 @@ class RSLVQ(SupervisedPrototypeModel):
                  prototypes_initializer=None, patience=None,
                  restore_best=False, class_weight=None,
                  gradient_accumulation_steps=None, ema_decay=None,
-                 freeze_params=None, lookahead=None, mixed_precision=None):
+                 freeze_params=None, lookahead=None, mixed_precision=None,
+                 **kwargs):
         super().__init__(
             n_prototypes_per_class=n_prototypes_per_class,
             max_iter=max_iter, lr=lr, epsilon=epsilon,
@@ -306,6 +309,7 @@ class RSLVQ(SupervisedPrototypeModel):
             gradient_accumulation_steps=gradient_accumulation_steps,
             ema_decay=ema_decay, freeze_params=freeze_params,
             lookahead=lookahead, mixed_precision=mixed_precision,
+            **kwargs,
         )
         self.sigma = sigma
         self.rejection_confidence = rejection_confidence

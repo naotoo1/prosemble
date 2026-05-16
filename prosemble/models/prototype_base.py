@@ -246,6 +246,16 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
         Master weights stay in float32; forward/backward pass runs in lower
         precision for ~2x speed and ~half memory on GPU. Float16 uses static
         loss scaling to prevent gradient underflow. Default: None (disabled).
+    gradient_checkpointing : bool, optional
+        If True, applies ``jax.checkpoint`` (remat) to the loss function.
+        Trades compute for memory by re-computing forward activations during
+        the backward pass. Beneficial for deep backbone models (Image,
+        Siamese). Default: False.
+    devices : list of jax.Device or None, optional
+        Devices for data-parallel training. Data is sharded across devices
+        along the batch dimension; params and optimizer state are replicated.
+        When using mini-batch training, ``batch_size`` must be divisible by
+        the number of devices. Default: None (single-device).
     """
 
     def __init__(
@@ -273,6 +283,8 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
         freeze_params: list | None = None,
         lookahead: dict | None = None,
         mixed_precision: str | None = None,
+        gradient_checkpointing: bool = False,
+        devices: list | None = None,
     ):
         if isinstance(n_prototypes_per_class, dict):
             for cls, cnt in n_prototypes_per_class.items():
@@ -355,6 +367,13 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
         self.mixed_precision = mixed_precision
         self._mp_dtype = jnp.dtype(mixed_precision) if mixed_precision else None
         self._loss_scale = 2**15 if mixed_precision == 'float16' else 1.0
+
+        # Gradient checkpointing (remat)
+        self.gradient_checkpointing = gradient_checkpointing
+
+        # Multi-device data parallelism
+        self.devices = devices
+        self._mesh = None
 
         # Default active optimizer (may be wrapped with masking in fit())
         self._active_optimizer = self._optimizer
@@ -653,17 +672,31 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
         return self._compute_loss(params_mp, X, y, proto_labels) * self._loss_scale
 
     def _value_and_grad_fn(self, params, X, y, proto_labels):
-        """Compute loss and gradients, with optional mixed precision."""
-        if self._mp_dtype is not None:
-            scaled_loss, grads = jax.value_and_grad(self._compute_loss_mp)(
-                params, X, y, proto_labels
-            )
-            loss = scaled_loss / self._loss_scale
+        """Compute loss and gradients.
+
+        Supports optional mixed precision, gradient checkpointing (remat),
+        and custom VJP rules.
+        """
+        # Select loss function
+        if getattr(self, '_use_custom_vjp', False):
+            loss_fn = self._custom_vjp_loss
+        elif self._mp_dtype is not None:
+            loss_fn = self._compute_loss_mp
+        else:
+            loss_fn = self._compute_loss
+
+        # Apply gradient checkpointing (recompute forward during backward)
+        if self.gradient_checkpointing and not getattr(self, '_use_custom_vjp', False):
+            loss_fn = jax.checkpoint(loss_fn)
+
+        loss, grads = jax.value_and_grad(loss_fn)(params, X, y, proto_labels)
+
+        # Unscale for mixed precision
+        if self._mp_dtype is not None and not getattr(self, '_use_custom_vjp', False):
+            loss = loss / self._loss_scale
             grads = jax.tree.map(lambda g: g / self._loss_scale, grads)
-            return loss, grads
-        return jax.value_and_grad(self._compute_loss)(
-            params, X, y, proto_labels
-        )
+
+        return loss, grads
 
     def _post_update(self, params):
         """Apply constraints after gradient update (e.g., normalize relevances).
@@ -671,6 +704,16 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
         Default: no-op. Subclasses override as needed.
         """
         return params
+
+    def _custom_vjp_loss(self, params, X, y, proto_labels):
+        """Compute loss with custom VJP rule.
+
+        Override this method and set ``self._use_custom_vjp = True`` in
+        ``__init__`` to use a custom backward pass via ``@jax.custom_vjp``.
+
+        Default: None (uses standard autodiff on ``_compute_loss``).
+        """
+        return None
 
     def _get_weighted_data(self, X, y, sample_weight, key):
         """Apply sample weighting via weighted resampling.
@@ -749,6 +792,13 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
 
         if self.restore_best and best_params is not None:
             params = best_params
+
+        # Unshard params back to single device after multi-device training
+        if self._mesh is not None:
+            from prosemble.core.distributed import unshard_params
+            params = unshard_params(params)
+            proto_labels = jax.device_put(proto_labels, jax.devices()[0])
+
         self.prototypes_ = params['prototypes']
         self.prototype_labels_ = proto_labels
         self.loss_ = float(loss_history[-1]) if len(loss_history) > 0 else None
@@ -798,6 +848,18 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
 
         if X.ndim != 2:
             raise ValueError(f"X must be 2D, got shape {X.shape}")
+
+        # Multi-device sharding setup
+        if self.devices is not None:
+            from prosemble.core.distributed import create_mesh, shard_data
+            self._mesh = create_mesh(self.devices)
+            n_devices = len(self.devices)
+            if self.batch_size is not None and self.batch_size % n_devices != 0:
+                raise ValueError(
+                    f"batch_size ({self.batch_size}) must be divisible by "
+                    f"number of devices ({n_devices}) for data parallelism."
+                )
+            X, y = shard_data(X, y, self._mesh)
 
         self.classes_ = jnp.unique(y)
         self.n_classes_ = int(len(self.classes_))
@@ -855,6 +917,12 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
         else:
             opt_state = self._active_optimizer.init(params)
 
+        # Replicate params and optimizer state across devices
+        if self._mesh is not None:
+            from prosemble.core.distributed import replicate_params, replicate_opt_state
+            params = replicate_params(params, self._mesh)
+            opt_state = replicate_opt_state(opt_state, self._mesh)
+
         if self._callbacks:
             return self._fit_with_callbacks(X, y, params, opt_state, proto_labels)
         else:
@@ -881,6 +949,11 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
         X = jnp.asarray(X, dtype=jnp.float32)
         y = jnp.asarray(y, dtype=jnp.int32)
 
+        # Shard data if multi-device
+        if self._mesh is not None:
+            from prosemble.core.distributed import shard_data, replicate_params, replicate_opt_state
+            X, y = shard_data(X, y, self._mesh)
+
         # Build params from fitted state
         params = self._get_resume_params({'prototypes': self.prototypes_})
         proto_labels = self.prototype_labels_
@@ -890,6 +963,12 @@ class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, Quant
             self._active_optimizer = self._optimizer
         if not hasattr(self, '_opt_state') or self._opt_state is None:
             self._opt_state = self._active_optimizer.init(params)
+
+        # Replicate params, optimizer state, and proto_labels for multi-device
+        if self._mesh is not None:
+            params = replicate_params(params, self._mesh)
+            self._opt_state = replicate_opt_state(self._opt_state, self._mesh)
+            proto_labels = replicate_params({'_': proto_labels}, self._mesh)['_']
 
         # Single gradient step
         loss, grads = self._value_and_grad_fn(params, X, y, proto_labels)

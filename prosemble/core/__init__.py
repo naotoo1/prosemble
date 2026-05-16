@@ -40,6 +40,7 @@ from .protocols import (
 )
 from .serialization import SerializationMixin
 from .data import shuffle_arrays, padded_batches, batched_iterator
+from .distributed import create_mesh, shard_data, replicate_params
 
 try:
     import jax
@@ -90,6 +91,8 @@ __all__ = _distance_all + [
     'SerializationMixin',
     # Data loading utilities
     'shuffle_arrays', 'padded_batches', 'batched_iterator',
+    # Distributed training
+    'create_mesh', 'shard_data', 'replicate_params',
     # ONNX export (optional)
     'export_onnx',
 ]

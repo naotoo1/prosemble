@@ -141,6 +141,13 @@ Protocols
    :members:
    :undoc-members:
 
+Distributed Training
+--------------------
+
+.. automodule:: prosemble.core.distributed
+   :members:
+   :undoc-members:
+
 Data Utilities
 --------------
 

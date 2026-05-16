@@ -621,6 +621,128 @@ JAX automatically uses available GPUs. Check your device:
 All prosemble operations (training, inference, distance computation) run
 on whatever device JAX is configured to use. No code changes needed.
 
+Multi-Device Data Parallelism
+------------------------------
+
+For large datasets or image models with trainable backbones, prosemble
+supports data-parallel training across multiple GPUs or TPUs using JAX's
+modern sharding API.
+
+.. code-block:: python
+
+   import jax
+   from prosemble.models import GLVQ
+
+   # Use all available devices
+   devices = jax.devices()  # e.g., [GpuDevice(id=0), GpuDevice(id=1), ...]
+
+   model = GLVQ(
+       n_prototypes_per_class=2,
+       max_iter=100,
+       lr=0.01,
+       devices=devices,
+       use_scan=False,
+   )
+   model.fit(X_train, y_train)
+
+When ``devices`` is specified:
+
+- Training data is **sharded** along the batch dimension across devices
+- Model parameters and optimizer state are **replicated** on all devices
+- Gradients are automatically aggregated (all-reduced) across devices
+- After training, parameters are moved back to a single device for inference
+
+**Requirements:**
+
+- ``batch_size`` (if set) must be divisible by the number of devices
+- The number of training samples should be divisible by the number of devices
+- ``use_scan=False`` is recommended for multi-device training
+
+**Primary use case:** Image variants (``ImageGLVQ``, ``ImageGMLVQ``,
+``ImageGTLVQ``, ``ImageCBC``) with trainable CNN backbones on large datasets
+across multiple GPUs/TPUs.
+
+.. code-block:: python
+
+   from prosemble.models import ImageGLVQ
+
+   model = ImageGLVQ(
+       n_prototypes_per_class=1,
+       max_iter=50,
+       lr=0.001,
+       devices=jax.devices(),
+       gradient_checkpointing=True,  # save memory for deep backbones
+       use_scan=False,
+   )
+   model.fit(X_images, y_labels)
+
+``partial_fit()`` also works with multi-device models:
+
+.. code-block:: python
+
+   model.fit(X_batch1, y_batch1)
+   model.partial_fit(X_batch2, y_batch2)  # data is automatically sharded
+
+Gradient Checkpointing
+-----------------------
+
+Gradient checkpointing (``jax.remat``) trades compute for memory by
+recomputing forward activations during the backward pass instead of
+storing them. This is beneficial when training models with deep backbones
+(Image, Siamese variants) that would otherwise exhaust GPU memory.
+
+.. code-block:: python
+
+   from prosemble.models import GLVQ
+
+   model = GLVQ(
+       n_prototypes_per_class=2,
+       max_iter=100,
+       lr=0.01,
+       gradient_checkpointing=True,
+   )
+   model.fit(X_train, y_train)
+
+When ``gradient_checkpointing=True``:
+
+- Forward activations are **not** stored during the forward pass
+- During backpropagation, the forward pass is **recomputed** to obtain
+  activations needed for gradient computation
+- Memory usage is reduced at the cost of ~33% more compute
+- Results are numerically identical to standard training
+
+This option has no effect on models with shallow loss functions (e.g.,
+standard GLVQ with Euclidean distance). It provides significant memory
+savings when unfreezing deep CNN backbones in Image or Siamese variants.
+
+Custom Gradient Rules
+----------------------
+
+Prosemble provides infrastructure for subclasses to define custom
+backward passes using ``jax.custom_vjp``. This is useful for:
+
+- Optimal transport distances with non-differentiable sorting operations
+- Hard thresholding operations that need surrogate gradients
+- Distances with numerically unstable standard autodiff
+
+Subclasses opt in by setting ``self._use_custom_vjp = True`` in their
+``__init__`` and overriding the ``_custom_vjp_loss`` method:
+
+.. code-block:: python
+
+   class MyModel(GLVQ):
+       def __init__(self, **kwargs):
+           super().__init__(**kwargs)
+           self._use_custom_vjp = True
+
+       def _custom_vjp_loss(self, params, X, y, proto_labels):
+           # Implement custom forward + backward pass
+           ...
+
+When ``_use_custom_vjp`` is active, gradient checkpointing is
+automatically disabled (custom VJP already controls what gets
+saved/recomputed).
+
 Training Callbacks
 ------------------
 

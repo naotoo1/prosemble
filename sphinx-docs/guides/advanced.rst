@@ -560,6 +560,27 @@ The exported function contains only the compiled XLA computation and
 the frozen prototype/metric parameters — no Python dependencies needed
 at inference time.
 
+ONNX Export
+-----------
+
+Export fitted models to ONNX for deployment without JAX or prosemble.
+68 of 71 models are supported, including encoder models (MLP/CNN
+backbones), one-class classifiers, and fuzzy clustering:
+
+.. code-block:: python
+
+   from prosemble.core.onnx_export import export_onnx
+
+   model.fit(X_train, y_train)
+   onnx_model = export_onnx(model, path='model.onnx')
+
+   # Run with ONNX Runtime
+   import onnxruntime as ort
+   session = ort.InferenceSession('model.onnx')
+   preds = session.run(None, {'X': X_test_np})[0]
+
+See the full guide: :doc:`/guides/onnx`.
+
 Prototype Analysis
 -------------------
 

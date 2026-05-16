@@ -12,9 +12,9 @@ All operations are JIT-compilable and vmap-compatible.
 
 References
 ----------
-.. [1] Schwarz, Psenickova, Villmann, Röhrbein (2026).
-       Topology-Preserving Prototype Learning on Riemannian Manifolds.
-       ESANN 2026.
+Schwarz, Psenickova, Villmann, Röhrbein (2026).
+Topology-Preserving Prototype Learning on Riemannian Manifolds.
+ESANN 2026.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ def logm_safe(A):
 def sqrt_spd(A):
     """Matrix square root for symmetric positive definite matrices.
 
-    Uses eigendecomposition: A^{1/2} = V diag(sqrt(λ)) V^T.
+    Uses eigendecomposition: :math:`A^{1/2} = V \operatorname{diag}(\sqrt{\lambda}) V^T`.
 
     Parameters
     ----------
@@ -67,7 +67,7 @@ def sqrt_spd(A):
 def inv_sqrt_spd(A):
     """Inverse matrix square root for symmetric positive definite matrices.
 
-    Uses eigendecomposition: A^{-1/2} = V diag(1/sqrt(λ)) V^T.
+    Uses eigendecomposition: :math:`A^{-1/2} = V \operatorname{diag}(1/\sqrt{\lambda}) V^T`.
 
     Parameters
     ----------
@@ -89,7 +89,7 @@ def inv_sqrt_spd(A):
 class SO:
     """Special orthogonal group SO(n): rotation matrices.
 
-    Points are n×n orthogonal matrices with det = +1.
+    Points are :math:`n \times n` orthogonal matrices with det = +1.
     Geodesic distance uses the bi-invariant metric.
 
     Parameters
@@ -140,7 +140,7 @@ class SO:
         return Q
 
     def belongs(self, R):
-        """Check if R is in SO(n): R^T R ≈ I and det(R) ≈ +1."""
+        """Check if R is in SO(n): :math:`R^T R \\approx I` and :math:`\\det(R) \\approx +1`."""
         ortho = jnp.allclose(R.T @ R, jnp.eye(self.n), atol=1e-4)
         det_pos = jnp.abs(jnp.linalg.det(R) - 1.0) < 1e-4
         return ortho & det_pos
@@ -152,7 +152,7 @@ class SO:
         return U
 
     def injectivity_radius(self, R):
-        """Injectivity radius of SO(n) is π."""
+        """Injectivity radius of SO(n) is :math:`\\pi`."""
         return jnp.pi
 
 
@@ -161,7 +161,7 @@ class SO:
 # ---------------------------------------------------------------------------
 
 class SPD:
-    """Manifold of n×n symmetric positive definite matrices.
+    """Manifold of :math:`n \\times n` symmetric positive definite matrices.
 
     Uses the affine-invariant Riemannian metric.
 
@@ -201,7 +201,7 @@ class SPD:
         return A_sqrt @ jsl.expm(inner) @ A_sqrt
 
     def random_point(self, key):
-        """Generate random SPD matrix: A = L L^T + εI."""
+        """Generate random SPD matrix: :math:`A = L L^T + \\epsilon I`."""
         L = jax.random.normal(key, (self.n, self.n))
         return L @ L.T + 0.1 * jnp.eye(self.n)
 
@@ -312,7 +312,7 @@ class Grassmannian:
         return Q
 
     def belongs(self, Q):
-        """Check if Q represents a point on Gr(n, k): Q^T Q ≈ I_k."""
+        """Check if Q represents a point on Gr(n, k): :math:`Q^T Q \\approx I_k`."""
         return jnp.allclose(Q.T @ Q, jnp.eye(self.k), atol=1e-4)
 
     def project(self, Q):
@@ -321,5 +321,5 @@ class Grassmannian:
         return Q_new
 
     def injectivity_radius(self, Q):
-        """Injectivity radius of Gr(n,k) is π/2."""
+        """Injectivity radius of Gr(n,k) is :math:`\\pi/2`."""
         return jnp.pi / 2.0

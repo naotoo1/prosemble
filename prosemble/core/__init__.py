@@ -33,6 +33,13 @@ from .losses import (
 )
 from .pipeline import Pipeline, StandardScaler, MinMaxScaler, PCA, TransformerMixin
 from .model_selection import GridSearchCV, cross_val_score, clone
+from .protocols import (
+    Manifold, CallbackLike,
+    DistanceMatrixFn, DistancePairwiseFn,
+    SupervisedInitFn, UnsupervisedInitFn,
+)
+from .serialization import SerializationMixin
+from .data import shuffle_arrays, padded_batches, batched_iterator
 
 try:
     import jax
@@ -75,4 +82,20 @@ __all__ = _distance_all + [
     'Pipeline', 'StandardScaler', 'MinMaxScaler', 'PCA', 'TransformerMixin',
     # Model Selection
     'GridSearchCV', 'cross_val_score', 'clone',
+    # Protocols & type aliases
+    'Manifold', 'CallbackLike',
+    'DistanceMatrixFn', 'DistancePairwiseFn',
+    'SupervisedInitFn', 'UnsupervisedInitFn',
+    # Serialization
+    'SerializationMixin',
+    # Data loading utilities
+    'shuffle_arrays', 'padded_batches', 'batched_iterator',
+    # ONNX export (optional)
+    'export_onnx',
 ]
+
+# Conditional ONNX export
+try:
+    from .onnx_export import export_onnx
+except ImportError:
+    pass

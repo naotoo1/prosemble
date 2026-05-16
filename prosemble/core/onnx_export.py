@@ -2102,7 +2102,7 @@ def export_onnx(
     one-class (threshold-based), SVQ-OCC (response model), CBC
     (reasoning matrices), PLVQ (Gaussian mixture), encoder models
     (MLP/CNN backbone), and Riemannian models on SO(n)/Grassmannian
-    manifolds (75 of 87 models total).
+    manifolds (73 of 87 models total).
 
     Parameters
     ----------

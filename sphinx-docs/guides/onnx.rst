@@ -6,7 +6,7 @@ cross-platform deployment.  An exported ONNX model reproduces the ``predict()``
 output of the original model and runs anywhere ONNX Runtime is available —
 no JAX or prosemble dependency needed at inference time.
 
-**75 of 87 models** are supported.
+**73 of 87 models** are supported.
 
 Installation
 ------------
@@ -107,6 +107,9 @@ Supported Models
    * - Supervised LVQ (local omega)
      - 2
      - LGMLVQ, LMRSLVQ
+   * - Supervised LVQ (relevance-weighted)
+     - 1
+     - GRLVQ
    * - Supervised LVQ (tangent)
      - 1
      - GTLVQ
@@ -123,8 +126,8 @@ Supported Models
      - 2
      - STNG, TCELVQ_NG
    * - Unsupervised
-     - 3
-     - NeuralGas, KohonenSOM, HeskesSOM
+     - 4
+     - NeuralGas, GrowingNeuralGas, KohonenSOM, HeskesSOM
    * - Fuzzy clustering
      - 8
      - FCM, PCM, FPCM, PFCM, AFCM, HCM, IPCM, IPCM2
@@ -156,8 +159,8 @@ Supported Models
      - 3
      - RiemannianSMNG, RiemannianSLNG, RiemannianSTNG
    * - Riemannian Grassmannian (tangent-space metric)
-     - 3
-     - RiemannianSMNG, RiemannianSLNG, RiemannianSTNG
+     - (same 3)
+     - RiemannianSMNG, RiemannianSLNG, RiemannianSTNG (alternate manifold config)
 
 Encoder Models
 --------------
@@ -199,7 +202,7 @@ Distance Functions in ONNX
      - GTLVQ, STNG, OCGTLVQ, SVQOCC_T
    * - Relevance-weighted
      - Element-wise weighted squared diff
-     - OCGRLVQ, SVQOCC_R
+     - GRLVQ, OCGRLVQ, SVQOCC_R
    * - SO(n) Chordal
      - Broadcast subtract + Frobenius norm
      - RiemannianSRNG
@@ -223,24 +226,21 @@ Not Supported
    * - Kernel fuzzy clustering (KFCM, KPCM, KFPCM, KPFCM, KAFCM, KIPCM, KIPCM2)
      - 7
      - Gaussian kernel distance has no standard ONNX operator
-   * - RiemannianSRNG + Grassmannian
-     - 1
-     - SVD-based geodesic distance has no ONNX operator
-   * - RiemannianNeuralGas (all manifolds)
+   * - RiemannianNeuralGas
      - 1
      - Matrix logarithm via Schur decomposition has no ONNX operator
-   * - All Riemannian models + SPD(n)
-     - (manifold choice)
+   * - Riemannian models + SPD(n) manifold
+     - (config)
      - Eigendecomposition (eigh) has no ONNX operator
-   * - GrowingNeuralGas
-     - 1
-     - Dynamic topology (variable number of prototypes)
+   * - RiemannianSRNG + Grassmannian manifold
+     - (config)
+     - SVD-based geodesic distance has no ONNX operator
    * - KNN
      - 1
      - k-nearest-neighbor logic, not prototype-based
    * - NPC
      - 1
      - Different predict pattern
-   * - Utility (KMeansPlusPlus, Kmeans, BGPC)
-     - 3
+   * - Utility (KMeansPlusPlus, Kmeans, SOM, BGPC)
+     - 4
      - Not prototype model base classes

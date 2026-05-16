@@ -2,7 +2,7 @@
 
 Status of ONNX export support across all 87 prosemble models.
 
-## Currently Supported (75 models)
+## Currently Supported (73 models)
 
 ### Supervised LVQ — squared euclidean (9)
 
@@ -15,6 +15,10 @@ GMLVQ, MRSLVQ
 ### Supervised LVQ — local omega (2)
 
 LGMLVQ, LMRSLVQ
+
+### Supervised LVQ — relevance-weighted (1)
+
+GRLVQ
 
 ### Supervised LVQ — tangent (1)
 
@@ -36,9 +40,9 @@ SLNG, LCELVQ_NG, LMRSLVQ_NG
 
 STNG, TCELVQ_NG
 
-### Unsupervised — squared euclidean (3)
+### Unsupervised — squared euclidean (4)
 
-NeuralGas, KohonenSOM, HeskesSOM
+NeuralGas, GrowingNeuralGas, KohonenSOM, HeskesSOM
 
 ### Fuzzy clustering — squared euclidean (8)
 
@@ -106,19 +110,15 @@ RiemannianSMNG, RiemannianSLNG, RiemannianSTNG (with SO(n) manifold)
 
 Log map: `Log_R(S) = R @ skew(R^T S)` where `skew(A) = (A - A^T)/2`. Then metric adaptation (global omega, local omega, or tangent subspace) applied to flattened tangent vectors. All ops are MatMul/Sub/Transpose.
 
-### Riemannian — Grassmannian tangent-space metric (3)
+### Riemannian — Grassmannian tangent-space metric (same 3 models, alternate manifold)
 
 RiemannianSMNG, RiemannianSLNG, RiemannianSTNG (with Grassmannian(n,k) manifold)
 
 Log map: `Log_{Q1}(Q2) = Q2 - Q1(Q1^T Q2)`. Then metric adaptation applied to flattened tangent vectors. All ops are MatMul/Sub.
 
-### Needs verification (1)
-
-GRLVQ — uses per-feature relevance weights; needs verification on whether predict is handled correctly by the current export.
-
 ---
 
-## Not Supported (12 models)
+## Not Supported (14 models)
 
 ### Kernel fuzzy clustering (7) — kernel distance not exportable
 
@@ -126,22 +126,20 @@ KFCM, KPCM, KFPCM, KPFCM, KAFCM, KIPCM, KIPCM2
 
 **Blocker:** Predict uses Gaussian kernel distance (1 - K) computed via `batch_gaussian_kernel()`. Kernel evaluation requires the `sigma` parameter and a different distance computation that has no standard ONNX equivalent.
 
-### Riemannian models — non-exportable combinations (2)
+### Riemannian models — non-exportable (1)
 
-- **RiemannianSRNG + Grassmannian** — geodesic distance requires SVD at runtime (no ONNX op)
-- **RiemannianNeuralGas (all manifolds)** — uses `jsl.funm` (matrix logarithm via Schur decomposition, no ONNX op)
+- **RiemannianNeuralGas** — uses `jsl.funm` (matrix logarithm via Schur decomposition, no ONNX op)
 
-Note: All 4 supervised Riemannian models with SPD(n) manifold are also not exportable (eigendecomposition required), but SPD(n) is a runtime manifold choice, not a separate model.
+Note: The 4 supervised Riemannian models (RiemannianSRNG/SMNG/SLNG/STNG) are exportable on SO(n) and Grassmannian manifolds. SPD(n) manifold is not exportable (eigendecomposition required) but is a runtime configuration choice, not a separate model. RiemannianSRNG on Grassmannian is also not exportable (SVD required) but again is the same model with a different manifold choice.
 
-### Other (3)
+### Other (2)
 
-- **GrowingNeuralGas** — dynamic topology (variable number of prototypes)
 - **KNN** — k-nearest-neighbor logic, not prototype-based
 - **NPC** — nearest prototype classifier with different predict pattern
 
-### Utility models not applicable (3)
+### Utility models not applicable (4)
 
-KMeansPlusPlus, Kmeans, BGPC — don't inherit from prototype model base classes.
+KMeansPlusPlus, Kmeans, SOM, BGPC — don't inherit from prototype model base classes.
 
 ---
 
@@ -153,7 +151,7 @@ KMeansPlusPlus, Kmeans, BGPC — don't inherit from prototype model base classes
 | Euclidean | sqrt of above | (available) |
 | Manhattan | broadcast + abs + sum | (available) |
 | Global Omega | project then sq. euclidean | GMLVQ, MRSLVQ, SMNG, OCGMLVQ, OCMRSLVQ, SVQOCC_M, SiameseGMLVQ, ImageGMLVQ |
-| Relevance-weighted | element-wise weighted sq. diff | OCGRLVQ, SVQOCC_R |
+| Relevance-weighted | element-wise weighted sq. diff | GRLVQ, OCGRLVQ, SVQOCC_R |
 | Local Omega | batched MatMul | LGMLVQ, SLNG, LCELVQ_NG, LMRSLVQ, OCLGMLVQ, SVQOCC_LM |
 | Tangent | batched MatMul project-reconstruct | GTLVQ, STNG, TCELVQ_NG, OCGTLVQ, SVQOCC_T, SiameseGTLVQ, ImageGTLVQ |
 | SO(n) Chordal | broadcast subtract + Frobenius | RiemannianSRNG |

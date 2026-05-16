@@ -1,8 +1,8 @@
 # ONNX Export Coverage
 
-Status of ONNX export support across all 71 prosemble models.
+Status of ONNX export support across all 87 prosemble models.
 
-## Currently Supported (~68 models)
+## Currently Supported (75 models)
 
 ### Supervised LVQ — squared euclidean (9)
 
@@ -94,13 +94,31 @@ CBC, ImageCBC
 
 Squared Euclidean distance → Gaussian similarity `exp(-d²/(2σ²))` → CBCC reasoning: `probs = (detections @ (pk - nk) + sum(nk)) / (sum(pk + nk) + eps)` → ArgMax. ImageCBC adds a CNN encoder before distance computation, with components pre-computed in latent space.
 
+### Riemannian — SO(n) chordal distance (1)
+
+RiemannianSRNG (with SO(n) manifold)
+
+Chordal distance: `d²(R,S) = ||R - S||²_F`. Pure Frobenius norm on flattened rotation matrices.
+
+### Riemannian — SO(n) tangent-space metric (3)
+
+RiemannianSMNG, RiemannianSLNG, RiemannianSTNG (with SO(n) manifold)
+
+Log map: `Log_R(S) = R @ skew(R^T S)` where `skew(A) = (A - A^T)/2`. Then metric adaptation (global omega, local omega, or tangent subspace) applied to flattened tangent vectors. All ops are MatMul/Sub/Transpose.
+
+### Riemannian — Grassmannian tangent-space metric (3)
+
+RiemannianSMNG, RiemannianSLNG, RiemannianSTNG (with Grassmannian(n,k) manifold)
+
+Log map: `Log_{Q1}(Q2) = Q2 - Q1(Q1^T Q2)`. Then metric adaptation applied to flattened tangent vectors. All ops are MatMul/Sub.
+
 ### Needs verification (1)
 
 GRLVQ — uses per-feature relevance weights; needs verification on whether predict is handled correctly by the current export.
 
 ---
 
-## Not Supported (~3 unique blockers, ~21 models)
+## Not Supported (12 models)
 
 ### Kernel fuzzy clustering (7) — kernel distance not exportable
 
@@ -108,11 +126,12 @@ KFCM, KPCM, KFPCM, KPFCM, KAFCM, KIPCM, KIPCM2
 
 **Blocker:** Predict uses Gaussian kernel distance (1 - K) computed via `batch_gaussian_kernel()`. Kernel evaluation requires the `sigma` parameter and a different distance computation that has no standard ONNX equivalent.
 
-### Riemannian models (5) — manifold operations
+### Riemannian models — non-exportable combinations (2)
 
-RiemannianSRNG, RiemannianSMNG, RiemannianSLNG, RiemannianSTNG, RiemannianNeuralGas
+- **RiemannianSRNG + Grassmannian** — geodesic distance requires SVD at runtime (no ONNX op)
+- **RiemannianNeuralGas (all manifolds)** — uses `jsl.funm` (matrix logarithm via Schur decomposition, no ONNX op)
 
-**Blocker:** Predict uses matrix logarithm/exponential (`logm`, `expm`) which have no ONNX operator equivalent.
+Note: All 4 supervised Riemannian models with SPD(n) manifold are also not exportable (eigendecomposition required), but SPD(n) is a runtime manifold choice, not a separate model.
 
 ### Other (3)
 
@@ -137,6 +156,9 @@ KMeansPlusPlus, Kmeans, BGPC — don't inherit from prototype model base classes
 | Relevance-weighted | element-wise weighted sq. diff | OCGRLVQ, SVQOCC_R |
 | Local Omega | batched MatMul | LGMLVQ, SLNG, LCELVQ_NG, LMRSLVQ, OCLGMLVQ, SVQOCC_LM |
 | Tangent | batched MatMul project-reconstruct | GTLVQ, STNG, TCELVQ_NG, OCGTLVQ, SVQOCC_T, SiameseGTLVQ, ImageGTLVQ |
+| SO(n) Chordal | broadcast subtract + Frobenius | RiemannianSRNG |
+| SO(n) Tangent | skew-symmetric log map + metric | RiemannianSMNG/SLNG/STNG (SO) |
+| Grassmannian Tangent | projection log map + metric | RiemannianSMNG/SLNG/STNG (Gr) |
 
 ## Encoder Support
 

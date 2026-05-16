@@ -6,7 +6,7 @@ cross-platform deployment.  An exported ONNX model reproduces the ``predict()``
 output of the original model and runs anywhere ONNX Runtime is available —
 no JAX or prosemble dependency needed at inference time.
 
-**68 of 71 models** are supported.
+**75 of 87 models** are supported.
 
 Installation
 ------------
@@ -149,6 +149,15 @@ Supported Models
    * - CBC (reasoning matrices)
      - 2
      - CBC, ImageCBC
+   * - Riemannian SO(n) (chordal)
+     - 1
+     - RiemannianSRNG
+   * - Riemannian SO(n) (tangent-space metric)
+     - 3
+     - RiemannianSMNG, RiemannianSLNG, RiemannianSTNG
+   * - Riemannian Grassmannian (tangent-space metric)
+     - 3
+     - RiemannianSMNG, RiemannianSLNG, RiemannianSTNG
 
 Encoder Models
 --------------
@@ -191,6 +200,15 @@ Distance Functions in ONNX
    * - Relevance-weighted
      - Element-wise weighted squared diff
      - OCGRLVQ, SVQOCC_R
+   * - SO(n) Chordal
+     - Broadcast subtract + Frobenius norm
+     - RiemannianSRNG
+   * - SO(n) Tangent
+     - Skew-symmetric log map + metric adaptation
+     - RiemannianSMNG/SLNG/STNG (SO)
+   * - Grassmannian Tangent
+     - Projection log map + metric adaptation
+     - RiemannianSMNG/SLNG/STNG (Gr)
 
 Not Supported
 -------------
@@ -205,9 +223,15 @@ Not Supported
    * - Kernel fuzzy clustering (KFCM, KPCM, KFPCM, KPFCM, KAFCM, KIPCM, KIPCM2)
      - 7
      - Gaussian kernel distance has no standard ONNX operator
-   * - Riemannian models (RiemannianSRNG, RiemannianSMNG, RiemannianSLNG, RiemannianSTNG, RiemannianNeuralGas)
-     - 5
-     - Matrix logarithm/exponential and eigendecomposition have no ONNX operator
+   * - RiemannianSRNG + Grassmannian
+     - 1
+     - SVD-based geodesic distance has no ONNX operator
+   * - RiemannianNeuralGas (all manifolds)
+     - 1
+     - Matrix logarithm via Schur decomposition has no ONNX operator
+   * - All Riemannian models + SPD(n)
+     - (manifold choice)
+     - Eigendecomposition (eigh) has no ONNX operator
    * - GrowingNeuralGas
      - 1
      - Dynamic topology (variable number of prototypes)

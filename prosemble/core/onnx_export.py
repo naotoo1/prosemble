@@ -666,6 +666,511 @@ def _tangent_onnx(builder, X_name, proto_name, omegas_name):
 
 
 # ---------------------------------------------------------------------------
+# Riemannian model builders
+# ---------------------------------------------------------------------------
+
+
+def _riemannian_so_chordal_onnx(X_name, proto_name, n):
+    r"""Chordal distance on SO(n): d^2(R,S) = ||R - S||^2_F.
+
+    Input X and prototypes are flattened (batch, n*n) and (p, n*n).
+    Reshapes to 3D, broadcasts, computes Frobenius distance matrix.
+
+    Returns
+    -------
+    nodes, initializers, output_name
+        Output shape: (batch, n_proto)
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # Unsqueeze X -> (batch, 1, n*n)
+    nodes.append(oh.make_node(
+        'Unsqueeze', [X_name, '_rsc_axis1'], ['_rsc_x_exp'],
+    ))
+    # Unsqueeze W -> (1, p, n*n)
+    nodes.append(oh.make_node(
+        'Unsqueeze', [proto_name, '_rsc_axis0'], ['_rsc_w_exp'],
+    ))
+
+    # diff = X - W -> (batch, p, n*n)
+    nodes.append(oh.make_node(
+        'Sub', ['_rsc_x_exp', '_rsc_w_exp'], ['_rsc_diff'],
+    ))
+
+    # diff^2
+    nodes.append(oh.make_node(
+        'Mul', ['_rsc_diff', '_rsc_diff'], ['_rsc_diff_sq'],
+    ))
+
+    # ReduceSum over last axis -> (batch, p)
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_rsc_diff_sq', '_rsc_axis2'],
+        ['distances_rsc'], keepdims=0,
+    ))
+
+    extra_initializers = [
+        oh.make_tensor('_rsc_axis0', TensorProto.INT64, [1], [0]),
+        oh.make_tensor('_rsc_axis1', TensorProto.INT64, [1], [1]),
+        oh.make_tensor('_rsc_axis2', TensorProto.INT64, [1], [2]),
+    ]
+    return nodes, extra_initializers, 'distances_rsc'
+
+
+def _riemannian_so_tangent_onnx(X_name, proto_name, n):
+    r"""Compute SO(n) tangent vectors: Log_W(X) = W @ skew(W^T @ X).
+
+    skew(A) = (A - A^T) / 2
+
+    Input X: (batch, n*n), prototypes W: (p, n*n).
+    Output tangent: (p, batch, n*n) — ready for downstream metric.
+
+    Returns
+    -------
+    nodes, initializers, output_name
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # Reshape X -> (batch, n, n)
+    nodes.append(oh.make_node(
+        'Reshape', [X_name, '_rst_x_shape'], ['_rst_X3'],
+    ))
+    # Reshape W -> (p, n, n)
+    nodes.append(oh.make_node(
+        'Reshape', [proto_name, '_rst_w_shape'], ['_rst_W3'],
+    ))
+
+    # Unsqueeze X -> (batch, 1, n, n)
+    nodes.append(oh.make_node(
+        'Unsqueeze', ['_rst_X3', '_rst_axis1'], ['_rst_X4'],
+    ))
+    # Unsqueeze W -> (1, p, n, n)
+    nodes.append(oh.make_node(
+        'Unsqueeze', ['_rst_W3', '_rst_axis0'], ['_rst_W4'],
+    ))
+
+    # W^T: transpose last two dims of W -> (1, p, n, n)
+    nodes.append(oh.make_node(
+        'Transpose', ['_rst_W4'], ['_rst_Wt'],
+        perm=[0, 1, 3, 2],
+    ))
+
+    # RtS = W^T @ X -> (batch, p, n, n) via broadcasting
+    nodes.append(oh.make_node(
+        'MatMul', ['_rst_Wt', '_rst_X4'], ['_rst_RtS'],
+    ))
+
+    # RtS^T: transpose last two dims
+    nodes.append(oh.make_node(
+        'Transpose', ['_rst_RtS'], ['_rst_RtS_T'],
+        perm=[0, 1, 3, 2],
+    ))
+
+    # skew = (RtS - RtS^T) / 2
+    nodes.append(oh.make_node(
+        'Sub', ['_rst_RtS', '_rst_RtS_T'], ['_rst_skew_raw'],
+    ))
+    nodes.append(oh.make_node(
+        'Div', ['_rst_skew_raw', '_rst_two'], ['_rst_skew'],
+    ))
+
+    # tangent = W @ skew -> (batch, p, n, n)
+    nodes.append(oh.make_node(
+        'MatMul', ['_rst_W4', '_rst_skew'], ['_rst_tangent4d'],
+    ))
+
+    # Reshape tangent -> (batch, p, n*n)
+    nodes.append(oh.make_node(
+        'Reshape', ['_rst_tangent4d', '_rst_tang_shape'], ['_rst_tangent3d'],
+    ))
+
+    # Transpose -> (p, batch, n*n) for downstream metric ops
+    nodes.append(oh.make_node(
+        'Transpose', ['_rst_tangent3d'], ['tangent_so'],
+        perm=[1, 0, 2],
+    ))
+
+    extra_initializers = [
+        oh.make_tensor('_rst_axis0', TensorProto.INT64, [1], [0]),
+        oh.make_tensor('_rst_axis1', TensorProto.INT64, [1], [1]),
+        oh.make_tensor('_rst_x_shape', TensorProto.INT64, [3], [-1, n, n]),
+        oh.make_tensor('_rst_w_shape', TensorProto.INT64, [3], [-1, n, n]),
+        oh.make_tensor('_rst_tang_shape', TensorProto.INT64, [3],
+                       [0, 0, n * n]),
+        oh.make_tensor('_rst_two', TensorProto.FLOAT, [], [2.0]),
+    ]
+    return nodes, extra_initializers, 'tangent_so'
+
+
+def _riemannian_gr_tangent_onnx(X_name, proto_name, n, k):
+    r"""Compute Grassmannian tangent vectors: Log_{Q1}(Q2) = Q2 - Q1(Q1^T Q2).
+
+    Input X: (batch, n*k), prototypes W: (p, n*k).
+    Output tangent: (p, batch, n*k) — ready for downstream metric.
+
+    Returns
+    -------
+    nodes, initializers, output_name
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # Reshape X -> (batch, n, k)
+    nodes.append(oh.make_node(
+        'Reshape', [X_name, '_rgt_x_shape'], ['_rgt_X3'],
+    ))
+    # Reshape W -> (p, n, k)
+    nodes.append(oh.make_node(
+        'Reshape', [proto_name, '_rgt_w_shape'], ['_rgt_W3'],
+    ))
+
+    # Unsqueeze X -> (batch, 1, n, k)
+    nodes.append(oh.make_node(
+        'Unsqueeze', ['_rgt_X3', '_rgt_axis1'], ['_rgt_X4'],
+    ))
+    # Unsqueeze W -> (1, p, n, k)
+    nodes.append(oh.make_node(
+        'Unsqueeze', ['_rgt_W3', '_rgt_axis0'], ['_rgt_W4'],
+    ))
+
+    # W^T: transpose last two dims -> (1, p, k, n)
+    nodes.append(oh.make_node(
+        'Transpose', ['_rgt_W4'], ['_rgt_Wt'],
+        perm=[0, 1, 3, 2],
+    ))
+
+    # Q1tQ2 = W^T @ X -> (batch, p, k, k)
+    nodes.append(oh.make_node(
+        'MatMul', ['_rgt_Wt', '_rgt_X4'], ['_rgt_Q1tQ2'],
+    ))
+
+    # proj = W @ Q1tQ2 -> (batch, p, n, k)
+    nodes.append(oh.make_node(
+        'MatMul', ['_rgt_W4', '_rgt_Q1tQ2'], ['_rgt_proj'],
+    ))
+
+    # tangent = X - proj -> (batch, p, n, k)
+    nodes.append(oh.make_node(
+        'Sub', ['_rgt_X4', '_rgt_proj'], ['_rgt_tangent4d'],
+    ))
+
+    # Reshape -> (batch, p, n*k)
+    nodes.append(oh.make_node(
+        'Reshape', ['_rgt_tangent4d', '_rgt_tang_shape'], ['_rgt_tangent3d'],
+    ))
+
+    # Transpose -> (p, batch, n*k)
+    nodes.append(oh.make_node(
+        'Transpose', ['_rgt_tangent3d'], ['tangent_gr'],
+        perm=[1, 0, 2],
+    ))
+
+    extra_initializers = [
+        oh.make_tensor('_rgt_axis0', TensorProto.INT64, [1], [0]),
+        oh.make_tensor('_rgt_axis1', TensorProto.INT64, [1], [1]),
+        oh.make_tensor('_rgt_x_shape', TensorProto.INT64, [3], [-1, n, k]),
+        oh.make_tensor('_rgt_w_shape', TensorProto.INT64, [3], [-1, n, k]),
+        oh.make_tensor('_rgt_tang_shape', TensorProto.INT64, [3],
+                       [0, 0, n * k]),
+    ]
+    return nodes, extra_initializers, 'tangent_gr'
+
+
+def _riemannian_global_omega_onnx(tangent_name, omega_name):
+    r"""Global omega metric on pre-computed tangents: d^2 = ||tangent @ Omega||^2.
+
+    Input tangent: (p, batch, d_flat), omega: (d_flat, latent_dim).
+    Output: (batch, p) distances.
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # MatMul: (p, batch, d) @ (d, l) -> (p, batch, l)
+    nodes.append(oh.make_node(
+        'MatMul', [tangent_name, omega_name], ['_rgo_projected'],
+    ))
+
+    # projected^2
+    nodes.append(oh.make_node(
+        'Mul', ['_rgo_projected', '_rgo_projected'], ['_rgo_proj_sq'],
+    ))
+
+    # ReduceSum over latent axis=2 -> (p, batch)
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_rgo_proj_sq', '_rgo_axis2'],
+        ['_rgo_dist_t'], keepdims=0,
+    ))
+
+    # Transpose -> (batch, p)
+    nodes.append(oh.make_node(
+        'Transpose', ['_rgo_dist_t'], ['distances_rgo'],
+        perm=[1, 0],
+    ))
+
+    extra_initializers = [
+        oh.make_tensor('_rgo_axis2', TensorProto.INT64, [1], [2]),
+    ]
+    return nodes, extra_initializers, 'distances_rgo'
+
+
+def _riemannian_local_omega_onnx(tangent_name, omegas_name):
+    r"""Per-prototype omega metric: d^2_k = ||tangent_k @ Omega_k||^2.
+
+    Input tangent: (p, batch, d_flat), omegas: (p, d_flat, latent_dim).
+    Output: (batch, p) distances.
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # Batched MatMul: (p, batch, d) @ (p, d, l) -> (p, batch, l)
+    nodes.append(oh.make_node(
+        'MatMul', [tangent_name, omegas_name], ['_rlo_projected'],
+    ))
+
+    # projected^2
+    nodes.append(oh.make_node(
+        'Mul', ['_rlo_projected', '_rlo_projected'], ['_rlo_proj_sq'],
+    ))
+
+    # ReduceSum over latent axis=2 -> (p, batch)
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_rlo_proj_sq', '_rlo_axis2'],
+        ['_rlo_dist_t'], keepdims=0,
+    ))
+
+    # Transpose -> (batch, p)
+    nodes.append(oh.make_node(
+        'Transpose', ['_rlo_dist_t'], ['distances_rlo'],
+        perm=[1, 0],
+    ))
+
+    extra_initializers = [
+        oh.make_tensor('_rlo_axis2', TensorProto.INT64, [1], [2]),
+    ]
+    return nodes, extra_initializers, 'distances_rlo'
+
+
+def _riemannian_tangent_subspace_onnx(tangent_name, omegas_name):
+    r"""Tangent subspace distance: d^2 = ||(I - Omega_k Omega_k^T) tangent_k||^2.
+
+    Input tangent: (p, batch, d_flat), omegas: (p, d_flat, s).
+    Output: (batch, p) distances.
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # Step 1: Project onto subspace
+    # proj = (p, batch, d) @ (p, d, s) -> (p, batch, s)
+    nodes.append(oh.make_node(
+        'MatMul', [tangent_name, omegas_name], ['_rts_proj'],
+    ))
+
+    # Step 2: Transpose omegas -> (p, s, d)
+    nodes.append(oh.make_node(
+        'Transpose', [omegas_name], ['_rts_omegas_T'],
+        perm=[0, 2, 1],
+    ))
+
+    # recon = (p, batch, s) @ (p, s, d) -> (p, batch, d)
+    nodes.append(oh.make_node(
+        'MatMul', ['_rts_proj', '_rts_omegas_T'], ['_rts_recon'],
+    ))
+
+    # Step 3: residual = tangent - recon
+    nodes.append(oh.make_node(
+        'Sub', [tangent_name, '_rts_recon'], ['_rts_residual'],
+    ))
+
+    # residual^2
+    nodes.append(oh.make_node(
+        'Mul', ['_rts_residual', '_rts_residual'], ['_rts_res_sq'],
+    ))
+
+    # ReduceSum over features axis=2 -> (p, batch)
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_rts_res_sq', '_rts_axis2'],
+        ['_rts_dist_t'], keepdims=0,
+    ))
+
+    # Transpose -> (batch, p)
+    nodes.append(oh.make_node(
+        'Transpose', ['_rts_dist_t'], ['distances_rts'],
+        perm=[1, 0],
+    ))
+
+    extra_initializers = [
+        oh.make_tensor('_rts_axis2', TensorProto.INT64, [1], [2]),
+    ]
+    return nodes, extra_initializers, 'distances_rts'
+
+
+def _export_riemannian_onnx(model, batch_size, opset_version, path):
+    """Export a Riemannian supervised model to ONNX.
+
+    Handles RiemannianSRNG (chordal distance on SO(n)) and
+    RiemannianSMNG/SLNG/STNG (tangent-space metric on SO(n) or Grassmannian).
+    """
+    import onnx
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    from prosemble.core.manifolds import SO, Grassmannian
+
+    # Determine manifold and model variant
+    manifold = model.manifold
+    is_so = isinstance(manifold, SO)
+    is_gr = isinstance(manifold, Grassmannian)
+    model_name = type(model).__name__
+
+    # Determine point shape
+    if is_so:
+        n = manifold.n
+        n_features = n * n
+        point_shape = (n, n)
+    else:  # Grassmannian
+        n, k = manifold.n, manifold.k
+        n_features = n * k
+        point_shape = (n, k)
+
+    batch_dim = batch_size if batch_size > 0 else 'batch'
+    input_shape = [batch_dim, n_features]
+
+    all_nodes = []
+    initializers = []
+
+    # Prototypes (flattened manifold points)
+    prototypes = np.asarray(model.prototypes_, dtype=np.float32)
+    n_proto = prototypes.shape[0]
+    initializers.append(
+        oh.make_tensor(
+            'prototypes', TensorProto.FLOAT,
+            list(prototypes.shape), prototypes.flatten().tolist(),
+        ),
+    )
+
+    # Prototype labels
+    proto_labels = np.asarray(model.prototype_labels_).astype(np.int64)
+    initializers.append(
+        oh.make_tensor(
+            'proto_labels', TensorProto.INT64,
+            list(proto_labels.shape), proto_labels.flatten().tolist(),
+        ),
+    )
+
+    # --- Distance computation ---
+    if model_name == 'RiemannianSRNG':
+        # Chordal distance: ||X - W||^2_F (works on flattened vectors directly)
+        nodes, extra_inits, dist_out = _riemannian_so_chordal_onnx(
+            'X', 'prototypes', n,
+        )
+        all_nodes.extend(nodes)
+        initializers.extend(extra_inits)
+
+    else:
+        # SMNG, SLNG, STNG: compute tangent vectors first, then apply metric
+        if is_so:
+            tang_nodes, tang_inits, tangent_out = _riemannian_so_tangent_onnx(
+                'X', 'prototypes', n,
+            )
+        else:  # Grassmannian
+            tang_nodes, tang_inits, tangent_out = _riemannian_gr_tangent_onnx(
+                'X', 'prototypes', n, k,
+            )
+        all_nodes.extend(tang_nodes)
+        initializers.extend(tang_inits)
+
+        # Apply metric based on model variant
+        if model_name == 'RiemannianSMNG':
+            # Global omega
+            omega = np.asarray(model.omega_, dtype=np.float32)
+            initializers.append(
+                oh.make_tensor(
+                    'omega', TensorProto.FLOAT,
+                    list(omega.shape), omega.flatten().tolist(),
+                ),
+            )
+            met_nodes, met_inits, dist_out = _riemannian_global_omega_onnx(
+                tangent_out, 'omega',
+            )
+
+        elif model_name == 'RiemannianSLNG':
+            # Per-prototype local omega
+            omegas = np.asarray(model.omegas_, dtype=np.float32)
+            initializers.append(
+                oh.make_tensor(
+                    'omegas', TensorProto.FLOAT,
+                    list(omegas.shape), omegas.flatten().tolist(),
+                ),
+            )
+            met_nodes, met_inits, dist_out = _riemannian_local_omega_onnx(
+                tangent_out, 'omegas',
+            )
+
+        elif model_name == 'RiemannianSTNG':
+            # Tangent subspace
+            omegas = np.asarray(model.omegas_, dtype=np.float32)
+            initializers.append(
+                oh.make_tensor(
+                    'omegas', TensorProto.FLOAT,
+                    list(omegas.shape), omegas.flatten().tolist(),
+                ),
+            )
+            met_nodes, met_inits, dist_out = _riemannian_tangent_subspace_onnx(
+                tangent_out, 'omegas',
+            )
+        else:
+            raise NotImplementedError(
+                f"Unknown Riemannian model variant: {model_name}"
+            )
+
+        all_nodes.extend(met_nodes)
+        initializers.extend(met_inits)
+
+    # --- WTAC decision ---
+    comp_nodes, comp_inits = _wtac_onnx_nodes(dist_out, 'proto_labels')
+    all_nodes.extend(comp_nodes)
+    initializers.extend(comp_inits)
+
+    # --- Build graph ---
+    X_input = oh.make_tensor_value_info('X', TensorProto.FLOAT, input_shape)
+    Y_output = oh.make_tensor_value_info(
+        'predictions', TensorProto.INT64, [batch_dim],
+    )
+
+    graph = oh.make_graph(
+        all_nodes,
+        'prosemble_riemannian_predict',
+        [X_input],
+        [Y_output],
+        initializer=initializers,
+    )
+
+    onnx_model = oh.make_model(graph, opset_imports=[
+        oh.make_opsetid('', opset_version),
+    ])
+    onnx_model.ir_version = 8
+    onnx.checker.check_model(onnx_model)
+
+    if path is not None:
+        onnx.save(onnx_model, path)
+
+    return onnx_model
+
+
+# ---------------------------------------------------------------------------
 # Competition / decision builders
 # ---------------------------------------------------------------------------
 
@@ -1540,13 +2045,26 @@ def _check_model_exportable(model):
 
     Raises NotImplementedError for models that cannot be converted.
     """
-    # Riemannian models: manifold ops have no ONNX equivalent
+    # Riemannian models: check manifold-specific exportability
     from prosemble.models.riemannian_srng import RiemannianSRNG
     if isinstance(model, RiemannianSRNG):
-        raise NotImplementedError(
-            "ONNX export is not supported for Riemannian models. "
-            "Manifold operations (logm, expm) have no ONNX equivalent."
-        )
+        from prosemble.core.manifolds import SO, Grassmannian, SPD
+        if isinstance(model.manifold, SPD):
+            raise NotImplementedError(
+                "ONNX export is not supported for Riemannian models with "
+                "SPD(n) manifold. Eigendecomposition (eigh) has no ONNX "
+                "equivalent."
+            )
+        model_name = type(model).__name__
+        if (isinstance(model.manifold, Grassmannian)
+                and model_name == 'RiemannianSRNG'):
+            raise NotImplementedError(
+                "ONNX export is not supported for RiemannianSRNG with "
+                "Grassmannian manifold. SVD-based geodesic distance has "
+                "no ONNX equivalent."
+            )
+        # SO(n) for all 4 models, and Grassmannian for SMNG/SLNG/STNG are OK
+        return
 
     try:
         from prosemble.models.riemannian_neural_gas import RiemannianNeuralGas
@@ -1582,8 +2100,9 @@ def export_onnx(
     Builds an ONNX graph that reproduces the model's ``predict()``
     output.  Supports supervised (WTAC), unsupervised (ArgMin),
     one-class (threshold-based), SVQ-OCC (response model), CBC
-    (reasoning matrices), PLVQ (Gaussian mixture), and encoder
-    models (MLP/CNN backbone).
+    (reasoning matrices), PLVQ (Gaussian mixture), encoder models
+    (MLP/CNN backbone), and Riemannian models on SO(n)/Grassmannian
+    manifolds (75 of 87 models total).
 
     Parameters
     ----------
@@ -1617,6 +2136,11 @@ def export_onnx(
 
     model._check_fitted()
     _check_model_exportable(model)
+
+    # Riemannian models: use dedicated export path
+    from prosemble.models.riemannian_srng import RiemannianSRNG
+    if isinstance(model, RiemannianSRNG):
+        return _export_riemannian_onnx(model, batch_size, opset_version, path)
 
     # Identify model type and distance
     model_type, dist_type = _identify_model_type(model)

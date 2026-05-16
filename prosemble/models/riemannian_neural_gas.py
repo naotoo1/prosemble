@@ -30,6 +30,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from prosemble.models.prototype_base import UnsupervisedPrototypeModel
+from prosemble.core.protocols import Manifold
 
 
 class RiemannianNeuralGas(UnsupervisedPrototypeModel):
@@ -40,11 +41,10 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
 
     Parameters
     ----------
-    manifold : object
+    manifold : Manifold
         Manifold instance (SO, SPD, or Grassmannian from
-        ``prosemble.core.manifolds``). Must implement ``distance``,
-        ``log_map``, ``exp_map``, ``random_point``, ``project``,
-        and ``injectivity_radius``.
+        ``prosemble.core.manifolds``). Must satisfy the
+        :class:`~prosemble.core.protocols.Manifold` protocol.
     n_prototypes : int
         Number of prototypes/nodes.
     lr_init : float
@@ -75,7 +75,7 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
         If True, restore parameters from the lowest-loss epoch. Default: False.
     """
 
-    def __init__(self, manifold, n_prototypes, lr_init=0.3, lr_final=0.01,
+    def __init__(self, manifold: Manifold, n_prototypes, lr_init=0.3, lr_final=0.01,
                  lambda_init=None, lambda_final=0.01,
                  tau=0.9, max_iter=100, lr=0.01, epsilon=1e-6,
                  random_seed=42, distance_fn=None, callbacks=None,
@@ -181,7 +181,7 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
 
         Parameters
         ----------
-        X : array of shape (n_samples, *point_shape)
+        X : array of shape ``(n_samples, *point_shape)``
             Data points on the manifold.
 
         Returns
@@ -240,7 +240,7 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
 
         Parameters
         ----------
-        X : array of shape (n_samples, *point_shape)
+        X : array of shape ``(n_samples, *point_shape)``
 
         Returns
         -------
@@ -256,7 +256,7 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
 
         Parameters
         ----------
-        X : array of shape (n_samples, *point_shape)
+        X : array of shape ``(n_samples, *point_shape)``
 
         Returns
         -------
@@ -315,28 +315,10 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
             raise ValueError(f"Unknown manifold type: {mtype}")
 
     @classmethod
-    def load(cls, path):
-        """Load a saved RiemannianNeuralGas model."""
-        import json
-        data = np.load(path, allow_pickle=True)
-        metadata = json.loads(str(data['__metadata__']))
-        hp = dict(metadata['hyperparams'])  # copy to avoid mutation
-
-        manifold = cls._reconstruct_manifold(hp)
-
-        # Remove manifold-specific keys
-        hp.pop('manifold_type', None)
-        hp.pop('manifold_n', None)
-        hp.pop('manifold_k', None)
-
-        model = cls(manifold=manifold, **hp)
-
-        # Restore fitted arrays
-        fitted_keys = metadata.get('fitted_array_names', [])
-        arrays = {k: data[k] for k in fitted_keys if k in data.files}
-        model._set_fitted_arrays(arrays)
-
-        model.n_iter_ = metadata.get('n_iter_', 0)
-        model.loss_ = metadata.get('loss_', None)
-
-        return model
+    def _pre_load_construct(cls, hyperparams, metadata):
+        manifold = cls._reconstruct_manifold(hyperparams)
+        hyperparams.pop('manifold_type', None)
+        hyperparams.pop('manifold_n', None)
+        hyperparams.pop('manifold_k', None)
+        hyperparams['manifold'] = manifold
+        return hyperparams

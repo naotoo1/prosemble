@@ -141,10 +141,39 @@ is highest, automatically focusing model capacity on complex data regions.
    topology (changing number of nodes and edges). It uses Python loops
    instead of ``lax.scan``.
 
+Riemannian Neural Gas
+---------------------
+
+Neural Gas extended to Riemannian manifolds.  Prototypes live on the
+manifold and are updated via exponential maps.  Supports SO(n), SPD(n),
+and Grassmannian(n,k).
+
+.. code-block:: python
+
+   from prosemble.models import RiemannianNeuralGas
+   from prosemble.core.manifolds import SO
+
+   manifold = SO(3)
+   model = RiemannianNeuralGas(
+       manifold=manifold,
+       n_prototypes=5,
+       max_iter=50,
+       lr_init=0.3,
+       lr_final=0.01,
+       lambda_final=0.01,
+   )
+   model.fit(X)  # X: (n_samples, 9) flattened 3x3 rotation matrices
+
+   labels = model.predict(X)
+   distances = model.transform(X)
+
 .. note::
 
-   **Riemannian Neural Gas** (Neural Gas on manifolds: SO(n), SPD(n),
-   Grassmannian) is available via ``prosemble.models.RiemannianNeuralGas``.
+   Riemannian Neural Gas uses **Python loops** (not ``lax.scan``) because
+   manifold projection is required after each update step.
+
+For supervised Riemannian models (RiemannianSRNG, RiemannianSMNG,
+RiemannianSLNG, RiemannianSTNG), see :doc:`/guides/riemannian`.
 
 Choosing a Model
 ----------------

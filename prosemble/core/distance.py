@@ -34,19 +34,16 @@ def euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
     """
     Compute pairwise Euclidean distances between rows of X and Y.
 
-    Uses the identity: ||x - y||² = ||x||² + ||y||² - 2⟨x, y⟩
-    This is more efficient than explicit broadcasting for large matrices.
+    Uses the expansion trick: :math:`\|x - y\|^2 = \|x\|^2 + \|y\|^2 - 2 x^T y`.
 
-    Mathematical Formula::
-
-        D[i,j] = ||X[i] - Y[j]|| = sqrt(Σ_k (X[i,k] - Y[j,k])²)
+    Formula: :math:`D_{ij} = \|X_i - Y_j\| = \sqrt{\sum_k (X_{ik} - Y_{jk})^2}`
 
     Args:
         X: Array of shape (n, d) - n samples with d features
         Y: Array of shape (m, d) - m samples with d features
 
     Returns:
-        D: Array of shape (n, m) where ``D[i,j] = ||X[i] - Y[j]||``
+        D: Array of shape (n, m) where :math:`D_{ij} = \|X_i - Y_j\|`
 
     Complexity:
         Time: O(nmd) - single matrix multiplication
@@ -96,16 +93,14 @@ def squared_euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Arra
     More efficient than euclidean_distance_matrix(X, Y)**2 because it avoids
     the sqrt operation entirely.
 
-    Mathematical Formula::
-
-        D²[i,j] = ||X[i] - Y[j]||² = Σ_k (X[i,k] - Y[j,k])²
+    Formula: :math:`D^2_{ij} = \|X_i - Y_j\|^2 = \sum_k (X_{ik} - Y_{jk})^2`
 
     Args:
         X: Array of shape (n, d)
         Y: Array of shape (m, d)
 
     Returns:
-        D²: Array of shape (n, m) where ``D²[i,j] = ||X[i] - Y[j]||²``
+        D: Array of shape (n, m) where :math:`D^2_{ij} = \|X_i - Y_j\|^2`
 
     Complexity:
         Time: O(nmd)
@@ -141,9 +136,7 @@ def manhattan_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
     """
     Compute pairwise Manhattan (L1) distances.
 
-    Mathematical Formula::
-
-        D[i,j] = ||X[i] - Y[j]||₁ = Σ_k |X[i,k] - Y[j,k]|
+    Formula: :math:`D_{ij} = \|X_i - Y_j\|_1 = \sum_k |X_{ik} - Y_{jk}|`
 
     Args:
         X: Array of shape (n, d)
@@ -193,14 +186,12 @@ def lpnorm_distance_matrix(
     """
     Compute pairwise L-p norm distances.
 
-    Mathematical Formula::
-
-        D[i,j] = ||X[i] - Y[j]||_p = (Σ_k |X[i,k] - Y[j,k]|^p)^(1/p)
+    Formula: :math:`D_{ij} = \|X_i - Y_j\|_p = (\sum_k |X_{ik} - Y_{jk}|^p)^{1/p}`
 
     Special Cases:
         p = 1: Manhattan distance
         p = 2: Euclidean distance
-        p = ∞: Chebyshev distance (max absolute difference)
+        p = :math:`\infty`: Chebyshev distance (max absolute difference)
 
     Args:
         X: Array of shape (n, d)
@@ -252,11 +243,8 @@ def omega_distance_matrix(
     """
     Compute distances in projected space using projection matrix Omega.
 
-    Mathematical Formula::
-
-        D[i,j] = ||X[i]Ω - Y[j]Ω||²
-
-    where Ω is a projection matrix that transforms the feature space.
+    Formula: :math:`D_{ij} = \|X_i \Omega - Y_j \Omega\|^2`
+    where :math:`\Omega` is a projection matrix that transforms the feature space.
 
     Args:
         X: Array of shape (n, d)
@@ -264,7 +252,7 @@ def omega_distance_matrix(
         omega: Projection matrix of shape (d, k) where k is projection dimension
 
     Returns:
-        D²: Array of shape (n, m) with squared distances in projected space
+        D: Array of shape (n, m) with squared distances in projected space
 
     Complexity:
         Time: O(ndk + mdk + nmk) = O((n+m)dk + nmk)
@@ -273,7 +261,7 @@ def omega_distance_matrix(
     Use Cases:
         - Dimensionality reduction for distance computation
         - Learning relevance of features (omega learned from data)
-        - Mahalanobis-like distances (when omega = L where Σ = LL^T)
+        - Mahalanobis-like distances (when :math:`\Omega = L` where :math:`\Sigma = LL^T`)
 
     Example:
         >>> X = jnp.array([[1, 2, 3], [4, 5, 6]])
@@ -313,11 +301,8 @@ def lomega_distance_matrix(
     """
     Compute distances using multiple projection matrices (Local Omega).
 
-    Mathematical Formula::
-
-        D[i,j] = Σ_p ||X[i]Ω_p - Y[j]Ω_p||²
-
-    where Ω_p are multiple projection matrices (one per prototype or cluster).
+    Formula: :math:`D_{ij} = \sum_p \|X_i \Omega_p - Y_j \Omega_p\|^2`
+    where :math:`\Omega_p` are multiple projection matrices (one per prototype or cluster).
 
     Args:
         X: Array of shape (n, d) - data points
@@ -326,7 +311,7 @@ def lomega_distance_matrix(
                 Each Y[j] has its own projection matrix omegas[j]
 
     Returns:
-        D²: Array of shape (n, m) with aggregated projected distances
+        D: Array of shape (n, m) with aggregated projected distances
 
     Complexity:
         Time: O(nmdk)
@@ -465,9 +450,7 @@ def gaussian_kernel_matrix(
     """
     Compute Gaussian (RBF) kernel matrix.
 
-    Mathematical Formula::
-
-        K[i,j] = exp(-||X[i] - Y[j]||² / (2σ²))
+    Formula: :math:`K_{ij} = \exp(-\|X_i - Y_j\|^2 / (2\sigma^2))`
 
     The Gaussian kernel maps data to infinite-dimensional Hilbert space,
     enabling non-linear clustering and classification.
@@ -475,12 +458,12 @@ def gaussian_kernel_matrix(
     Args:
         X: Array of shape (n, d)
         Y: Array of shape (m, d)
-        sigma: Bandwidth parameter (σ > 0)
+        sigma: Bandwidth parameter (:math:`\sigma > 0`)
 
     Returns:
-        K: Array of shape (n, m) where K[i,j] ∈ [0, 1]
-           K[i,j] = 1 when X[i] = Y[j]
-           K[i,j] → 0 as ||X[i] - Y[j]|| → ∞
+        K: Array of shape (n, m) where :math:`K_{ij} \in [0, 1]`.
+           :math:`K_{ij} = 1` when :math:`X_i = Y_j`;
+           :math:`K_{ij} \to 0` as :math:`\|X_i - Y_j\| \to \infty`
 
     Complexity:
         Time: O(nmd)
@@ -501,12 +484,9 @@ def gaussian_kernel_matrix(
         True
 
     Kernel Trick:
-        For feature map φ: ℝ^d → ℋ (infinite-dimensional),
-        K(x, y) = ⟨φ(x), φ(y)⟩ in Hilbert space ℋ
-
-        Kernel distance:
-            ||φ(x) - φ(y)||² = K(x,x) - 2K(x,y) + K(y,y)
-                              = 2 - 2K(x,y)  [for normalized kernel]
+        For feature map phi mapping to infinite-dimensional Hilbert space,
+        K(x, y) = <phi(x), phi(y)>. Kernel distance:
+        ||phi(x) - phi(y)||^2 = K(x,x) - 2K(x,y) + K(y,y) = 2 - 2K(x,y) for normalized kernel.
 
     Use Cases:
         - Kernel Fuzzy C-Means (KFCM)
@@ -515,12 +495,12 @@ def gaussian_kernel_matrix(
         - Gaussian Processes
 
     Hyperparameter Tuning:
-        - Small σ: Tight clusters, high sensitivity to noise
-        - Large σ: Smooth clusters, may underfit
-        - Rule of thumb: σ ≈ median(pairwise_distances) / √(2 * n_clusters)
+        - Small :math:`\sigma`: Tight clusters, high sensitivity to noise
+        - Large :math:`\sigma`: Smooth clusters, may underfit
+        - Rule of thumb: :math:`\sigma \approx \text{median}(\text{pairwise\_distances}) / \sqrt{2 \cdot n_\text{clusters}}`
 
     Notes:
-        - sigma is bandwidth, NOT variance (variance = σ²)
+        - sigma is bandwidth, NOT variance (variance = :math:`\sigma^2`)
         - For numerical stability, we use maximum() to ensure non-negative
         - JIT-compiled for GPU acceleration
     """
@@ -547,17 +527,14 @@ def polynomial_kernel_matrix(
     """
     Compute polynomial kernel matrix.
 
-    Mathematical Formula::
-
-        K[i,j] = (⟨X[i], Y[j]⟩ + c)^d
-
-    where d is degree and c is coef0.
+    Formula: :math:`K_{ij} = (X_i^T Y_j + c)^d`
+    where *d* is degree and *c* is coef0.
 
     Args:
         X: Array of shape (n, d)
         Y: Array of shape (m, d)
-        degree: Polynomial degree (d ≥ 1)
-        coef0: Coefficient (c ≥ 0)
+        degree: Polynomial degree (:math:`d \ge 1`)
+        coef0: Coefficient (:math:`c \ge 0`)
 
     Returns:
         K: Array of shape (n, m) with polynomial kernel values
@@ -568,7 +545,7 @@ def polynomial_kernel_matrix(
         >>> K = polynomial_kernel_matrix(X, Y, degree=2, coef0=1.0)
 
     Notes:
-        - degree=1, coef0=0: Linear kernel (⟨x, y⟩)
+        - degree=1, coef0=0: Linear kernel (dot product)
         - Higher degree: More complex decision boundaries
         - coef0: Influences importance of lower vs higher order terms
     """
@@ -728,7 +705,7 @@ def estimate_sigma(X: chex.Array, percentile: float = 50.0) -> float:
         >>> sigma = estimate_sigma(X, percentile=50)
 
     Notes:
-        - Heuristic: sigma = median_distance / √(2 * n_clusters)
+        - Heuristic: :math:`\sigma = \text{median\_distance} / \sqrt{2 \cdot n_\text{clusters}}`
         - For large datasets, use subsample to avoid O(n²) computation
     """
     # For large datasets, subsample

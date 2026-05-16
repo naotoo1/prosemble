@@ -118,3 +118,33 @@ Datasets
 .. automodule:: prosemble.datasets.dataset
    :members:
    :undoc-members:
+   :no-index:
+
+ONNX Export
+-----------
+
+.. automodule:: prosemble.core.onnx_export
+   :members: export_onnx
+   :undoc-members:
+
+Manifolds
+---------
+
+.. automodule:: prosemble.core.manifolds
+   :members:
+   :undoc-members:
+
+Protocols
+---------
+
+.. automodule:: prosemble.core.protocols
+   :members:
+   :undoc-members:
+
+Data Utilities
+--------------
+
+.. automodule:: prosemble.core.data
+   :members:
+   :undoc-members:
+   :no-index:

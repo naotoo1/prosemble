@@ -4,6 +4,7 @@ import json
 from abc import ABC, abstractmethod
 
 from prosemble.core.quantization import MetadataCollectorMixin, QuantizationMixin
+from prosemble.core.serialization import SerializationMixin
 from functools import partial
 from typing import Self
 
@@ -22,7 +23,7 @@ class NotFittedError(ValueError, RuntimeError):
     pass
 
 
-class FuzzyClusteringBase(MetadataCollectorMixin, QuantizationMixin, ABC):
+class FuzzyClusteringBase(SerializationMixin, MetadataCollectorMixin, QuantizationMixin, ABC):
     """Base class providing shared boilerplate for clustering models.
 
     Provides common parameter handling, input validation, fitted-state
@@ -163,6 +164,11 @@ class FuzzyClusteringBase(MetadataCollectorMixin, QuantizationMixin, ABC):
 
         return X
 
+    @property
+    def prototypes_(self):
+        """Alias for ``centroids_`` for ONNX export compatibility."""
+        return self.centroids_
+
     def _check_fitted(self, attr='centroids_'):
         """Raise NotFittedError if model has not been fitted.
 
@@ -190,6 +196,34 @@ class FuzzyClusteringBase(MetadataCollectorMixin, QuantizationMixin, ABC):
     def predict(self, X):
         """Predict cluster labels for new data."""
         ...
+
+    def export_onnx(self, batch_size=1, opset_version=17, path=None):
+        """Export predict function to ONNX format.
+
+        Builds an ONNX graph that computes:
+        ``predictions = argmin(distance(X, centroids))``.
+
+        Parameters
+        ----------
+        batch_size : int
+            Fixed input batch size. Use ``-1`` for dynamic batch.
+        opset_version : int
+            ONNX opset version. Default: 17.
+        path : str, optional
+            If provided, save ONNX model to this file path.
+
+        Returns
+        -------
+        onnx.ModelProto
+            The exported ONNX model.
+
+        Raises
+        ------
+        NotImplementedError
+            If the model uses kernel distances.
+        """
+        from prosemble.core.onnx_export import export_onnx
+        return export_onnx(self, batch_size, opset_version, path)
 
     @abstractmethod
     def _build_info(self, state, iteration) -> dict:
@@ -285,107 +319,19 @@ class FuzzyClusteringBase(MetadataCollectorMixin, QuantizationMixin, ABC):
             if name in arrays:
                 setattr(self, name, jnp.asarray(arrays[name]))
 
-    def save(self, path, quantize=None):
-        """Save fitted model to an NPZ file.
+    # --- SerializationMixin hooks ---
 
-        Parameters
-        ----------
-        path : str
-            File path (`.npz` extension added if not present)
-        quantize : str, optional
-            Quantize before saving: 'float16', 'bfloat16', or 'int8'.
-            Model in memory is unchanged; only the saved file is quantized.
-        """
-        self._check_fitted()
-
-        # Save originals and temporarily quantize if needed
-        originals = {}
-        if quantize is not None and not self.is_quantized:
-            for attr in self._get_quantizable_attrs():
-                originals[attr] = getattr(self, attr)
-            self.quantize(quantize)
-
-        arrays = self._get_fitted_arrays()
-        hyperparams = self._get_hyperparams()
-
-        metadata = {
-            'class_name': type(self).__name__,
-            'module': type(self).__module__,
-            'hyperparams': hyperparams,
-            'fitted_array_names': list(arrays.keys()),
+    def _get_save_metadata(self):
+        return {
             'n_iter_': int(self.n_iter_) if self.n_iter_ is not None else None,
             'objective_': float(self.objective_) if self.objective_ is not None else None,
-            'quantized_dtype': self.quantized_dtype,
         }
 
-        if self.quantized_dtype == 'int8' and hasattr(self, '_int8_scales'):
-            for attr, scale in self._int8_scales.items():
-                arrays[f'__scale__{attr}'] = np.asarray(scale)
-            metadata['int8_scale_keys'] = list(self._int8_scales.keys())
-
-        save_dict = {'__metadata__': np.array(json.dumps(metadata))}
-        save_dict.update(arrays)
-
-        np.savez_compressed(path, **save_dict)
-
-        # Restore originals exactly (no precision loss)
-        if originals:
-            for attr, val in originals.items():
-                setattr(self, attr, val)
-            self._quantized_dtype = None
-            if hasattr(self, '_int8_scales'):
-                self._int8_scales = {}
-
-    @classmethod
-    def load(cls, path):
-        """Load a fitted model from an NPZ file.
-
-        Parameters
-        ----------
-        path : str
-            Path to the `.npz` file
-
-        Returns
-        -------
-        model : FuzzyClusteringBase
-            Reconstructed fitted model
-        """
-        from prosemble.models import _MODEL_REGISTRY
-
-        if not path.endswith('.npz'):
-            path = path + '.npz'
-
-        data = np.load(path, allow_pickle=False)
-        metadata = json.loads(str(data['__metadata__']))
-
-        class_name = metadata['class_name']
-        if class_name not in _MODEL_REGISTRY:
-            raise ValueError(f"Unknown model class: {class_name}")
-
-        model_cls = _MODEL_REGISTRY[class_name]
-        hyperparams = metadata['hyperparams']
-
-        model = model_cls(**hyperparams)
-
-        arrays = {name: data[name] for name in metadata['fitted_array_names']}
-        model._set_fitted_arrays(arrays)
-
+    def _restore_metadata(self, metadata):
         if metadata.get('n_iter_') is not None:
-            model.n_iter_ = metadata['n_iter_']
+            self.n_iter_ = metadata['n_iter_']
         if metadata.get('objective_') is not None:
-            model.objective_ = metadata['objective_']
-
-        q_dtype = metadata.get('quantized_dtype')
-        if q_dtype:
-            model._quantized_dtype = q_dtype
-            if q_dtype == 'int8':
-                model._int8_scales = {}
-                for attr in metadata.get('int8_scale_keys', []):
-                    scale_key = f'__scale__{attr}'
-                    if scale_key in data:
-                        model._int8_scales[attr] = jnp.asarray(data[scale_key])
-
-        return model
+            self.objective_ = metadata['objective_']
 
     # --- Patience-based early stopping ---
 

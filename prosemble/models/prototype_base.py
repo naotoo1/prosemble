@@ -23,6 +23,7 @@ from functools import partial
 
 from prosemble.models.base import NotFittedError
 from prosemble.core.quantization import MetadataCollectorMixin, QuantizationMixin
+from prosemble.core.serialization import SerializationMixin
 from prosemble.core.distance import squared_euclidean_distance_matrix
 from prosemble.core.competitions import wtac
 from prosemble.core.pooling import stratified_min_pooling
@@ -160,7 +161,7 @@ class ScanTrainState(NamedTuple):
     converged: jnp.ndarray        # boolean convergence flag
 
 
-class SupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC):
+class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, QuantizationMixin, ABC):
     """Base class for supervised prototype-based learning models.
 
     Provides the fit/predict/save/load infrastructure. Subclasses implement:
@@ -1492,6 +1493,31 @@ class SupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC):
         )
         return jax_export.export(predict_fn)(input_spec)
 
+    def export_onnx(self, batch_size=1, opset_version=17, path=None):
+        """Export predict function to ONNX format.
+
+        Parameters
+        ----------
+        batch_size : int
+            Fixed input batch size. Use -1 for dynamic batch.
+        opset_version : int
+            ONNX opset version. Default: 17.
+        path : str, optional
+            If provided, save ONNX model to this file path.
+
+        Returns
+        -------
+        onnx.ModelProto
+            The exported ONNX model.
+
+        Raises
+        ------
+        NotImplementedError
+            If the model's distance function is not supported.
+        """
+        from prosemble.core.onnx_export import export_onnx
+        return export_onnx(self, batch_size, opset_version, path)
+
     def _check_fitted(self):
         if self.prototypes_ is None:
             raise NotFittedError("Model not fitted yet. Call fit() first.")
@@ -1541,126 +1567,46 @@ class SupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC):
             if name in arrays:
                 setattr(self, name, jnp.asarray(arrays[name]))
 
-    def save(self, path, quantize=None):
-        """Save fitted model to NPZ file.
+    # --- SerializationMixin hooks ---
 
-        Parameters
-        ----------
-        path : str
-            File path (.npz extension added if not present).
-        quantize : str, optional
-            Quantize before saving: 'float16', 'bfloat16', or 'int8'.
-            Model in memory is unchanged; only the saved file is quantized.
-        """
-        self._check_fitted()
-
-        # Save originals and temporarily quantize if needed
-        originals = {}
-        if quantize is not None and not self.is_quantized:
-            for attr in self._get_quantizable_attrs():
-                originals[attr] = getattr(self, attr)
-            self.quantize(quantize)
-
-        arrays = self._get_fitted_arrays()
-        hyperparams = self._get_hyperparams()
-
-        metadata = {
-            'class_name': type(self).__name__,
-            'module': type(self).__module__,
-            'hyperparams': hyperparams,
-            'fitted_array_names': list(arrays.keys()),
+    def _get_save_metadata(self):
+        return {
             'n_iter_': self.n_iter_,
             'loss_': self.loss_,
             'n_classes_': self.n_classes_,
-            'quantized_dtype': self.quantized_dtype,
         }
 
-        # Store int8 scale factors
-        if self.quantized_dtype == 'int8' and hasattr(self, '_int8_scales'):
-            for attr, scale in self._int8_scales.items():
-                arrays[f'__scale__{attr}'] = np.asarray(scale)
-            metadata['int8_scale_keys'] = list(self._int8_scales.keys())
+    def _restore_metadata(self, metadata):
+        self.n_iter_ = metadata.get('n_iter_')
+        self.loss_ = metadata.get('loss_')
+        self.n_classes_ = metadata.get('n_classes_')
+        if self.prototype_labels_ is not None:
+            self.classes_ = jnp.unique(self.prototype_labels_)
 
-        # Serialize optimizer state if available
+    def _save_optimizer_state(self, arrays, metadata):
         if hasattr(self, '_opt_state') and self._opt_state is not None:
             opt_leaves = jax.tree.leaves(self._opt_state)
             for i, leaf in enumerate(opt_leaves):
                 arrays[f'__opt_state_{i}__'] = np.asarray(leaf)
             metadata['opt_state_n_leaves'] = len(opt_leaves)
 
-        save_dict = {'__metadata__': np.array(json.dumps(metadata))}
-        save_dict.update(arrays)
-        np.savez_compressed(path, **save_dict)
-
-        # Restore originals exactly (no precision loss)
-        if originals:
-            for attr, val in originals.items():
-                setattr(self, attr, val)
-            self._quantized_dtype = None
-            if hasattr(self, '_int8_scales'):
-                self._int8_scales = {}
-
-    @classmethod
-    def load(cls, path):
-        """Load a fitted model from NPZ file."""
-        from prosemble.models import _MODEL_REGISTRY
-
-        if not path.endswith('.npz'):
-            path = path + '.npz'
-
-        data = np.load(path, allow_pickle=False)
-        metadata = json.loads(str(data['__metadata__']))
-
-        class_name = metadata['class_name']
-        if class_name not in _MODEL_REGISTRY:
-            raise ValueError(f"Unknown model class: {class_name}")
-
-        model_cls = _MODEL_REGISTRY[class_name]
-        hyperparams = metadata['hyperparams']
-        model = model_cls(**hyperparams)
-
-        arrays = {name: data[name] for name in metadata['fitted_array_names']}
-        model._set_fitted_arrays(arrays)
-
-        model.n_iter_ = metadata.get('n_iter_')
-        model.loss_ = metadata.get('loss_')
-        model.n_classes_ = metadata.get('n_classes_')
-        if model.prototype_labels_ is not None:
-            model.classes_ = jnp.unique(model.prototype_labels_)
-
-        # Restore quantization state
-        q_dtype = metadata.get('quantized_dtype')
-        if q_dtype:
-            model._quantized_dtype = q_dtype
-            if q_dtype == 'int8':
-                model._int8_scales = {}
-                for attr in metadata.get('int8_scale_keys', []):
-                    scale_key = f'__scale__{attr}'
-                    if scale_key in data:
-                        model._int8_scales[attr] = jnp.asarray(data[scale_key])
-
-        # Restore optimizer state if saved
+    def _load_optimizer_state(self, data, metadata):
         n_leaves = metadata.get('opt_state_n_leaves')
         if n_leaves is not None and n_leaves > 0:
             saved_leaves = [
                 jnp.asarray(data[f'__opt_state_{i}__'])
                 for i in range(n_leaves)
             ]
-            # Get tree structure from a fresh init, then replace leaves
-            params = model._get_resume_params({'prototypes': model.prototypes_})
-            optimizer = model._optimizer
-            # Apply freeze_params masking to match the optimizer used during training
-            if model.freeze_params is not None:
-                freeze_set = set(model.freeze_params)
+            params = self._get_resume_params({'prototypes': self.prototypes_})
+            optimizer = self._optimizer
+            if self.freeze_params is not None:
+                freeze_set = set(self.freeze_params)
                 mask = {k: (k not in freeze_set) for k in params}
                 optimizer = optax.masked(optimizer, mask)
             skeleton = optimizer.init(params)
             treedef = jax.tree.structure(skeleton)
             if len(saved_leaves) == len(jax.tree.leaves(skeleton)):
-                model._opt_state = jax.tree.unflatten(treedef, saved_leaves)
-            # else: leaf count mismatch, skip restore (fresh init on next fit)
-
-        return model
+                self._opt_state = jax.tree.unflatten(treedef, saved_leaves)
 
     # --- Callback notifications ---
 
@@ -1679,7 +1625,7 @@ class SupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC):
 
 # --- Unsupervised Base ---
 
-class UnsupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC):
+class UnsupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, QuantizationMixin, ABC):
     """Base class for unsupervised prototype-based topology models.
 
     For NeuralGas, GrowingNeuralGas, KohonenSOM.
@@ -1827,6 +1773,25 @@ class UnsupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC)
         )
         return jax_export.export(predict_fn)(input_spec)
 
+    def export_onnx(self, batch_size=1, opset_version=17, path=None):
+        """Export predict function to ONNX format.
+
+        Parameters
+        ----------
+        batch_size : int
+            Fixed input batch size. Use -1 for dynamic batch.
+        opset_version : int
+            ONNX opset version. Default: 17.
+        path : str, optional
+            If provided, save ONNX model to this file path.
+
+        Returns
+        -------
+        onnx.ModelProto
+        """
+        from prosemble.core.onnx_export import export_onnx
+        return export_onnx(self, batch_size, opset_version, path)
+
     # --- Serialization ---
 
     def _get_hyperparams(self):
@@ -1863,90 +1828,17 @@ class UnsupervisedPrototypeModel(MetadataCollectorMixin, QuantizationMixin, ABC)
             if name in arrays:
                 setattr(self, name, jnp.asarray(arrays[name]))
 
-    def save(self, path, quantize=None):
-        """Save fitted model to NPZ file.
+    # --- SerializationMixin hooks ---
 
-        Parameters
-        ----------
-        path : str
-            File path (.npz extension added if not present).
-        quantize : str, optional
-            Quantize before saving: 'float16', 'bfloat16', or 'int8'.
-            Model in memory is unchanged; only the saved file is quantized.
-        """
-        self._check_fitted()
-
-        originals = {}
-        if quantize is not None and not self.is_quantized:
-            for attr in self._get_quantizable_attrs():
-                originals[attr] = getattr(self, attr)
-            self.quantize(quantize)
-
-        arrays = self._get_fitted_arrays()
-        hyperparams = self._get_hyperparams()
-
-        metadata = {
-            'class_name': type(self).__name__,
-            'module': type(self).__module__,
-            'hyperparams': hyperparams,
-            'fitted_array_names': list(arrays.keys()),
+    def _get_save_metadata(self):
+        return {
             'n_iter_': self.n_iter_,
             'loss_': self.loss_,
-            'quantized_dtype': self.quantized_dtype,
         }
 
-        if self.quantized_dtype == 'int8' and hasattr(self, '_int8_scales'):
-            for attr, scale in self._int8_scales.items():
-                arrays[f'__scale__{attr}'] = np.asarray(scale)
-            metadata['int8_scale_keys'] = list(self._int8_scales.keys())
-
-        save_dict = {'__metadata__': np.array(json.dumps(metadata))}
-        save_dict.update(arrays)
-        np.savez_compressed(path, **save_dict)
-
-        if originals:
-            for attr, val in originals.items():
-                setattr(self, attr, val)
-            self._quantized_dtype = None
-            if hasattr(self, '_int8_scales'):
-                self._int8_scales = {}
-
-    @classmethod
-    def load(cls, path):
-        """Load a fitted model from NPZ file."""
-        from prosemble.models import _MODEL_REGISTRY
-
-        if not path.endswith('.npz'):
-            path = path + '.npz'
-
-        data = np.load(path, allow_pickle=False)
-        metadata = json.loads(str(data['__metadata__']))
-
-        class_name = metadata['class_name']
-        if class_name not in _MODEL_REGISTRY:
-            raise ValueError(f"Unknown model class: {class_name}")
-
-        model_cls = _MODEL_REGISTRY[class_name]
-        hyperparams = metadata['hyperparams']
-        model = model_cls(**hyperparams)
-
-        arrays = {name: data[name] for name in metadata['fitted_array_names']}
-        model._set_fitted_arrays(arrays)
-
-        model.n_iter_ = metadata.get('n_iter_')
-        model.loss_ = metadata.get('loss_')
-
-        q_dtype = metadata.get('quantized_dtype')
-        if q_dtype:
-            model._quantized_dtype = q_dtype
-            if q_dtype == 'int8':
-                model._int8_scales = {}
-                for attr in metadata.get('int8_scale_keys', []):
-                    scale_key = f'__scale__{attr}'
-                    if scale_key in data:
-                        model._int8_scales[attr] = jnp.asarray(data[scale_key])
-
-        return model
+    def _restore_metadata(self, metadata):
+        self.n_iter_ = metadata.get('n_iter_')
+        self.loss_ = metadata.get('loss_')
 
     # --- Callback notifications ---
 

@@ -167,8 +167,10 @@ def lvq21_loss(distances, target_labels, prototype_labels):
 def _class_probabilities(distances, target_labels, prototype_labels, sigma):
     """Compute Gaussian mixture class probabilities.
 
-    p(k|x) = exp(-d²/2σ²) / Σexp(-d²/2σ²)
-    P(class|x) = Σ_{k∈class} p(k|x)
+    .. math::
+
+        p(k|x) = \frac{\exp(-d^2 / 2\sigma^2)}{\sum \exp(-d^2 / 2\sigma^2)}, \quad
+        P(\text{class}|x) = \sum_{k \in \text{class}} p(k|x)
 
     Returns
     -------
@@ -246,13 +248,15 @@ def ng_rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0, gamma=1
     """RSLVQ loss with Neural Gas rank-based neighborhood cooperation.
 
     Combines Gaussian mixture prototype probabilities with NG rank weights
-    to create a neighborhood-cooperative probabilistic assignment:
+    to create a neighborhood-cooperative probabilistic assignment.
 
-        p(k|x) = exp(-d_k / 2σ²) / Σ exp(-d_j / 2σ²)   [Gaussian]
-        h_k = exp(-rank_k / γ) / Σ exp(-rank_j / γ)      [NG weights]
-        w_k = p(k|x) · h_k / Σ p(j|x) · h_j             [combined]
+    Gaussian: :math:`p(k|x) = \exp(-d_k / 2\sigma^2) / \sum_j \exp(-d_j / 2\sigma^2)`
 
-    The loss is -log(Σ w_k for correct class / Σ w_k for all).
+    NG weights: :math:`h_k = \exp(-\text{rank}_k / \gamma) / \sum_j \exp(-\text{rank}_j / \gamma)`
+
+    Combined: :math:`w_k = p(k|x) \cdot h_k / \sum_j p(j|x) \cdot h_j`
+
+    The loss is :math:`-\log(\sum_{k \in \text{correct}} w_k)`.
 
     Parameters
     ----------
@@ -284,7 +288,7 @@ def ng_rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0, gamma=1
     h = jnp.exp(-ranks / (gamma + 1e-10))
     h = h / (jnp.sum(h, axis=1, keepdims=True) + 1e-10)
 
-    # 3. Combined weights (Gaussian × NG), renormalized
+    # 3. Combined weights (Gaussian * NG), renormalized
     weighted_probs = h * probs
     weighted_probs = weighted_probs / (jnp.sum(weighted_probs, axis=1, keepdims=True) + 1e-10)
 
@@ -357,8 +361,10 @@ def margin_loss(y_pred, y_true_one_hot, margin=0.3):
 def neural_gas_energy(distances, lam):
     """Neural Gas energy function.
 
-    E = Σ_k h(rank_k, λ) * d(x, w_k)
-    h(rank, λ) = exp(-rank / λ)
+    .. math::
+
+        E = \sum_k h(\text{rank}_k, \lambda) \cdot d(x, w_k), \quad
+        h(\text{rank}, \lambda) = \exp(-\text{rank} / \lambda)
 
     Parameters
     ----------

@@ -14,6 +14,8 @@ JIT-compiled and run on CPU, GPU, and TPU.
    guides/one_class
    guides/clustering
    guides/topology
+   guides/riemannian
+   guides/onnx
    guides/advanced
    api/models
    api/core

@@ -15,7 +15,7 @@ def gaussian_kernel(x: chex.Array, y: chex.Array, sigma: float) -> chex.Array:
     """
     Compute Gaussian (RBF) kernel between two vectors.
 
-    K(x, y) = exp(-||x - y||² / (2σ²))
+    :math:`K(x, y) = \exp(-\|x - y\|^2 / (2\sigma^2))`
 
     Args:
         x: First vector, shape (n_features,)
@@ -50,7 +50,7 @@ def batch_gaussian_kernel(
     X_sq = jnp.sum(X ** 2, axis=1, keepdims=True)  # (n_samples, 1)
     Y_sq = jnp.sum(Y ** 2, axis=1, keepdims=True)  # (m_samples, 1)
 
-    # ||x - y||² = ||x||² + ||y||² - 2⟨x, y⟩
+    # ||x - y||^2 = ||x||^2 + ||y||^2 - 2<x, y>
     sq_distances = X_sq + Y_sq.T - 2.0 * (X @ Y.T)  # (n_samples, m_samples)
 
     # Ensure non-negative (numerical stability)
@@ -67,12 +67,10 @@ def kernel_distance_squared(
     X: chex.Array, Y: chex.Array, sigma: float
 ) -> chex.Array:
     """
-    Compute squared distance in feature space: ||φ(x) - φ(y)||²
+    Compute squared distance in feature space.
 
-    For Gaussian kernel::
-
-        ||φ(x) - φ(y)||² = K(x,x) + K(y,y) - 2K(x,y)
-                          = 2(1 - K(x,y))  [since K(x,x) = 1]
+    For Gaussian kernel: ||phi(x) - phi(y)||^2 = K(x,x) + K(y,y) - 2K(x,y) = 2(1 - K(x,y)),
+    since K(x,x) = 1.
 
     Args:
         X: First set of vectors, shape (n_samples, n_features)
@@ -91,7 +89,7 @@ def kernel_distance(
     X: chex.Array, Y: chex.Array, sigma: float
 ) -> chex.Array:
     """
-    Compute distance in feature space: ||φ(x) - φ(y)||
+    Compute distance in feature space.
 
     Args:
         X: First set of vectors, shape (n_samples, n_features)

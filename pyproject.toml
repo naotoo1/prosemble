@@ -123,6 +123,10 @@ all = [
 export = [
     "flatbuffers>=25.12.19",
 ]
+onnx = [
+    "onnx>=1.21.0",
+    "onnxruntime>=1.26.0",
+]
 
 [build-system]
 requires = ["setuptools>=64", "setuptools_scm>=8"]

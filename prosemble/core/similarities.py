@@ -91,9 +91,11 @@ def rank_scaled_gaussian(distances, lambd=1.0):
     (lower rank) receive a stronger signal, while farther ones are
     exponentially suppressed.
 
-        s(d, r) = exp(-exp(-r / λ) * d)
+    .. math::
 
-    where r is the rank of each distance (0 = closest).
+        s(d, r) = \exp(-\exp(-r / \lambda) \cdot d)
+
+    where *r* is the rank of each distance (0 = closest).
 
     Parameters
     ----------

@@ -349,6 +349,29 @@ Topology-Preserving Models
    :members: fit, predict
    :undoc-members:
 
+Riemannian Models
+-----------------
+
+.. autoclass:: prosemble.models.RiemannianSRNG
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianSMNG
+   :members: fit, predict, relevance_matrix
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianSLNG
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianSTNG
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianNeuralGas
+   :members: fit, predict, transform
+   :undoc-members:
+
 Utility Models
 --------------
 

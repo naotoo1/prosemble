@@ -58,6 +58,12 @@ try:
     from .image_lvq import ImageGLVQ, ImageGMLVQ, ImageGTLVQ
     from .image_cbc import ImageCBC
 
+    # Supervised Riemannian Neural Gas
+    from .riemannian_srng import RiemannianSRNG
+    from .riemannian_smng import RiemannianSMNG
+    from .riemannian_slng import RiemannianSLNG
+    from .riemannian_stng import RiemannianSTNG
+
     # One-class models
     from .oc_glvq import OCGLVQ
     from .oc_grlvq import OCGRLVQ
@@ -84,6 +90,7 @@ try:
     from .growing_neural_gas import GrowingNeuralGas
     from .kohonen_som import KohonenSOM
     from .heskes_som import HeskesSOM
+    from .riemannian_neural_gas import RiemannianNeuralGas
 
     _MODEL_REGISTRY = {
         # Unsupervised clustering
@@ -107,6 +114,9 @@ try:
         'SiameseGTLVQ': SiameseGTLVQ,
         'ImageGLVQ': ImageGLVQ, 'ImageGMLVQ': ImageGMLVQ,
         'ImageGTLVQ': ImageGTLVQ, 'ImageCBC': ImageCBC,
+        # Supervised Riemannian NG
+        'RiemannianSRNG': RiemannianSRNG, 'RiemannianSMNG': RiemannianSMNG,
+        'RiemannianSLNG': RiemannianSLNG, 'RiemannianSTNG': RiemannianSTNG,
         # One-class GLVQ
         'OCGLVQ': OCGLVQ, 'OCGRLVQ': OCGRLVQ, 'OCGMLVQ': OCGMLVQ,
         'OCLGMLVQ': OCLGMLVQ, 'OCGTLVQ': OCGTLVQ,
@@ -123,6 +133,7 @@ try:
         # Unsupervised topology
         'NeuralGas': NeuralGas, 'GrowingNeuralGas': GrowingNeuralGas,
         'KohonenSOM': KohonenSOM, 'HeskesSOM': HeskesSOM,
+        'RiemannianNeuralGas': RiemannianNeuralGas,
     }
 
     JAX_AVAILABLE = True
@@ -156,6 +167,8 @@ __all__ = [
     'LVQMLN', 'PLVQ',
     'SiameseGLVQ', 'SiameseGMLVQ', 'SiameseGTLVQ',
     'ImageGLVQ', 'ImageGMLVQ', 'ImageGTLVQ', 'ImageCBC',
+    # Supervised Riemannian NG
+    'RiemannianSRNG', 'RiemannianSMNG', 'RiemannianSLNG', 'RiemannianSTNG',
     # One-class GLVQ
     'OCGLVQ', 'OCGRLVQ', 'OCGMLVQ', 'OCLGMLVQ', 'OCGTLVQ',
     'OCGLVQ_NG', 'OCGRLVQ_NG', 'OCGMLVQ_NG', 'OCLGMLVQ_NG', 'OCGTLVQ_NG',
@@ -166,6 +179,7 @@ __all__ = [
     'SVQOCC', 'SVQOCC_R', 'SVQOCC_M', 'SVQOCC_LM', 'SVQOCC_T',
     # Unsupervised topology
     'NeuralGas', 'GrowingNeuralGas', 'KohonenSOM', 'HeskesSOM',
+    'RiemannianNeuralGas',
     # Status
     'JAX_AVAILABLE',
 ]

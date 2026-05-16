@@ -172,12 +172,12 @@ class TestKernelFuzzyRejection:
 
 class TestUnsupportedModels:
 
-    def test_riemannian_raises(self):
-        from prosemble.core.manifolds import SO
+    def test_riemannian_spd_raises(self):
+        from prosemble.core.manifolds import SPD
         from prosemble.models import RiemannianSRNG
-        model = RiemannianSRNG(manifold=SO(3), n_prototypes_per_class=1, max_iter=1)
+        model = RiemannianSRNG(manifold=SPD(3), n_prototypes_per_class=1, max_iter=1)
         from prosemble.core.onnx_export import _check_model_exportable
-        with pytest.raises(NotImplementedError, match="Riemannian"):
+        with pytest.raises(NotImplementedError, match="SPD"):
             _check_model_exportable(model)
 
     def test_riemannian_ng_raises(self):
@@ -1070,3 +1070,261 @@ class TestImageCBCExport:
         jax_preds = np.asarray(model.predict(X))
         ort_preds = _onnx_predict(model, X)
         npt.assert_array_equal(jax_preds, ort_preds)
+
+
+# ---------------------------------------------------------------------------
+# Riemannian model ONNX export tests
+# ---------------------------------------------------------------------------
+
+def _make_so3_data(n=30, n_classes=3, seed=42):
+    """Generate random rotation matrices on SO(3) with labels."""
+    from scipy.spatial.transform import Rotation
+    np.random.seed(seed)
+    rotations = Rotation.random(n, random_state=seed).as_matrix()
+    X = jnp.array(rotations.reshape(n, 9).astype(np.float32))
+    y = jnp.array(np.tile(np.arange(n_classes), n // n_classes))
+    return X, y
+
+
+def _make_grassmannian_data(n=30, dim_n=4, dim_k=2, n_classes=3, seed=42):
+    """Generate random points on Gr(n,k) with labels."""
+    np.random.seed(seed)
+    points = []
+    for _ in range(n):
+        A = np.random.randn(dim_n, dim_k).astype(np.float32)
+        Q, _ = np.linalg.qr(A)
+        points.append(Q[:, :dim_k].flatten())
+    X = jnp.array(np.array(points))
+    y = jnp.array(np.tile(np.arange(n_classes), n // n_classes))
+    return X, y
+
+
+class TestRiemannianSRNGSO:
+    """RiemannianSRNG + SO(n): chordal distance."""
+
+    @pytest.fixture
+    def fitted_model(self):
+        from prosemble.models import RiemannianSRNG
+        from prosemble.core.manifolds import SO
+        X, y = _make_so3_data()
+        model = RiemannianSRNG(
+            manifold=SO(3), n_prototypes_per_class=1, max_iter=3,
+            random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_export_succeeds(self, fitted_model):
+        model, X = fitted_model
+        onnx_model = model.export_onnx(batch_size=X.shape[0])
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_model):
+        model, X = fitted_model
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestRiemannianSMNGSO:
+    """RiemannianSMNG + SO(n): tangent-space global omega."""
+
+    @pytest.fixture
+    def fitted_model(self):
+        from prosemble.models import RiemannianSMNG
+        from prosemble.core.manifolds import SO
+        X, y = _make_so3_data()
+        model = RiemannianSMNG(
+            manifold=SO(3), latent_dim=5, n_prototypes_per_class=1,
+            max_iter=3, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_export_succeeds(self, fitted_model):
+        model, X = fitted_model
+        onnx_model = model.export_onnx(batch_size=X.shape[0])
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_model):
+        model, X = fitted_model
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestRiemannianSMNGGrassmannian:
+    """RiemannianSMNG + Grassmannian: tangent-space global omega."""
+
+    @pytest.fixture
+    def fitted_model(self):
+        from prosemble.models import RiemannianSMNG
+        from prosemble.core.manifolds import Grassmannian
+        X, y = _make_grassmannian_data()
+        model = RiemannianSMNG(
+            manifold=Grassmannian(4, 2), latent_dim=4,
+            n_prototypes_per_class=1, max_iter=3, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_export_succeeds(self, fitted_model):
+        model, X = fitted_model
+        onnx_model = model.export_onnx(batch_size=X.shape[0])
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_model):
+        model, X = fitted_model
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestRiemannianSLNGSO:
+    """RiemannianSLNG + SO(n): per-prototype local omega."""
+
+    @pytest.fixture
+    def fitted_model(self):
+        from prosemble.models import RiemannianSLNG
+        from prosemble.core.manifolds import SO
+        X, y = _make_so3_data()
+        model = RiemannianSLNG(
+            manifold=SO(3), latent_dim=5, n_prototypes_per_class=1,
+            max_iter=3, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_export_succeeds(self, fitted_model):
+        model, X = fitted_model
+        onnx_model = model.export_onnx(batch_size=X.shape[0])
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_model):
+        model, X = fitted_model
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestRiemannianSLNGGrassmannian:
+    """RiemannianSLNG + Grassmannian: per-prototype local omega."""
+
+    @pytest.fixture
+    def fitted_model(self):
+        from prosemble.models import RiemannianSLNG
+        from prosemble.core.manifolds import Grassmannian
+        X, y = _make_grassmannian_data()
+        model = RiemannianSLNG(
+            manifold=Grassmannian(4, 2), latent_dim=4,
+            n_prototypes_per_class=1, max_iter=3, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_export_succeeds(self, fitted_model):
+        model, X = fitted_model
+        onnx_model = model.export_onnx(batch_size=X.shape[0])
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_model):
+        model, X = fitted_model
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestRiemannianSTNGSO:
+    """RiemannianSTNG + SO(n): tangent subspace."""
+
+    @pytest.fixture
+    def fitted_model(self):
+        from prosemble.models import RiemannianSTNG
+        from prosemble.core.manifolds import SO
+        X, y = _make_so3_data()
+        model = RiemannianSTNG(
+            manifold=SO(3), subspace_dim=4, n_prototypes_per_class=1,
+            max_iter=3, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_export_succeeds(self, fitted_model):
+        model, X = fitted_model
+        onnx_model = model.export_onnx(batch_size=X.shape[0])
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_model):
+        model, X = fitted_model
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestRiemannianSTNGGrassmannian:
+    """RiemannianSTNG + Grassmannian: tangent subspace."""
+
+    @pytest.fixture
+    def fitted_model(self):
+        from prosemble.models import RiemannianSTNG
+        from prosemble.core.manifolds import Grassmannian
+        X, y = _make_grassmannian_data()
+        model = RiemannianSTNG(
+            manifold=Grassmannian(4, 2), subspace_dim=4,
+            n_prototypes_per_class=1, max_iter=3, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_export_succeeds(self, fitted_model):
+        model, X = fitted_model
+        onnx_model = model.export_onnx(batch_size=X.shape[0])
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_model):
+        model, X = fitted_model
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestRiemannianONNXRejections:
+    """Models/manifolds that should raise NotImplementedError."""
+
+    def test_srng_spd_raises(self):
+        from prosemble.models import RiemannianSRNG
+        from prosemble.core.manifolds import SPD
+        X, y = _make_supervised_data(30, 9)
+        model = RiemannianSRNG(
+            manifold=SPD(3), n_prototypes_per_class=1, max_iter=3,
+            random_seed=42,
+        )
+        model.fit(X, y)
+        with pytest.raises(NotImplementedError, match="SPD"):
+            model.export_onnx()
+
+    def test_srng_grassmannian_raises(self):
+        from prosemble.models import RiemannianSRNG
+        from prosemble.core.manifolds import Grassmannian
+        X, y = _make_grassmannian_data()
+        model = RiemannianSRNG(
+            manifold=Grassmannian(4, 2), n_prototypes_per_class=1,
+            max_iter=3, random_seed=42,
+        )
+        model.fit(X, y)
+        with pytest.raises(NotImplementedError, match="Grassmannian"):
+            model.export_onnx()
+
+    def test_riemannian_neural_gas_raises(self):
+        from prosemble.models import RiemannianNeuralGas
+        from prosemble.core.manifolds import SO
+        from scipy.spatial.transform import Rotation
+        np.random.seed(42)
+        X = Rotation.random(20, random_state=42).as_matrix().astype(np.float32)
+        # RiemannianNeuralGas expects (n_samples, n, n) shape
+        model = RiemannianNeuralGas(
+            manifold=SO(3), n_prototypes=3, max_iter=2, random_seed=42,
+        )
+        model.fit(X)
+        with pytest.raises(NotImplementedError, match="RiemannianNeuralGas"):
+            model.export_onnx()

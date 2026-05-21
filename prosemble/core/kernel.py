@@ -69,8 +69,8 @@ def kernel_distance_squared(
     """
     Compute squared distance in feature space.
 
-    For Gaussian kernel: ||phi(x) - phi(y)||^2 = K(x,x) + K(y,y) - 2K(x,y) = 2(1 - K(x,y)),
-    since K(x,x) = 1.
+    For Gaussian kernel: :math:`\|\phi(x) - \phi(y)\|^2 = K(x,x) + K(y,y) - 2K(x,y) = 2(1 - K(x,y))`,
+    since :math:`K(x,x) = 1`.
 
     Args:
         X: First set of vectors, shape (n_samples, n_features)

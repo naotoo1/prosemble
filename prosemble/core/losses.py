@@ -74,7 +74,7 @@ def glvq_loss(distances, target_labels, prototype_labels,
               margin=0.0):
     """Generalized LVQ loss.
 
-    mu_i = (d+_i - d-_i) / (d+_i + d-_i)
+    :math:`\mu_i = \frac{d^+_i - d^-_i}{d^+_i + d^-_i}`
 
     Parameters
     ----------
@@ -98,7 +98,7 @@ def glvq_loss_with_transfer(distances, target_labels, prototype_labels,
                             transfer_fn=identity, margin=0.0, beta=10.0):
     """GLVQ loss with configurable transfer function.
 
-    loss = mean(transfer(mu + margin, beta))
+    :math:`\text{loss} = \text{mean}(f(\mu + \text{margin}, \beta))`
 
     Parameters
     ----------
@@ -198,7 +198,7 @@ def _class_probabilities(distances, target_labels, prototype_labels, sigma):
 def nllr_loss(distances, target_labels, prototype_labels, sigma=1.0):
     """Negative Log-Likelihood Ratio loss (for SLVQ).
 
-    loss = -log(P(correct) / P(wrong))
+    :math:`\text{loss} = -\log(P(\text{correct}) / P(\text{wrong}))`
 
     Parameters
     ----------
@@ -223,7 +223,7 @@ def nllr_loss(distances, target_labels, prototype_labels, sigma=1.0):
 def rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0):
     """Robust Soft LVQ loss (for RSLVQ).
 
-    loss = -log(P(correct) / P(all))
+    :math:`\text{loss} = -\log(P(\text{correct}) / P(\text{all}))`
 
     Parameters
     ----------
@@ -336,7 +336,7 @@ def cross_entropy_lvq_loss(distances, target_labels, prototype_labels, n_classes
 def margin_loss(y_pred, y_true_one_hot, margin=0.3):
     """Margin loss for CBC.
 
-    loss = relu(max_wrong - correct + margin)
+    :math:`\text{loss} = \text{ReLU}(\max(\text{wrong}) - \text{correct} + \text{margin})`
 
     Parameters
     ----------

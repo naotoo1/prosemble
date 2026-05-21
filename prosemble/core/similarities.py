@@ -13,7 +13,7 @@ from jax import jit
 def gaussian_similarity(distances_sq, variance=1.0):
     """Convert squared distances to Gaussian similarities.
 
-    s(d) = exp(-d^2 / (2 * variance))
+    :math:`s(d) = \exp(-d^2 / (2 \cdot \text{variance}))`
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def gaussian_similarity(distances_sq, variance=1.0):
 def cosine_similarity_matrix(X, Y):
     """Pairwise cosine similarity between rows of X and Y.
 
-    cos(x, y) = (x . y) / (||x|| * ||y||)
+    :math:`\cos(x, y) = \frac{x \cdot y}{\|x\| \cdot \|y\|}`
 
     Parameters
     ----------

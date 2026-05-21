@@ -380,17 +380,12 @@ def tangent_distance_matrix(
     """
     Compute pairwise localized tangent distances.
 
-    Each prototype j has an orthogonal subspace basis Omega_j of shape (d, s).
+    Each prototype j has an orthogonal subspace basis :math:`\Omega_j` of shape (d, s).
     The tangent distance projects out the subspace directions:
 
-        d(x, w_j) = ||(I - Omega_j @ Omega_j^T)(x - w_j)||^2
+    .. math::
 
-    This is equivalent to:
-        diff = x - w_j
-        proj = Omega_j^T @ diff          (project onto subspace)
-        recon = Omega_j @ proj            (reconstruct in ambient space)
-        tangent_diff = diff - recon       (residual orthogonal to subspace)
-        d = ||tangent_diff||^2
+        d(x, w_j) = \|(I - \Omega_j \Omega_j^T)(x - w_j)\|^2
 
     Parameters
     ----------
@@ -484,9 +479,9 @@ def gaussian_kernel_matrix(
         True
 
     Kernel Trick:
-        For feature map phi mapping to infinite-dimensional Hilbert space,
-        K(x, y) = <phi(x), phi(y)>. Kernel distance:
-        ||phi(x) - phi(y)||^2 = K(x,x) - 2K(x,y) + K(y,y) = 2 - 2K(x,y) for normalized kernel.
+        For feature map :math:`\phi` mapping to infinite-dimensional Hilbert space,
+        :math:`K(x, y) = \langle\phi(x), \phi(y)\rangle`. Kernel distance:
+        :math:`\|\phi(x) - \phi(y)\|^2 = K(x,x) - 2K(x,y) + K(y,y) = 2 - 2K(x,y)` for normalized kernel.
 
     Use Cases:
         - Kernel Fuzzy C-Means (KFCM)
@@ -643,7 +638,7 @@ def omega_distance(x: chex.Array, y: chex.Array, omega: chex.Array) -> chex.Arra
     """
     Omega (projection-based) distance between two vectors.
 
-    Computes ||diff @ omega||² where diff = x - y.
+    Computes :math:`\|\text{diff} \cdot \Omega\|^2` where :math:`\text{diff} = x - y`.
 
     Args:
         x: Array of shape (d,)

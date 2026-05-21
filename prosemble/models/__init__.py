@@ -92,6 +92,14 @@ try:
     from .heskes_som import HeskesSOM
     from .riemannian_neural_gas import RiemannianNeuralGas
 
+    # Differentiating Kernel models (Villmann, Haase & Kaden, 2015)
+    from .dk_glvq import DKGLVQ
+    from .dk_relevance_lvq import DKGRLVQ
+    from .dk_matrix_lvq import DKGMLVQ
+    from .dk_neural_gas import DKNeuralGas
+    from .dk_kohonen_som import DKKohonenSOM
+    from .dk_heskes_som import DKHeskesSOM
+
     _MODEL_REGISTRY = {
         # Unsupervised clustering
         'FCM': FCM, 'PCM': PCM, 'PFCM': PFCM, 'AFCM': AFCM,
@@ -134,6 +142,10 @@ try:
         'NeuralGas': NeuralGas, 'GrowingNeuralGas': GrowingNeuralGas,
         'KohonenSOM': KohonenSOM, 'HeskesSOM': HeskesSOM,
         'RiemannianNeuralGas': RiemannianNeuralGas,
+        # Differentiating Kernel
+        'DKGLVQ': DKGLVQ, 'DKGRLVQ': DKGRLVQ, 'DKGMLVQ': DKGMLVQ,
+        'DKNeuralGas': DKNeuralGas, 'DKKohonenSOM': DKKohonenSOM,
+        'DKHeskesSOM': DKHeskesSOM,
     }
 
     JAX_AVAILABLE = True
@@ -180,6 +192,9 @@ __all__ = [
     # Unsupervised topology
     'NeuralGas', 'GrowingNeuralGas', 'KohonenSOM', 'HeskesSOM',
     'RiemannianNeuralGas',
+    # Differentiating Kernel
+    'DKGLVQ', 'DKGRLVQ', 'DKGMLVQ',
+    'DKNeuralGas', 'DKKohonenSOM', 'DKHeskesSOM',
     # Status
     'JAX_AVAILABLE',
 ]

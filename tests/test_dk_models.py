@@ -147,11 +147,11 @@ class TestDKGLVQ:
 
     def test_iris(self, iris_data):
         X, y = iris_data
-        model = DKGLVQ(n_prototypes_per_class=1, max_iter=100, lr=0.01)
+        model = DKGLVQ(n_prototypes_per_class=2, max_iter=200, lr=0.01)
         model.fit(X, y)
         preds = model.predict(X)
         accuracy = jnp.mean(preds == y)
-        assert accuracy >= 0.7
+        assert accuracy >= 0.9
 
     def test_kernel_bandwidths_property(self, separable_2d):
         X, y = separable_2d
@@ -203,11 +203,11 @@ class TestDKGRLVQ:
 
     def test_iris(self, iris_data):
         X, y = iris_data
-        model = DKGRLVQ(n_prototypes_per_class=1, max_iter=100, lr=0.01)
+        model = DKGRLVQ(n_prototypes_per_class=2, max_iter=200, lr=0.01)
         model.fit(X, y)
         preds = model.predict(X)
         accuracy = jnp.mean(preds == y)
-        assert accuracy >= 0.7
+        assert accuracy >= 0.9
 
 
 # ─── DKGMLVQ Tests ────────────────────────────────────────────

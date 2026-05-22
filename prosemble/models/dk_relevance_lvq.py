@@ -218,14 +218,14 @@ class DKGRLVQ(SupervisedPrototypeModel):
     def _extract_results(self, params, proto_labels, loss_history, n_iter, **kwargs):
         super()._extract_results(params, proto_labels, loss_history, n_iter, **kwargs)
         self.sigmas_ = params['sigmas']
-        self.relevances_ = jax.nn.softmax(params['relevances'])
+        self.relevances_ = params['relevances']
 
     @property
     def relevance_profile(self):
-        """Return the learned relevance weights (normalized)."""
+        """Return the learned relevance weights (normalized via softmax)."""
         if self.relevances_ is None:
             raise ValueError("Model not fitted. Call fit() first.")
-        return self.relevances_
+        return jax.nn.softmax(self.relevances_)
 
     @property
     def kernel_bandwidths(self):

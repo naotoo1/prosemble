@@ -330,6 +330,39 @@ Kernel Clustering
    :members: fit, predict, predict_proba
    :undoc-members:
 
+Differentiating Kernel Models
+------------------------------
+
+Supervised
+^^^^^^^^^^
+
+.. autoclass:: prosemble.models.DKGLVQ
+   :members: fit, predict, predict_proba, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.DKGRLVQ
+   :members: fit, predict, predict_proba, relevance_profile, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.DKGMLVQ
+   :members: fit, predict, predict_proba, omega_hat_matrix, lambda_hat_matrix
+   :undoc-members:
+
+Unsupervised
+^^^^^^^^^^^^
+
+.. autoclass:: prosemble.models.DKNeuralGas
+   :members: fit, predict, transform
+   :undoc-members:
+
+.. autoclass:: prosemble.models.DKKohonenSOM
+   :members: fit, predict, bmu_map
+   :undoc-members:
+
+.. autoclass:: prosemble.models.DKHeskesSOM
+   :members: fit, predict, bmu_map
+   :undoc-members:
+
 Topology-Preserving Models
 --------------------------
 

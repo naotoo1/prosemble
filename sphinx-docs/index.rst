@@ -14,6 +14,7 @@ JIT-compiled and run on CPU, GPU, and TPU.
    guides/one_class
    guides/clustering
    guides/topology
+   guides/differentiating_kernels
    guides/riemannian
    guides/onnx
    guides/advanced

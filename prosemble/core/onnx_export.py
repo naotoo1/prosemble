@@ -2383,7 +2383,7 @@ def export_onnx(
     (reasoning matrices), PLVQ (Gaussian mixture), encoder models
     (MLP/CNN backbone), Differentiating Kernel models (Gaussian,
     relevance-weighted, and exponential kernels), and Riemannian
-    models on SO(n)/Grassmannian manifolds (85 of 87 models total).
+    models on SO(n)/Grassmannian manifolds (88 of 102 models total).
 
     Parameters
     ----------

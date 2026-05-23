@@ -666,6 +666,268 @@ def _tangent_onnx(builder, X_name, proto_name, omegas_name):
 
 
 # ---------------------------------------------------------------------------
+# Differentiating Kernel distance builders
+# ---------------------------------------------------------------------------
+
+def _kernel_per_proto_onnx(builder, X_name, proto_name, sigmas_name):
+    r"""Gaussian kernel distance with per-prototype bandwidth.
+
+    .. math::
+
+        d_\kappa^2(x, w_k) = 2\left(1 - \exp\left(
+            -\frac{\|x - w_k\|^2}{2\sigma_k^2}
+        \right)\right)
+
+    Parameters
+    ----------
+    sigmas_name : str
+        Name of the (n_proto,) per-prototype bandwidth initializer.
+        Should be pre-clamped to sigma_min at export time.
+
+    Returns
+    -------
+    nodes, initializers, output_name
+        Output shape: (batch, n_proto), values in [0, 2].
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # Unsqueeze X -> (batch, 1, features)
+    nodes.append(oh.make_node(
+        'Unsqueeze', [X_name, '_kpp_axis1'], ['_kpp_x_exp'],
+    ))
+    # Unsqueeze W -> (1, n_proto, features)
+    nodes.append(oh.make_node(
+        'Unsqueeze', [proto_name, '_kpp_axis0'], ['_kpp_w_exp'],
+    ))
+
+    # diff = X - W -> (batch, n_proto, features)
+    nodes.append(oh.make_node('Sub', ['_kpp_x_exp', '_kpp_w_exp'], ['_kpp_diff']))
+
+    # diff^2
+    nodes.append(oh.make_node('Mul', ['_kpp_diff', '_kpp_diff'], ['_kpp_diff_sq']))
+
+    # sq_norms = sum(diff^2, axis=2) -> (batch, n_proto)
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_kpp_diff_sq', '_kpp_axis2'],
+        ['_kpp_sq_norms'], keepdims=0,
+    ))
+
+    # scaled = sq_norms * neg_inv_2sigma_sq
+    # neg_inv_2sigma_sq is (n_proto,), broadcasts with (batch, n_proto)
+    nodes.append(oh.make_node(
+        'Mul', ['_kpp_sq_norms', sigmas_name], ['_kpp_scaled'],
+    ))
+
+    # K = exp(scaled)
+    nodes.append(oh.make_node('Exp', ['_kpp_scaled'], ['_kpp_K']))
+
+    # 1 - K
+    nodes.append(oh.make_node('Sub', ['_kpp_one', '_kpp_K'], ['_kpp_one_minus_K']))
+
+    # 2 * (1 - K)
+    nodes.append(oh.make_node(
+        'Mul', ['_kpp_two', '_kpp_one_minus_K'], ['distances_kpp'],
+    ))
+
+    extra_initializers = [
+        oh.make_tensor('_kpp_axis0', TensorProto.INT64, [1], [0]),
+        oh.make_tensor('_kpp_axis1', TensorProto.INT64, [1], [1]),
+        oh.make_tensor('_kpp_axis2', TensorProto.INT64, [1], [2]),
+        oh.make_tensor('_kpp_one', TensorProto.FLOAT, [], [1.0]),
+        oh.make_tensor('_kpp_two', TensorProto.FLOAT, [], [2.0]),
+    ]
+    return nodes, extra_initializers, 'distances_kpp'
+
+
+def _kernel_relevance_onnx(builder, X_name, proto_name, sigmas_name,
+                           relevances_name):
+    r"""Relevance-weighted Gaussian kernel distance.
+
+    .. math::
+
+        d_\kappa^2(x, w_k) = 2\left(1 - \exp\left(
+            -\frac{\sum_j \lambda_j (x_j - w_{kj})^2}{2\sigma_k^2}
+        \right)\right)
+
+    where :math:`\lambda = \text{softmax}(\text{relevances})`.
+
+    Parameters
+    ----------
+    sigmas_name : str
+        Name of the (n_proto,) per-prototype bandwidth initializer.
+    relevances_name : str
+        Name of the (n_features,) raw relevance logits initializer.
+        Softmax is applied inside this function.
+
+    Returns
+    -------
+    nodes, initializers, output_name
+        Output shape: (batch, n_proto), values in [0, 2].
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # Softmax on raw relevances -> normalized lambdas
+    nodes.append(oh.make_node(
+        'Softmax', [relevances_name], ['_kr_lambdas'], axis=0,
+    ))
+
+    # Unsqueeze X -> (batch, 1, features)
+    nodes.append(oh.make_node(
+        'Unsqueeze', [X_name, '_kr_axis1'], ['_kr_x_exp'],
+    ))
+    # Unsqueeze W -> (1, n_proto, features)
+    nodes.append(oh.make_node(
+        'Unsqueeze', [proto_name, '_kr_axis0'], ['_kr_w_exp'],
+    ))
+
+    # diff = X - W -> (batch, n_proto, features)
+    nodes.append(oh.make_node('Sub', ['_kr_x_exp', '_kr_w_exp'], ['_kr_diff']))
+
+    # diff^2
+    nodes.append(oh.make_node('Mul', ['_kr_diff', '_kr_diff'], ['_kr_diff_sq']))
+
+    # weighted = lambdas * diff^2  (lambdas broadcasts as (d,))
+    nodes.append(oh.make_node(
+        'Mul', ['_kr_lambdas', '_kr_diff_sq'], ['_kr_weighted'],
+    ))
+
+    # weighted_norms = sum(weighted, axis=2) -> (batch, n_proto)
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_kr_weighted', '_kr_axis2'],
+        ['_kr_weighted_norms'], keepdims=0,
+    ))
+
+    # scaled = weighted_norms * neg_inv_2sigma_sq
+    nodes.append(oh.make_node(
+        'Mul', ['_kr_weighted_norms', sigmas_name], ['_kr_scaled'],
+    ))
+
+    # K = exp(scaled)
+    nodes.append(oh.make_node('Exp', ['_kr_scaled'], ['_kr_K']))
+
+    # 1 - K
+    nodes.append(oh.make_node('Sub', ['_kr_one', '_kr_K'], ['_kr_one_minus_K']))
+
+    # 2 * (1 - K)
+    nodes.append(oh.make_node(
+        'Mul', ['_kr_two', '_kr_one_minus_K'], ['distances_kr'],
+    ))
+
+    extra_initializers = [
+        oh.make_tensor('_kr_axis0', TensorProto.INT64, [1], [0]),
+        oh.make_tensor('_kr_axis1', TensorProto.INT64, [1], [1]),
+        oh.make_tensor('_kr_axis2', TensorProto.INT64, [1], [2]),
+        oh.make_tensor('_kr_one', TensorProto.FLOAT, [], [1.0]),
+        oh.make_tensor('_kr_two', TensorProto.FLOAT, [], [2.0]),
+    ]
+    return nodes, extra_initializers, 'distances_kr'
+
+
+def _kernel_exponential_onnx(builder, X_name, proto_name, omega_hat_name):
+    r"""Exponential kernel distance with learnable transformation.
+
+    .. math::
+
+        \hat\Lambda = \hat\Omega \hat\Omega^T
+
+        d_\kappa^2(x, w) = \exp(x^T \hat\Lambda x)
+                          + \exp(w^T \hat\Lambda w)
+                          - 2 \exp(x^T \hat\Lambda w)
+
+    Parameters
+    ----------
+    omega_hat_name : str
+        Name of the (n_features, latent_dim) transformation matrix
+        initializer.
+
+    Returns
+    -------
+    nodes, initializers, output_name
+        Output shape: (batch, n_proto).
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+
+    # Lambda_hat = omega_hat @ omega_hat^T  -> (d, d)
+    nodes.append(oh.make_node(
+        'Transpose', [omega_hat_name], ['_ke_omega_hat_T'],
+    ))
+    nodes.append(oh.make_node(
+        'MatMul', [omega_hat_name, '_ke_omega_hat_T'], ['_ke_lambda_hat'],
+    ))
+
+    # XL = X @ Lambda_hat -> (batch, d)
+    nodes.append(oh.make_node(
+        'MatMul', [X_name, '_ke_lambda_hat'], ['_ke_XL'],
+    ))
+
+    # xLx = sum(X * XL, axis=1, keepdims=1) -> (batch, 1)
+    nodes.append(oh.make_node('Mul', [X_name, '_ke_XL'], ['_ke_X_XL']))
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_ke_X_XL', '_ke_axis1'],
+        ['_ke_xLx'], keepdims=1,
+    ))
+
+    # WL = W @ Lambda_hat -> (n_proto, d)
+    nodes.append(oh.make_node(
+        'MatMul', [proto_name, '_ke_lambda_hat'], ['_ke_WL'],
+    ))
+
+    # wLw = sum(W * WL, axis=1, keepdims=1) -> (n_proto, 1)
+    nodes.append(oh.make_node('Mul', [proto_name, '_ke_WL'], ['_ke_W_WL']))
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_ke_W_WL', '_ke_axis1'],
+        ['_ke_wLw'], keepdims=1,
+    ))
+
+    # wLw_T -> (1, n_proto)
+    nodes.append(oh.make_node('Transpose', ['_ke_wLw'], ['_ke_wLw_T']))
+
+    # W^T -> (d, n_proto)
+    nodes.append(oh.make_node('Transpose', [proto_name], ['_ke_W_T']))
+
+    # xLw = XL @ W^T -> (batch, n_proto)
+    nodes.append(oh.make_node('MatMul', ['_ke_XL', '_ke_W_T'], ['_ke_xLw']))
+
+    # exp terms
+    nodes.append(oh.make_node('Exp', ['_ke_xLx'], ['_ke_exp_xLx']))
+    nodes.append(oh.make_node('Exp', ['_ke_wLw_T'], ['_ke_exp_wLw']))
+    nodes.append(oh.make_node('Exp', ['_ke_xLw'], ['_ke_exp_xLw']))
+
+    # 2 * exp(xLw)
+    nodes.append(oh.make_node(
+        'Mul', ['_ke_two', '_ke_exp_xLw'], ['_ke_2exp_xLw'],
+    ))
+
+    # exp(xLx) + exp(wLw)  (broadcasts: (batch,1) + (1,n_proto) -> (batch,n_proto))
+    nodes.append(oh.make_node(
+        'Add', ['_ke_exp_xLx', '_ke_exp_wLw'], ['_ke_sum_self'],
+    ))
+
+    # dist_raw = sum_self - 2*exp(xLw)
+    nodes.append(oh.make_node(
+        'Sub', ['_ke_sum_self', '_ke_2exp_xLw'], ['_ke_dist_raw'],
+    ))
+
+    # Clip negatives (numerical stability)
+    nodes.append(oh.make_node('Relu', ['_ke_dist_raw'], ['distances_ke']))
+
+    extra_initializers = [
+        oh.make_tensor('_ke_axis1', TensorProto.INT64, [1], [1]),
+        oh.make_tensor('_ke_two', TensorProto.FLOAT, [], [2.0]),
+    ]
+    return nodes, extra_initializers, 'distances_ke'
+
+
+# ---------------------------------------------------------------------------
 # Riemannian model builders
 # ---------------------------------------------------------------------------
 
@@ -1895,7 +2157,8 @@ def _identify_model_type(model):
         'oc_gaussian_soft', 'oc_gaussian_ng', 'svqocc', 'cbc', 'plvq'.
     dist_type : str
         One of 'squared_euclidean', 'euclidean', 'manhattan', 'omega',
-        'relevance', 'local_omega', 'tangent'.
+        'relevance', 'local_omega', 'tangent', 'kernel_per_proto',
+        'kernel_relevance', 'kernel_exponential'.
     """
     # --- Determine model type ---
 
@@ -1964,12 +2227,28 @@ def _identify_model_type(model):
 def _identify_distance_fn(model, model_type='supervised') -> str:
     """Identify which distance function a model uses.
 
-    For OC and SVQ-OCC models, distance is detected from learned
-    metric parameters (omega_, omegas_, relevances_).  For supervised
-    and unsupervised models, distance is detected from the distance_fn
-    attribute.
+    For DK models, distance is detected from kernel-specific attributes
+    (sigmas_, omega_hat_).  For OC and SVQ-OCC models, distance is
+    detected from learned metric parameters (omega_, omegas_,
+    relevances_).  For supervised and unsupervised models, distance is
+    detected from the distance_fn attribute.
     """
     # --- Attribute-based detection (OC, SVQ-OCC, and supervised metric models) ---
+
+    # Kernel distance detection (DK models) — must come before Euclidean
+    # attribute checks to prevent misidentification
+    has_sigmas = hasattr(model, 'sigmas_') and model.sigmas_ is not None
+    has_omega_hat = hasattr(model, 'omega_hat_') and model.omega_hat_ is not None
+
+    if has_omega_hat:
+        return 'kernel_exponential'
+
+    if has_sigmas:
+        has_relevances = (hasattr(model, 'relevances_')
+                          and model.relevances_ is not None)
+        if has_relevances:
+            return 'kernel_relevance'
+        return 'kernel_per_proto'
 
     # Tangent vs local omega: tangent models have subspace_dim
     has_omegas = hasattr(model, 'omegas_') and model.omegas_ is not None
@@ -2036,7 +2315,8 @@ def _identify_distance_fn(model, model_type='supervised') -> str:
     raise NotImplementedError(
         f"ONNX export is not supported for distance function "
         f"'{fn_name or fn}'. Supported: squared_euclidean, euclidean, "
-        f"manhattan, omega, relevance, local_omega, tangent."
+        f"manhattan, omega, relevance, local_omega, tangent, "
+        f"kernel_per_proto, kernel_relevance, kernel_exponential."
     )
 
 
@@ -2101,8 +2381,9 @@ def export_onnx(
     output.  Supports supervised (WTAC), unsupervised (ArgMin),
     one-class (threshold-based), SVQ-OCC (response model), CBC
     (reasoning matrices), PLVQ (Gaussian mixture), encoder models
-    (MLP/CNN backbone), and Riemannian models on SO(n)/Grassmannian
-    manifolds (73 of 87 models total).
+    (MLP/CNN backbone), Differentiating Kernel models (Gaussian,
+    relevance-weighted, and exponential kernels), and Riemannian
+    models on SO(n)/Grassmannian manifolds (85 of 87 models total).
 
     Parameters
     ----------
@@ -2311,6 +2592,55 @@ def export_onnx(
         )
         nodes, extra_inits, dist_out = _tangent_onnx(
             None, X_for_distance, 'prototypes', 'omegas',
+        )
+    elif dist_type == 'kernel_per_proto':
+        sigmas = np.asarray(model.sigmas_).astype(np.float32)
+        sigma_min = getattr(model, 'sigma_min', 1e-3)
+        sigmas = np.maximum(sigmas, sigma_min)
+        neg_inv_2sigma_sq = (-1.0 / (2.0 * sigmas ** 2)).astype(np.float32)
+        initializers.append(
+            oh.make_tensor(
+                'neg_inv_2sigma_sq', TensorProto.FLOAT,
+                list(neg_inv_2sigma_sq.shape),
+                neg_inv_2sigma_sq.flatten().tolist(),
+            ),
+        )
+        nodes, extra_inits, dist_out = _kernel_per_proto_onnx(
+            None, X_for_distance, 'prototypes', 'neg_inv_2sigma_sq',
+        )
+    elif dist_type == 'kernel_relevance':
+        sigmas = np.asarray(model.sigmas_).astype(np.float32)
+        sigma_min = getattr(model, 'sigma_min', 1e-3)
+        sigmas = np.maximum(sigmas, sigma_min)
+        neg_inv_2sigma_sq = (-1.0 / (2.0 * sigmas ** 2)).astype(np.float32)
+        initializers.append(
+            oh.make_tensor(
+                'neg_inv_2sigma_sq', TensorProto.FLOAT,
+                list(neg_inv_2sigma_sq.shape),
+                neg_inv_2sigma_sq.flatten().tolist(),
+            ),
+        )
+        relevances = np.asarray(model.relevances_).astype(np.float32)
+        initializers.append(
+            oh.make_tensor(
+                'relevances', TensorProto.FLOAT,
+                list(relevances.shape), relevances.flatten().tolist(),
+            ),
+        )
+        nodes, extra_inits, dist_out = _kernel_relevance_onnx(
+            None, X_for_distance, 'prototypes', 'neg_inv_2sigma_sq',
+            'relevances',
+        )
+    elif dist_type == 'kernel_exponential':
+        omega_hat = np.asarray(model.omega_hat_).astype(np.float32)
+        initializers.append(
+            oh.make_tensor(
+                'omega_hat', TensorProto.FLOAT,
+                list(omega_hat.shape), omega_hat.flatten().tolist(),
+            ),
+        )
+        nodes, extra_inits, dist_out = _kernel_exponential_onnx(
+            None, X_for_distance, 'prototypes', 'omega_hat',
         )
     else:
         raise NotImplementedError(f"Unknown distance type: {dist_type}")

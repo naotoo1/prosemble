@@ -1328,3 +1328,403 @@ class TestRiemannianONNXRejections:
         model.fit(X)
         with pytest.raises(NotImplementedError, match="RiemannianNeuralGas"):
             model.export_onnx()
+
+
+# ---------------------------------------------------------------------------
+# Differentiating Kernel models — supervised
+# ---------------------------------------------------------------------------
+
+class TestDKGLVQExport:
+    """DKGLVQ: kernel_per_proto + supervised WTAC."""
+
+    @pytest.fixture
+    def fitted_dkglvq(self):
+        from prosemble.models import DKGLVQ
+        X, y = _make_supervised_data(30, 4)
+        model = DKGLVQ(
+            n_prototypes_per_class=1, max_iter=5, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_dkglvq):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_dkglvq
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'supervised'
+        assert dist_type == 'kernel_per_proto'
+
+    def test_export_returns_model_proto(self, fitted_dkglvq):
+        model, X = fitted_dkglvq
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_dkglvq):
+        model, X = fitted_dkglvq
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X, batch_size=30)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestDKGRLVQExport:
+    """DKGRLVQ: kernel_relevance + supervised WTAC."""
+
+    @pytest.fixture
+    def fitted_dkgrlvq(self):
+        from prosemble.models import DKGRLVQ
+        X, y = _make_supervised_data(30, 4)
+        model = DKGRLVQ(
+            n_prototypes_per_class=1, max_iter=5, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_dkgrlvq):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_dkgrlvq
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'supervised'
+        assert dist_type == 'kernel_relevance'
+
+    def test_export_returns_model_proto(self, fitted_dkgrlvq):
+        model, X = fitted_dkgrlvq
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_dkgrlvq):
+        model, X = fitted_dkgrlvq
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X, batch_size=30)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestDKGMLVQExport:
+    """DKGMLVQ: kernel_exponential + supervised WTAC."""
+
+    @pytest.fixture
+    def fitted_dkgmlvq(self):
+        from prosemble.models import DKGMLVQ
+        X, y = _make_supervised_data(30, 4)
+        model = DKGMLVQ(
+            n_prototypes_per_class=1, max_iter=5, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_dkgmlvq):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_dkgmlvq
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'supervised'
+        assert dist_type == 'kernel_exponential'
+
+    def test_export_returns_model_proto(self, fitted_dkgmlvq):
+        model, X = fitted_dkgmlvq
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_dkgmlvq):
+        model, X = fitted_dkgmlvq
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X, batch_size=30)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+# ---------------------------------------------------------------------------
+# Differentiating Kernel models — supervised NG variants
+# ---------------------------------------------------------------------------
+
+class TestDKGLVQNGExport:
+    """DKGLVQ_NG: kernel_per_proto + supervised WTAC (NG at train only)."""
+
+    @pytest.fixture
+    def fitted_dkglvq_ng(self):
+        from prosemble.models import DKGLVQ_NG
+        X, y = _make_supervised_data(30, 4)
+        model = DKGLVQ_NG(
+            n_prototypes_per_class=1, max_iter=5, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_dkglvq_ng):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_dkglvq_ng
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'supervised'
+        assert dist_type == 'kernel_per_proto'
+
+    def test_export_returns_model_proto(self, fitted_dkglvq_ng):
+        model, X = fitted_dkglvq_ng
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_dkglvq_ng):
+        model, X = fitted_dkglvq_ng
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X, batch_size=30)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestDKGRLVQNGExport:
+    """DKGRLVQ_NG: kernel_relevance + supervised WTAC (NG at train only)."""
+
+    @pytest.fixture
+    def fitted_dkgrlvq_ng(self):
+        from prosemble.models import DKGRLVQ_NG
+        X, y = _make_supervised_data(30, 4)
+        model = DKGRLVQ_NG(
+            n_prototypes_per_class=1, max_iter=5, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_dkgrlvq_ng):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_dkgrlvq_ng
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'supervised'
+        assert dist_type == 'kernel_relevance'
+
+    def test_export_returns_model_proto(self, fitted_dkgrlvq_ng):
+        model, X = fitted_dkgrlvq_ng
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_dkgrlvq_ng):
+        model, X = fitted_dkgrlvq_ng
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X, batch_size=30)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestDKGMLVQNGExport:
+    """DKGMLVQ_NG: kernel_exponential + supervised WTAC (NG at train only)."""
+
+    @pytest.fixture
+    def fitted_dkgmlvq_ng(self):
+        from prosemble.models import DKGMLVQ_NG
+        X, y = _make_supervised_data(30, 4)
+        model = DKGMLVQ_NG(
+            n_prototypes_per_class=1, max_iter=5, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_dkgmlvq_ng):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_dkgmlvq_ng
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'supervised'
+        assert dist_type == 'kernel_exponential'
+
+    def test_export_returns_model_proto(self, fitted_dkgmlvq_ng):
+        model, X = fitted_dkgmlvq_ng
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_dkgmlvq_ng):
+        model, X = fitted_dkgmlvq_ng
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X, batch_size=30)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+# ---------------------------------------------------------------------------
+# One-Class Differentiating Kernel models
+# ---------------------------------------------------------------------------
+
+class TestOCDKGLVQExport:
+    """OCDKGLVQ: kernel_per_proto + OC hard nearest."""
+
+    @pytest.fixture
+    def fitted_ocdkglvq(self):
+        from prosemble.models import OCDKGLVQ
+        X, y = _make_oc_data()
+        model = OCDKGLVQ(
+            n_prototypes=3, max_iter=10, lr=0.01, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_ocdkglvq):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_ocdkglvq
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'oc_hard_nearest'
+        assert dist_type == 'kernel_per_proto'
+
+    def test_export_returns_model_proto(self, fitted_ocdkglvq):
+        model, X = fitted_ocdkglvq
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_ocdkglvq):
+        model, X = fitted_ocdkglvq
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestOCDKGRLVQExport:
+    """OCDKGRLVQ: kernel_relevance + OC hard nearest."""
+
+    @pytest.fixture
+    def fitted_ocdkgrlvq(self):
+        from prosemble.models import OCDKGRLVQ
+        X, y = _make_oc_data()
+        model = OCDKGRLVQ(
+            n_prototypes=3, max_iter=10, lr=0.01, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_ocdkgrlvq):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_ocdkgrlvq
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'oc_hard_nearest'
+        assert dist_type == 'kernel_relevance'
+
+    def test_export_returns_model_proto(self, fitted_ocdkgrlvq):
+        model, X = fitted_ocdkgrlvq
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_ocdkgrlvq):
+        model, X = fitted_ocdkgrlvq
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestOCDKGMLVQExport:
+    """OCDKGMLVQ: kernel_exponential + OC hard nearest."""
+
+    @pytest.fixture
+    def fitted_ocdkgmlvq(self):
+        from prosemble.models import OCDKGMLVQ
+        X, y = _make_oc_data()
+        model = OCDKGMLVQ(
+            n_prototypes=3, max_iter=10, lr=0.01, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_ocdkgmlvq):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_ocdkgmlvq
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'oc_hard_nearest'
+        assert dist_type == 'kernel_exponential'
+
+    def test_export_returns_model_proto(self, fitted_ocdkgmlvq):
+        model, X = fitted_ocdkgmlvq
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_ocdkgmlvq):
+        model, X = fitted_ocdkgmlvq
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+# ---------------------------------------------------------------------------
+# One-Class Differentiating Kernel NG models
+# ---------------------------------------------------------------------------
+
+class TestOCDKGLVQNGExport:
+    """OCDKGLVQ_NG: kernel_per_proto + OC hard nearest (NG at train only)."""
+
+    @pytest.fixture
+    def fitted_ocdkglvq_ng(self):
+        from prosemble.models import OCDKGLVQ_NG
+        X, y = _make_oc_data()
+        model = OCDKGLVQ_NG(
+            n_prototypes=3, max_iter=10, lr=0.01, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_ocdkglvq_ng):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_ocdkglvq_ng
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'oc_hard_nearest'
+        assert dist_type == 'kernel_per_proto'
+
+    def test_export_returns_model_proto(self, fitted_ocdkglvq_ng):
+        model, X = fitted_ocdkglvq_ng
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_ocdkglvq_ng):
+        model, X = fitted_ocdkglvq_ng
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestOCDKGRLVQNGExport:
+    """OCDKGRLVQ_NG: kernel_relevance + OC hard nearest (NG at train only)."""
+
+    @pytest.fixture
+    def fitted_ocdkgrlvq_ng(self):
+        from prosemble.models import OCDKGRLVQ_NG
+        X, y = _make_oc_data()
+        model = OCDKGRLVQ_NG(
+            n_prototypes=3, max_iter=10, lr=0.01, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_ocdkgrlvq_ng):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_ocdkgrlvq_ng
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'oc_hard_nearest'
+        assert dist_type == 'kernel_relevance'
+
+    def test_export_returns_model_proto(self, fitted_ocdkgrlvq_ng):
+        model, X = fitted_ocdkgrlvq_ng
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_ocdkgrlvq_ng):
+        model, X = fitted_ocdkgrlvq_ng
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)
+
+
+class TestOCDKGMLVQNGExport:
+    """OCDKGMLVQ_NG: kernel_exponential + OC hard nearest (NG at train only)."""
+
+    @pytest.fixture
+    def fitted_ocdkgmlvq_ng(self):
+        from prosemble.models import OCDKGMLVQ_NG
+        X, y = _make_oc_data()
+        model = OCDKGMLVQ_NG(
+            n_prototypes=3, max_iter=10, lr=0.01, random_seed=42,
+        )
+        model.fit(X, y)
+        return model, X
+
+    def test_model_type_detected(self, fitted_ocdkgmlvq_ng):
+        from prosemble.core.onnx_export import _identify_model_type
+        model, X = fitted_ocdkgmlvq_ng
+        model_type, dist_type = _identify_model_type(model)
+        assert model_type == 'oc_hard_nearest'
+        assert dist_type == 'kernel_exponential'
+
+    def test_export_returns_model_proto(self, fitted_ocdkgmlvq_ng):
+        model, X = fitted_ocdkgmlvq_ng
+        onnx_model = model.export_onnx()
+        assert isinstance(onnx_model, onnx.ModelProto)
+
+    def test_numerical_match(self, fitted_ocdkgmlvq_ng):
+        model, X = fitted_ocdkgmlvq_ng
+        jax_preds = np.asarray(model.predict(X))
+        ort_preds = _onnx_predict(model, X)
+        npt.assert_array_equal(jax_preds, ort_preds)

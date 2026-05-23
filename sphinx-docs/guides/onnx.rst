@@ -6,7 +6,7 @@ cross-platform deployment.  An exported ONNX model reproduces the ``predict()``
 output of the original model and runs anywhere ONNX Runtime is available —
 no JAX or prosemble dependency needed at inference time.
 
-**73 of 87 models** are supported.
+**85 of 87 models** are supported.
 
 Installation
 ------------
@@ -125,9 +125,30 @@ Supported Models
    * - Supervised NG (tangent)
      - 2
      - STNG, TCELVQ_NG
+   * - Supervised DK (Gaussian kernel)
+     - 2
+     - DKGLVQ, DKGLVQ_NG
+   * - Supervised DK (relevance kernel)
+     - 2
+     - DKGRLVQ, DKGRLVQ_NG
+   * - Supervised DK (exponential kernel)
+     - 2
+     - DKGMLVQ, DKGMLVQ_NG
+   * - One-class DK (Gaussian kernel)
+     - 2
+     - OCDKGLVQ, OCDKGLVQ_NG
+   * - One-class DK (relevance kernel)
+     - 2
+     - OCDKGRLVQ, OCDKGRLVQ_NG
+   * - One-class DK (exponential kernel)
+     - 2
+     - OCDKGMLVQ, OCDKGMLVQ_NG
    * - Unsupervised
      - 4
      - NeuralGas, GrowingNeuralGas, KohonenSOM, HeskesSOM
+   * - Unsupervised DK
+     - 3
+     - DKNeuralGas, DKKohonenSOM, DKHeskesSOM
    * - Fuzzy clustering
      - 8
      - FCM, PCM, FPCM, PFCM, AFCM, HCM, IPCM, IPCM2
@@ -203,6 +224,15 @@ Distance Functions in ONNX
    * - Relevance-weighted
      - Element-wise weighted squared diff
      - GRLVQ, OCGRLVQ, SVQOCC_R
+   * - Gaussian Kernel (per-prototype :math:`\sigma`)
+     - :math:`2(1 - \exp(-\|x-w\|^2 / 2\sigma_k^2))`
+     - DKGLVQ, DKGLVQ_NG, OCDKGLVQ, OCDKGLVQ_NG
+   * - Relevance Kernel
+     - :math:`2(1 - \exp(-\sum_j \lambda_j(x_j - w_j)^2 / 2\sigma_k^2))`
+     - DKGRLVQ, DKGRLVQ_NG, OCDKGRLVQ, OCDKGRLVQ_NG
+   * - Exponential Kernel
+     - :math:`\exp(x^\top\hat\Lambda x) + \exp(w^\top\hat\Lambda w) - 2\exp(x^\top\hat\Lambda w)`
+     - DKGMLVQ, DKGMLVQ_NG, OCDKGMLVQ, OCDKGMLVQ_NG
    * - SO(n) Chordal
      - Broadcast subtract + Frobenius norm
      - RiemannianSRNG
@@ -225,7 +255,7 @@ Not Supported
      - Reason
    * - Kernel fuzzy clustering (KFCM, KPCM, KFPCM, KPFCM, KAFCM, KIPCM, KIPCM2)
      - 7
-     - Gaussian kernel distance has no standard ONNX operator
+     - Kernel fuzzy membership requires iterative kernel-distance update incompatible with ONNX
    * - RiemannianNeuralGas
      - 1
      - Matrix logarithm via Schur decomposition has no ONNX operator

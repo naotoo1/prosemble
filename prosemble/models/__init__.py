@@ -96,9 +96,20 @@ try:
     from .dk_glvq import DKGLVQ
     from .dk_relevance_lvq import DKGRLVQ
     from .dk_matrix_lvq import DKGMLVQ
+    from .dk_glvq_ng import DKGLVQ_NG
+    from .dk_relevance_lvq_ng import DKGRLVQ_NG
+    from .dk_matrix_lvq_ng import DKGMLVQ_NG
     from .dk_neural_gas import DKNeuralGas
     from .dk_kohonen_som import DKKohonenSOM
     from .dk_heskes_som import DKHeskesSOM
+
+    # One-Class Differentiating Kernel models
+    from .oc_dk_glvq import OCDKGLVQ
+    from .oc_dk_relevance_lvq import OCDKGRLVQ
+    from .oc_dk_matrix_lvq import OCDKGMLVQ
+    from .oc_dk_glvq_ng import OCDKGLVQ_NG
+    from .oc_dk_relevance_lvq_ng import OCDKGRLVQ_NG
+    from .oc_dk_matrix_lvq_ng import OCDKGMLVQ_NG
 
     _MODEL_REGISTRY = {
         # Unsupervised clustering
@@ -144,8 +155,15 @@ try:
         'RiemannianNeuralGas': RiemannianNeuralGas,
         # Differentiating Kernel
         'DKGLVQ': DKGLVQ, 'DKGRLVQ': DKGRLVQ, 'DKGMLVQ': DKGMLVQ,
+        'DKGLVQ_NG': DKGLVQ_NG, 'DKGRLVQ_NG': DKGRLVQ_NG,
+        'DKGMLVQ_NG': DKGMLVQ_NG,
         'DKNeuralGas': DKNeuralGas, 'DKKohonenSOM': DKKohonenSOM,
         'DKHeskesSOM': DKHeskesSOM,
+        # One-Class Differentiating Kernel
+        'OCDKGLVQ': OCDKGLVQ, 'OCDKGRLVQ': OCDKGRLVQ,
+        'OCDKGMLVQ': OCDKGMLVQ,
+        'OCDKGLVQ_NG': OCDKGLVQ_NG, 'OCDKGRLVQ_NG': OCDKGRLVQ_NG,
+        'OCDKGMLVQ_NG': OCDKGMLVQ_NG,
     }
 
     JAX_AVAILABLE = True
@@ -194,7 +212,11 @@ __all__ = [
     'RiemannianNeuralGas',
     # Differentiating Kernel
     'DKGLVQ', 'DKGRLVQ', 'DKGMLVQ',
+    'DKGLVQ_NG', 'DKGRLVQ_NG', 'DKGMLVQ_NG',
     'DKNeuralGas', 'DKKohonenSOM', 'DKHeskesSOM',
+    # One-Class Differentiating Kernel
+    'OCDKGLVQ', 'OCDKGRLVQ', 'OCDKGMLVQ',
+    'OCDKGLVQ_NG', 'OCDKGRLVQ_NG', 'OCDKGMLVQ_NG',
     # Status
     'JAX_AVAILABLE',
 ]

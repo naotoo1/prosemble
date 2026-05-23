@@ -330,6 +330,36 @@ Kernel Clustering
    :members: fit, predict, predict_proba
    :undoc-members:
 
+One-Class Differentiating Kernel
+---------------------------------
+
+.. autoclass:: prosemble.models.OCDKGLVQ
+   :members: fit, predict, decision_function, predict_with_reject, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCDKGRLVQ
+   :members: fit, predict, decision_function, predict_with_reject, relevance_profile, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCDKGMLVQ
+   :members: fit, predict, decision_function, predict_with_reject, omega_hat_matrix, lambda_hat_matrix
+   :undoc-members:
+
+One-Class Differentiating Kernel (Neural Gas)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: prosemble.models.OCDKGLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCDKGRLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject, relevance_profile, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCDKGMLVQ_NG
+   :members: fit, predict, decision_function, predict_with_reject, omega_hat_matrix, lambda_hat_matrix
+   :undoc-members:
+
 Differentiating Kernel Models
 ------------------------------
 
@@ -345,6 +375,21 @@ Supervised
    :undoc-members:
 
 .. autoclass:: prosemble.models.DKGMLVQ
+   :members: fit, predict, predict_proba, omega_hat_matrix, lambda_hat_matrix
+   :undoc-members:
+
+Supervised (Neural Gas)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: prosemble.models.DKGLVQ_NG
+   :members: fit, predict, predict_proba, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.DKGRLVQ_NG
+   :members: fit, predict, predict_proba, relevance_profile, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.DKGMLVQ_NG
    :members: fit, predict, predict_proba, omega_hat_matrix, lambda_hat_matrix
    :undoc-members:
 

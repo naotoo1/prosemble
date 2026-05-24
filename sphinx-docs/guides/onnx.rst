@@ -39,6 +39,7 @@ The ``export_onnx`` function accepts:
   dynamic batch size)
 - ``opset_version`` — ONNX opset version (default ``17``)
 - ``path`` — optional file path to save the ONNX model
+- ``reject_threshold`` — optional float to enable reject option (see below)
 
 Running with ONNX Runtime
 --------------------------
@@ -274,3 +275,53 @@ Not Supported
    * - Utility (KMeansPlusPlus, Kmeans, SOM, BGPC)
      - 4
      - Not prototype model base classes
+
+Export with Reject Option
+--------------------------
+
+Supervised models can be exported with a built-in reject option. When
+``reject_threshold`` is provided, the ONNX model outputs two tensors:
+
+- ``predictions`` (INT64): class labels with ``-1`` for rejected samples
+- ``confidence`` (FLOAT): confidence scores in ``[-1, 1]``
+
+The confidence is the GLVQ relative margin:
+
+.. math::
+
+   \text{confidence}(x) = \frac{d^-(x) - d^+(x)}{d^-(x) + d^+(x)}
+
+Samples with confidence below the threshold are rejected (prediction = -1).
+
+.. code-block:: python
+
+   from prosemble.models import GLVQ
+   from prosemble.core.onnx_export import export_onnx
+
+   model = GLVQ(n_prototypes_per_class=2, max_iter=100, lr=0.01)
+   model.fit(X_train, y_train)
+
+   # Export with reject option (threshold = 0.2)
+   onnx_model = export_onnx(
+       model, batch_size=-1, reject_threshold=0.2, path='glvq_reject.onnx',
+   )
+
+   # Run with ONNX Runtime
+   import onnxruntime as ort
+   import numpy as np
+
+   session = ort.InferenceSession('glvq_reject.onnx')
+   results = session.run(None, {'X': X_test_np})
+
+   predictions = results[0]   # class labels or -1
+   confidence = results[1]    # confidence scores
+
+   # Analyze
+   rejected = predictions == -1
+   print(f"Rejected: {rejected.sum()} / {len(predictions)}")
+   print(f"Accuracy on accepted: {(predictions[~rejected] == y_test[~rejected]).mean():.3f}")
+
+Works with all supervised model distance types: Euclidean, relevance-weighted,
+omega-projected, local omega, tangent, and all differentiating kernel variants.
+
+Not supported for one-class or unsupervised models (raises ``ValueError``).

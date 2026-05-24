@@ -1457,6 +1457,121 @@ def _wtac_onnx_nodes(dist_name, proto_labels_name):
     return nodes, []
 
 
+def _wtac_with_rejection_onnx_nodes(dist_name, proto_labels_name, threshold):
+    """WTAC with reject option: confidence-based rejection.
+
+    Computes:
+        winner_label = proto_labels[argmin(distances, axis=1)]
+        d_plus = min distance to same-class prototype (winner's class)
+        d_minus = min distance to different-class prototype
+        confidence = (d_minus - d_plus) / (d_minus + d_plus + eps)
+        predictions = where(confidence >= threshold, winner_label, -1)
+
+    Outputs two tensors: 'predictions' (INT64) and 'confidence' (FLOAT).
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    nodes = []
+    inits = []
+
+    # Constants
+    inits.extend([
+        oh.make_tensor('_rej_eps', TensorProto.FLOAT, [], [1e-10]),
+        oh.make_tensor('_rej_threshold', TensorProto.FLOAT, [], [float(threshold)]),
+        oh.make_tensor('_rej_inf', TensorProto.FLOAT, [], [1e30]),
+        oh.make_tensor('_rej_neg_one', TensorProto.INT64, [], [-1]),
+    ])
+
+    # Step 1: winner_idx = argmin(distances, axis=1) → (batch,)
+    nodes.append(oh.make_node(
+        'ArgMin', [dist_name], ['_rej_winner_idx'],
+        axis=1, keepdims=0,
+    ))
+    nodes.append(oh.make_node(
+        'Cast', ['_rej_winner_idx'], ['_rej_winner_idx_i64'],
+        to=TensorProto.INT64,
+    ))
+
+    # Step 2: winner_label = proto_labels[winner_idx] → (batch,)
+    nodes.append(oh.make_node(
+        'Gather', [proto_labels_name, '_rej_winner_idx_i64'], ['_rej_winner_label'],
+        axis=0,
+    ))
+
+    # Step 3: Build same-class mask
+    # Unsqueeze winner_label to (batch, 1) for broadcasting
+    nodes.append(oh.make_node(
+        'Unsqueeze', ['_rej_winner_label', '_rej_unsqueeze_axis'], ['_rej_winner_label_2d'],
+    ))
+    inits.append(
+        oh.make_tensor('_rej_unsqueeze_axis', TensorProto.INT64, [1], [1]),
+    )
+    # Unsqueeze proto_labels to (1, n_protos) for broadcasting
+    nodes.append(oh.make_node(
+        'Unsqueeze', [proto_labels_name, '_rej_unsqueeze_axis0'], ['_rej_proto_labels_2d'],
+    ))
+    inits.append(
+        oh.make_tensor('_rej_unsqueeze_axis0', TensorProto.INT64, [1], [0]),
+    )
+    # same_mask = (winner_label == proto_labels) → (batch, n_protos)
+    nodes.append(oh.make_node(
+        'Equal', ['_rej_winner_label_2d', '_rej_proto_labels_2d'], ['_rej_same_mask'],
+    ))
+    # diff_mask = NOT same_mask
+    nodes.append(oh.make_node(
+        'Not', ['_rej_same_mask'], ['_rej_diff_mask'],
+    ))
+
+    # Step 4: d_plus = min(where(same_mask, distances, INF), axis=1)
+    # Use Add with large constant to create INF-filled tensor matching dist shape
+    # Where broadcasts scalars automatically against the mask shape
+    nodes.append(oh.make_node(
+        'Where', ['_rej_same_mask', dist_name, '_rej_inf'],
+        ['_rej_dist_same'],
+    ))
+    nodes.append(oh.make_node(
+        'ReduceMin', ['_rej_dist_same'], ['_rej_d_plus'],
+        axes=[1], keepdims=0,
+    ))
+
+    # Step 5: d_minus = min(where(diff_mask, distances, INF), axis=1)
+    nodes.append(oh.make_node(
+        'Where', ['_rej_diff_mask', dist_name, '_rej_inf'],
+        ['_rej_dist_diff'],
+    ))
+    nodes.append(oh.make_node(
+        'ReduceMin', ['_rej_dist_diff'], ['_rej_d_minus'],
+        axes=[1], keepdims=0,
+    ))
+
+    # Step 6: confidence = (d_minus - d_plus) / (d_minus + d_plus + eps)
+    nodes.append(oh.make_node(
+        'Sub', ['_rej_d_minus', '_rej_d_plus'], ['_rej_numerator'],
+    ))
+    nodes.append(oh.make_node(
+        'Add', ['_rej_d_minus', '_rej_d_plus'], ['_rej_denom_raw'],
+    ))
+    nodes.append(oh.make_node(
+        'Add', ['_rej_denom_raw', '_rej_eps'], ['_rej_denominator'],
+    ))
+    nodes.append(oh.make_node(
+        'Div', ['_rej_numerator', '_rej_denominator'], ['confidence'],
+    ))
+
+    # Step 7: predictions = where(confidence >= threshold, winner_label, -1)
+    nodes.append(oh.make_node(
+        'GreaterOrEqual', ['confidence', '_rej_threshold'], ['_rej_accept_mask'],
+    ))
+    # Where broadcasts scalar _rej_neg_one against _rej_winner_label shape
+    nodes.append(oh.make_node(
+        'Where', ['_rej_accept_mask', '_rej_winner_label', '_rej_neg_one'],
+        ['predictions'],
+    ))
+
+    return nodes, inits
+
+
 def _argmin_onnx_nodes(dist_name):
     """Unsupervised: predictions = argmin(distances, axis=1)."""
     import onnx.helper as oh
@@ -2374,6 +2489,7 @@ def export_onnx(
     batch_size: int = 1,
     opset_version: int = 17,
     path: str | None = None,
+    reject_threshold: float | None = None,
 ):
     """Export a fitted model's predict function to ONNX format.
 
@@ -2396,6 +2512,13 @@ def export_onnx(
         ONNX opset version.  Default: 17.
     path : str, optional
         If provided, save the ONNX model to this file path.
+    reject_threshold : float, optional
+        If provided, enables reject option for supervised models.
+        Samples with confidence below this threshold are assigned
+        prediction -1 (rejected). The exported model produces two
+        outputs: ``predictions`` (INT64, with -1 for rejected) and
+        ``confidence`` (FLOAT, in [-1, 1]).
+        Only supported for supervised models (WTAC decision).
 
     Returns
     -------
@@ -2409,6 +2532,8 @@ def export_onnx(
         supported.
     ImportError
         If the ``onnx`` package is not installed.
+    ValueError
+        If ``reject_threshold`` is used with a non-supervised model.
     """
     _check_onnx_installed()
     import onnx
@@ -2649,7 +2774,18 @@ def export_onnx(
     initializers.extend(extra_inits)
 
     # --- Decision / competition nodes ---
-    if model_type == 'supervised':
+    use_rejection = reject_threshold is not None
+
+    if use_rejection:
+        if model_type != 'supervised':
+            raise ValueError(
+                "reject_threshold is only supported for supervised models "
+                f"(WTAC decision), got model_type='{model_type}'."
+            )
+        comp_nodes, comp_inits = _wtac_with_rejection_onnx_nodes(
+            dist_out, 'proto_labels', reject_threshold,
+        )
+    elif model_type == 'supervised':
         comp_nodes, comp_inits = _wtac_onnx_nodes(dist_out, 'proto_labels')
     elif model_type == 'unsupervised':
         comp_nodes, comp_inits = _argmin_onnx_nodes(dist_out)
@@ -2687,11 +2823,18 @@ def export_onnx(
         'predictions', output_dtype, [batch_dim],
     )
 
+    outputs = [Y_output]
+    if use_rejection:
+        conf_output = oh.make_tensor_value_info(
+            'confidence', TensorProto.FLOAT, [batch_dim],
+        )
+        outputs.append(conf_output)
+
     graph = oh.make_graph(
         all_nodes,
         'prosemble_predict',
         [X_input],
-        [Y_output],
+        outputs,
         initializer=initializers,
     )
 

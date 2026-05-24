@@ -309,6 +309,12 @@ class DKGRLVQ_NG(SupervisedPrototypeModel):
         self.relevances_ = params['relevances']  # raw logits
         self.gamma_ = float(params['gamma'])
 
+    def _compute_distances_for_rejection(self, X):
+        """Relevance kernel distances for reject option."""
+        sigmas = jnp.maximum(self.sigmas_, self.sigma_min)
+        lam = jax.nn.softmax(self.relevances_)
+        return kernel_distance_squared_relevance(X, self.prototypes_, sigmas, lam)
+
     def predict(self, X):
         """Predict using learned relevance-weighted kernel distance."""
         self._check_fitted()

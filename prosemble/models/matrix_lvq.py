@@ -200,6 +200,12 @@ class GMLVQ(SupervisedPrototypeModel):
             beta=self.beta,
         )
 
+    def _compute_distances_for_rejection(self, X):
+        """Omega-projected distances for reject option."""
+        diff = X[:, None, :] - self.prototypes_[None, :, :]
+        projected = jnp.einsum('npd,dl->npl', diff, self.omega_)
+        return jnp.sum(projected ** 2, axis=2)
+
     def _extract_results(self, params, proto_labels, loss_history, n_iter, **kwargs):
         super()._extract_results(params, proto_labels, loss_history, n_iter, **kwargs)
         self.omega_ = params['omega']

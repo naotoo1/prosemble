@@ -1728,3 +1728,93 @@ class TestOCDKGMLVQNGExport:
         jax_preds = np.asarray(model.predict(X))
         ort_preds = _onnx_predict(model, X)
         npt.assert_array_equal(jax_preds, ort_preds)
+
+
+# ---------------------------------------------------------------------------
+# Reject Option ONNX Export
+# ---------------------------------------------------------------------------
+
+class TestRejectOptionExport:
+    """Test ONNX export with reject_threshold parameter."""
+
+    @pytest.fixture
+    def fitted_glvq(self):
+        X, y = _make_supervised_data(n=60, d=4, n_classes=2)
+        model = GLVQ(n_prototypes_per_class=2, max_iter=50, lr=0.01)
+        model.fit(X, y)
+        return model, X, y
+
+    @pytest.fixture
+    def fitted_gmlvq(self):
+        X, y = _make_supervised_data(n=60, d=4, n_classes=2)
+        model = GMLVQ(n_prototypes_per_class=2, max_iter=50, lr=0.01)
+        model.fit(X, y)
+        return model, X, y
+
+    def test_reject_export_has_two_outputs(self, fitted_glvq):
+        model, X, y = fitted_glvq
+        from prosemble.core.onnx_export import export_onnx
+        onnx_model = export_onnx(model, batch_size=60, reject_threshold=0.1)
+        output_names = [o.name for o in onnx_model.graph.output]
+        assert output_names == ['predictions', 'confidence']
+
+    def test_reject_glvq_predictions_match(self, fitted_glvq):
+        model, X, y = fitted_glvq
+        from prosemble.core.onnx_export import export_onnx
+        threshold = 0.3
+        onnx_model = export_onnx(model, batch_size=60, reject_threshold=threshold)
+        sess = ort.InferenceSession(onnx_model.SerializeToString())
+        results = sess.run(None, {'X': np.asarray(X)})
+        onnx_preds = results[0]
+        jax_preds = np.asarray(model.predict_with_rejection(X, threshold=threshold))
+        npt.assert_array_equal(onnx_preds, jax_preds)
+
+    def test_reject_glvq_confidence_match(self, fitted_glvq):
+        model, X, y = fitted_glvq
+        from prosemble.core.onnx_export import export_onnx
+        onnx_model = export_onnx(model, batch_size=60, reject_threshold=0.1)
+        sess = ort.InferenceSession(onnx_model.SerializeToString())
+        results = sess.run(None, {'X': np.asarray(X)})
+        onnx_conf = results[1]
+        jax_conf = np.asarray(model.confidence(X))
+        npt.assert_allclose(onnx_conf, jax_conf, atol=1e-5)
+
+    def test_reject_gmlvq_predictions_match(self, fitted_gmlvq):
+        model, X, y = fitted_gmlvq
+        from prosemble.core.onnx_export import export_onnx
+        threshold = 0.2
+        onnx_model = export_onnx(model, batch_size=60, reject_threshold=threshold)
+        sess = ort.InferenceSession(onnx_model.SerializeToString())
+        results = sess.run(None, {'X': np.asarray(X)})
+        onnx_preds = results[0]
+        jax_preds = np.asarray(model.predict_with_rejection(X, threshold=threshold))
+        npt.assert_array_equal(onnx_preds, jax_preds)
+
+    def test_reject_gmlvq_confidence_match(self, fitted_gmlvq):
+        model, X, y = fitted_gmlvq
+        from prosemble.core.onnx_export import export_onnx
+        onnx_model = export_onnx(model, batch_size=60, reject_threshold=0.2)
+        sess = ort.InferenceSession(onnx_model.SerializeToString())
+        results = sess.run(None, {'X': np.asarray(X)})
+        onnx_conf = results[1]
+        jax_conf = np.asarray(model.confidence(X))
+        npt.assert_allclose(onnx_conf, jax_conf, atol=1e-5)
+
+    def test_high_threshold_produces_rejections(self, fitted_glvq):
+        model, X, y = fitted_glvq
+        from prosemble.core.onnx_export import export_onnx
+        onnx_model = export_onnx(model, batch_size=60, reject_threshold=0.9)
+        sess = ort.InferenceSession(onnx_model.SerializeToString())
+        results = sess.run(None, {'X': np.asarray(X)})
+        n_rejected = (results[0] == -1).sum()
+        # With threshold 0.9, some samples should be rejected
+        assert n_rejected > 0
+
+    def test_reject_not_supported_for_unsupervised(self):
+        from prosemble.models import NeuralGas
+        from prosemble.core.onnx_export import export_onnx
+        X = jnp.array(np.random.randn(30, 4).astype(np.float32))
+        model = NeuralGas(n_prototypes=3, max_iter=10, lr=0.1)
+        model.fit(X)
+        with pytest.raises(ValueError, match="reject_threshold is only supported"):
+            export_onnx(model, batch_size=30, reject_threshold=0.1)

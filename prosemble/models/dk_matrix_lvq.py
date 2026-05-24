@@ -214,6 +214,10 @@ class DKGMLVQ(SupervisedPrototypeModel):
             raise ValueError("Model not fitted.")
         return self.omega_hat_ @ self.omega_hat_.T
 
+    def _compute_distances_for_rejection(self, X):
+        """Exponential kernel distances for reject option."""
+        return exponential_kernel_distance_squared(X, self.prototypes_, self.omega_hat_)
+
     def predict(self, X):
         """Predict using learned exponential kernel distance."""
         self._check_fitted()

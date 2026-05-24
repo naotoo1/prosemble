@@ -41,6 +41,19 @@ from .protocols import (
 from .serialization import SerializationMixin
 from .data import shuffle_arrays, padded_batches, batched_iterator
 from .distributed import create_mesh, shard_data, replicate_params
+from .optimizers import per_group_clip, hypergradient_descent, riemannian_nesterov
+from .regularization import (
+    prototype_diversity_loss, prototype_diversity_loss_vectorized,
+    sparse_relevance_proximal, elastic_net_proximal,
+)
+from .curriculum import (
+    curriculum_weights, curriculum_threshold, apply_curriculum_to_loss,
+)
+from .reject import RejectOptionMixin
+from .geodesic import (
+    geodesic_interpolation, geodesic_midpoint, decision_boundary_point,
+    prototype_geodesic_distances, inter_class_geodesics,
+)
 
 try:
     import jax
@@ -93,6 +106,18 @@ __all__ = _distance_all + [
     'shuffle_arrays', 'padded_batches', 'batched_iterator',
     # Distributed training
     'create_mesh', 'shard_data', 'replicate_params',
+    # Custom optimizers
+    'per_group_clip', 'hypergradient_descent', 'riemannian_nesterov',
+    # Regularization
+    'prototype_diversity_loss', 'prototype_diversity_loss_vectorized',
+    'sparse_relevance_proximal', 'elastic_net_proximal',
+    # Curriculum learning
+    'curriculum_weights', 'curriculum_threshold', 'apply_curriculum_to_loss',
+    # Reject option
+    'RejectOptionMixin',
+    # Geodesic interpolation
+    'geodesic_interpolation', 'geodesic_midpoint', 'decision_boundary_point',
+    'prototype_geodesic_distances', 'inter_class_geodesics',
     # ONNX export (optional)
     'export_onnx',
 ]

@@ -155,3 +155,38 @@ Data Utilities
    :members:
    :undoc-members:
    :no-index:
+
+Custom Optimizers
+-----------------
+
+.. automodule:: prosemble.core.optimizers
+   :members:
+   :undoc-members:
+
+Regularization
+--------------
+
+.. automodule:: prosemble.core.regularization
+   :members:
+   :undoc-members:
+
+Curriculum Learning
+-------------------
+
+.. automodule:: prosemble.core.curriculum
+   :members:
+   :undoc-members:
+
+Reject Option
+-------------
+
+.. automodule:: prosemble.core.reject
+   :members:
+   :undoc-members:
+
+Geodesic Interpolation
+----------------------
+
+.. automodule:: prosemble.core.geodesic
+   :members:
+   :undoc-members:

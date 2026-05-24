@@ -24,6 +24,7 @@ from functools import partial
 from prosemble.models.base import NotFittedError
 from prosemble.core.quantization import MetadataCollectorMixin, QuantizationMixin
 from prosemble.core.serialization import SerializationMixin
+from prosemble.core.reject import RejectOptionMixin
 from prosemble.core.distance import squared_euclidean_distance_matrix
 from prosemble.core.competitions import wtac
 from prosemble.core.pooling import stratified_min_pooling
@@ -161,7 +162,7 @@ class ScanTrainState(NamedTuple):
     converged: jnp.ndarray        # boolean convergence flag
 
 
-class SupervisedPrototypeModel(SerializationMixin, MetadataCollectorMixin, QuantizationMixin, ABC):
+class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCollectorMixin, QuantizationMixin, ABC):
     """Base class for supervised prototype-based learning models.
 
     Provides the fit/predict/save/load infrastructure. Subclasses implement:

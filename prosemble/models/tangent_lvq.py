@@ -211,6 +211,14 @@ class GTLVQ(SupervisedPrototypeModel):
         omegas = jax.vmap(orthogonalize)(params['omegas'])
         return {**params, 'omegas': omegas}
 
+    def _compute_distances_for_rejection(self, X):
+        """Tangent distances for reject option."""
+        diff = X[:, None, :] - self.prototypes_[None, :, :]
+        proj_onto_subspace = jnp.einsum('npd,pds->nps', diff, self.omegas_)
+        reconstruction = jnp.einsum('nps,pds->npd', proj_onto_subspace, self.omegas_)
+        tangent_diff = diff - reconstruction
+        return jnp.sum(tangent_diff ** 2, axis=2)
+
     def _extract_results(self, params, proto_labels, loss_history, n_iter, **kwargs):
         super()._extract_results(params, proto_labels, loss_history, n_iter, **kwargs)
         self.omegas_ = params['omegas']

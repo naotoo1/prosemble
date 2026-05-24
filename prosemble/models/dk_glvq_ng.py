@@ -303,6 +303,11 @@ class DKGLVQ_NG(SupervisedPrototypeModel):
         self.sigmas_ = params['sigmas']
         self.gamma_ = float(params['gamma'])
 
+    def _compute_distances_for_rejection(self, X):
+        """Kernel distances for reject option."""
+        sigmas = jnp.maximum(self.sigmas_, self.sigma_min)
+        return kernel_distance_squared_per_proto(X, self.prototypes_, sigmas)
+
     def predict(self, X):
         """Predict using learned kernel distance."""
         self._check_fitted()

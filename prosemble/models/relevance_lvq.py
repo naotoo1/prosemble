@@ -175,6 +175,11 @@ class GRLVQ(SupervisedPrototypeModel):
             beta=self.beta,
         )
 
+    def _compute_distances_for_rejection(self, X):
+        """Relevance-weighted distances for reject option."""
+        diff = X[:, None, :] - self.prototypes_[None, :, :]
+        return jnp.sum(self.relevances_[None, None, :] * diff ** 2, axis=2)
+
     def _post_update(self, params):
         # No explicit constraint needed since we use softmax in loss
         return params

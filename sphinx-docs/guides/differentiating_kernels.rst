@@ -513,6 +513,80 @@ Choosing a Model
      - :math:`w_k`
      - Principled SOM with kernel distance
 
+Riemannian Variants
+-------------------
+
+Differentiating kernel distances can also be applied on Riemannian manifolds.
+Three models combine the RiemannianSRNG framework (prototypes on manifold,
+NG rank cooperation, manifold projection) with kernel distance formulas:
+
+- **RiemannianDKGLVQ** — Gaussian kernel on geodesic distance:
+  :math:`d_\kappa^2(x, w_k) = 2(1 - \exp(-d_{\text{geo}}^2(x, w_k) / 2\sigma_k^2))`
+- **RiemannianDKGRLVQ** — Relevance-weighted kernel in tangent space:
+  :math:`d_\kappa^2(x, w_k) = 2(1 - \exp(-\sum_j \lambda_j v_j^2 / 2\sigma_k^2))`
+  where :math:`v = \text{Log}_{w_k}(x)_{\text{flat}}`
+- **RiemannianDKGMLVQ** — Exponential kernel in tangent space:
+  :math:`d_\kappa^2(x, w_k) = \exp(v^T \hat\Lambda v) - 1`
+  where :math:`\hat\Lambda = \hat\Omega \hat\Omega^T`
+
+All three support SO(n), SPD(n), and Grassmannian(n,k) manifolds.
+
+.. code-block:: python
+
+   from prosemble.core.manifolds import SO
+   from prosemble.models import RiemannianDKGLVQ
+
+   manifold = SO(3)
+   model = RiemannianDKGLVQ(
+       manifold=manifold, n_prototypes_per_class=2,
+       max_iter=100, lr=0.01, use_scan=False,
+   )
+   model.fit(X_train, y_train)
+   preds = model.predict(X_test)
+
+   # Inspect learned bandwidths
+   print(model.kernel_bandwidths)
+
+Riemannian Metric-Adapted DK Variants
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Nine additional models combine metric adaptation (global/local/subspace) with
+kernel distance learning on Riemannian manifolds, completing a 3x3 grid
+(Gaussian/Relevance/Matrix kernels x SMNG/SLNG/STNG bases):
+
+**Gaussian kernel variants** (per-prototype :math:`\sigma_k`):
+
+- **RiemannianDKSMNG** — :math:`d_\kappa^2 = 2(1 - \exp(-\|\Omega \cdot v\|^2 / 2\sigma_k^2))`
+- **RiemannianDKSLNG** — :math:`d_\kappa^2 = 2(1 - \exp(-\|\Omega_k \cdot v\|^2 / 2\sigma_k^2))`
+- **RiemannianDKSTNG** — :math:`d_\kappa^2 = 2(1 - \exp(-\|(I - \Omega_k\Omega_k^T) \cdot v\|^2 / 2\sigma_k^2))`
+
+**Relevance kernel variants** (:math:`\sigma_k` + relevance :math:`\lambda`):
+
+- **RiemannianDKRSMNG** — :math:`d_\kappa^2 = 2(1 - \exp(-\sum_j \lambda_j (\Omega \cdot v)_j^2 / 2\sigma_k^2))`
+- **RiemannianDKRSLNG** — :math:`d_\kappa^2 = 2(1 - \exp(-\sum_j \lambda_j (\Omega_k \cdot v)_j^2 / 2\sigma_k^2))`
+- **RiemannianDKRSTNG** — :math:`d_\kappa^2 = 2(1 - \exp(-\sum_j \lambda_j r_j^2 / 2\sigma_k^2))`
+
+**Matrix kernel variants** (exponential with :math:`\hat\Lambda = \hat\Omega\hat\Omega^T`):
+
+- **RiemannianDKMSMNG** — :math:`d_\kappa^2 = \exp((\Omega \cdot v)^T \hat\Lambda (\Omega \cdot v)) - 1`
+- **RiemannianDKMSLNG** — :math:`d_\kappa^2 = \exp((\Omega_k \cdot v)^T \hat\Lambda (\Omega_k \cdot v)) - 1`
+- **RiemannianDKMSTNG** — :math:`d_\kappa^2 = \exp(r^T \hat\Lambda r) - 1`
+
+.. code-block:: python
+
+   from prosemble.core.manifolds import Grassmannian
+   from prosemble.models import RiemannianDKRSMNG
+
+   manifold = Grassmannian(4, 2)
+   model = RiemannianDKRSMNG(
+       manifold=manifold, n_prototypes_per_class=2,
+       max_iter=100, lr=0.01, use_scan=False,
+   )
+   model.fit(X_train, y_train)
+   preds = model.predict(X_test)
+   print(model.kernel_bandwidths)
+   print(model.relevance_profile)
+
 ONNX Export
 -----------
 

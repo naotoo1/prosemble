@@ -450,6 +450,57 @@ Riemannian Models
    :members: fit, predict, transform
    :undoc-members:
 
+Riemannian Differentiating Kernel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: prosemble.models.RiemannianDKGLVQ
+   :members: fit, predict, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKGRLVQ
+   :members: fit, predict, kernel_bandwidths, relevance_profile
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKGMLVQ
+   :members: fit, predict, omega_hat_matrix, lambda_hat_matrix
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKSMNG
+   :members: fit, predict, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKSLNG
+   :members: fit, predict, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKSTNG
+   :members: fit, predict, kernel_bandwidths
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKRSMNG
+   :members: fit, predict, kernel_bandwidths, relevance_profile
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKMSMNG
+   :members: fit, predict, omega_hat_matrix, lambda_hat_matrix
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKRSLNG
+   :members: fit, predict, kernel_bandwidths, relevance_profile
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKMSLNG
+   :members: fit, predict, omega_hat_matrix, lambda_hat_matrix
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKRSTNG
+   :members: fit, predict, kernel_bandwidths, relevance_profile
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianDKMSTNG
+   :members: fit, predict, omega_hat_matrix, lambda_hat_matrix
+   :undoc-members:
+
 Utility Models
 --------------
 

@@ -64,6 +64,20 @@ try:
     from .riemannian_slng import RiemannianSLNG
     from .riemannian_stng import RiemannianSTNG
 
+    # Riemannian Differentiating Kernel
+    from .riemannian_dk_glvq import RiemannianDKGLVQ
+    from .riemannian_dk_relevance_lvq import RiemannianDKGRLVQ
+    from .riemannian_dk_matrix_lvq import RiemannianDKGMLVQ
+    from .riemannian_dk_smng import RiemannianDKSMNG
+    from .riemannian_dk_slng import RiemannianDKSLNG
+    from .riemannian_dk_stng import RiemannianDKSTNG
+    from .riemannian_dk_r_smng import RiemannianDKRSMNG
+    from .riemannian_dk_m_smng import RiemannianDKMSMNG
+    from .riemannian_dk_r_slng import RiemannianDKRSLNG
+    from .riemannian_dk_m_slng import RiemannianDKMSLNG
+    from .riemannian_dk_r_stng import RiemannianDKRSTNG
+    from .riemannian_dk_m_stng import RiemannianDKMSTNG
+
     # One-class models
     from .oc_glvq import OCGLVQ
     from .oc_grlvq import OCGRLVQ
@@ -136,6 +150,19 @@ try:
         # Supervised Riemannian NG
         'RiemannianSRNG': RiemannianSRNG, 'RiemannianSMNG': RiemannianSMNG,
         'RiemannianSLNG': RiemannianSLNG, 'RiemannianSTNG': RiemannianSTNG,
+        # Riemannian Differentiating Kernel
+        'RiemannianDKGLVQ': RiemannianDKGLVQ,
+        'RiemannianDKGRLVQ': RiemannianDKGRLVQ,
+        'RiemannianDKGMLVQ': RiemannianDKGMLVQ,
+        'RiemannianDKSMNG': RiemannianDKSMNG,
+        'RiemannianDKSLNG': RiemannianDKSLNG,
+        'RiemannianDKSTNG': RiemannianDKSTNG,
+        'RiemannianDKRSMNG': RiemannianDKRSMNG,
+        'RiemannianDKMSMNG': RiemannianDKMSMNG,
+        'RiemannianDKRSLNG': RiemannianDKRSLNG,
+        'RiemannianDKMSLNG': RiemannianDKMSLNG,
+        'RiemannianDKRSTNG': RiemannianDKRSTNG,
+        'RiemannianDKMSTNG': RiemannianDKMSTNG,
         # One-class GLVQ
         'OCGLVQ': OCGLVQ, 'OCGRLVQ': OCGRLVQ, 'OCGMLVQ': OCGMLVQ,
         'OCLGMLVQ': OCLGMLVQ, 'OCGTLVQ': OCGTLVQ,
@@ -199,6 +226,12 @@ __all__ = [
     'ImageGLVQ', 'ImageGMLVQ', 'ImageGTLVQ', 'ImageCBC',
     # Supervised Riemannian NG
     'RiemannianSRNG', 'RiemannianSMNG', 'RiemannianSLNG', 'RiemannianSTNG',
+    # Riemannian Differentiating Kernel
+    'RiemannianDKGLVQ', 'RiemannianDKGRLVQ', 'RiemannianDKGMLVQ',
+    'RiemannianDKSMNG', 'RiemannianDKSLNG', 'RiemannianDKSTNG',
+    'RiemannianDKRSMNG', 'RiemannianDKMSMNG',
+    'RiemannianDKRSLNG', 'RiemannianDKMSLNG',
+    'RiemannianDKRSTNG', 'RiemannianDKMSTNG',
     # One-class GLVQ
     'OCGLVQ', 'OCGRLVQ', 'OCGMLVQ', 'OCLGMLVQ', 'OCGTLVQ',
     'OCGLVQ_NG', 'OCGRLVQ_NG', 'OCGMLVQ_NG', 'OCLGMLVQ_NG', 'OCGTLVQ_NG',

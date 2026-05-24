@@ -774,3 +774,265 @@ Enable real-time training visualization for clustering models:
        plot_steps=True,
    )
    model.fit(X)
+
+Custom LVQ Optimizers
+----------------------
+
+Prosemble provides three custom optax-compatible optimizers designed
+specifically for the geometry and parameter structure of LVQ models.
+These can be composed with standard optax transformations via
+``optax.chain()``.
+
+Per-Group Gradient Clipping
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Different parameter types (prototypes, omega matrices, relevances) have
+different natural scales. A single global clip either under-constrains
+large parameters or over-constrains small ones. Per-group clipping clips
+each parameter group independently:
+
+.. code-block:: python
+
+   import optax
+   from prosemble.core.optimizers import per_group_clip
+
+   optimizer = optax.chain(
+       per_group_clip({'prototypes': 1.0, 'omega': 0.5, 'sigmas': 0.1}),
+       optax.adam(0.01),
+   )
+
+   from prosemble.models import GMLVQ
+   model = GMLVQ(
+       n_prototypes_per_class=2,
+       max_iter=100,
+       lr=0.01,
+       optimizer=optimizer,
+   )
+   model.fit(X_train, y_train)
+
+Hypergradient Descent
+^^^^^^^^^^^^^^^^^^^^^^
+
+Adaptive per-parameter learning rates via gradient correlation (Baydin
+et al. 2017). If consecutive gradients point in the same direction,
+the learning rate increases; if they oscillate, it decreases:
+
+.. math::
+
+   \eta_k^{t+1} = \text{clip}\left(
+       \eta_k^t + \beta \cdot \langle g_k^t, g_k^{t-1} \rangle
+   \right)
+
+.. code-block:: python
+
+   from prosemble.core.optimizers import hypergradient_descent
+   from prosemble.models import GLVQ
+
+   model = GLVQ(
+       n_prototypes_per_class=2,
+       max_iter=200,
+       lr=0.01,
+       optimizer=hypergradient_descent(
+           init_lr=0.01,
+           hyper_lr=1e-4,
+           min_lr=1e-6,
+           max_lr=0.1,
+       ),
+   )
+   model.fit(X_train, y_train)
+
+Riemannian Nesterov Momentum
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Nesterov accelerated gradient providing :math:`O(1/t^2)` convergence
+rate versus :math:`O(1/t)` for vanilla gradient descent. Designed for
+use with Riemannian models where manifold projection is handled by
+``_post_update()``:
+
+.. code-block:: python
+
+   from prosemble.core.optimizers import riemannian_nesterov
+   from prosemble.models import GLVQ
+
+   model = GLVQ(
+       n_prototypes_per_class=2,
+       max_iter=200,
+       lr=0.01,
+       optimizer=riemannian_nesterov(
+           learning_rate=0.01,
+           momentum=0.9,
+       ),
+   )
+   model.fit(X_train, y_train)
+
+Reject Option
+--------------
+
+The ``RejectOptionMixin`` adds calibrated rejection to any supervised
+prototype classifier. When the model is uncertain about a prediction
+(the sample lies near the decision boundary), it abstains instead of
+guessing.
+
+The confidence measure is the GLVQ relative margin:
+
+.. math::
+
+   \text{confidence}(x) = \frac{d^-(x) - d^+(x)}{d^-(x) + d^+(x)}
+
+Values near 0 indicate the decision boundary; values near 1 indicate
+high confidence.
+
+.. code-block:: python
+
+   from prosemble.models import GLVQ
+
+   model = GLVQ(n_prototypes_per_class=2, max_iter=100, lr=0.01)
+   model.fit(X_train, y_train)
+
+   # Predict with rejection (uncertain samples get label -1)
+   labels = model.predict_with_rejection(X_test, threshold=0.1)
+   rejected = labels == -1
+   print(f"Rejected {rejected.sum()} of {len(labels)} samples")
+
+   # Compute confidence scores
+   conf = model.confidence(X_test)
+
+   # Find the optimal threshold minimizing Chow's risk
+   threshold = model.optimal_threshold(
+       X_val, y_val,
+       cost_reject=0.5,    # rejection costs half of a misclassification
+       cost_error=1.0,
+   )
+
+   # Accuracy-coverage curve
+   thresholds, accuracies, coverages = model.accuracy_coverage_curve(X_val, y_val)
+
+Curriculum Learning
+--------------------
+
+Self-paced curriculum learning adaptively weights training samples by
+difficulty. Early in training, the model focuses on easy samples; as
+training progresses, harder samples are gradually introduced.
+
+The difficulty measure is the per-sample GLVQ loss (mu-ratio). Samples
+with loss below the current threshold are weighted; those above are
+down-weighted or excluded.
+
+.. code-block:: python
+
+   from prosemble.core.curriculum import (
+       curriculum_weights, curriculum_threshold, apply_curriculum_to_loss,
+   )
+
+   # Compute per-sample difficulty weights
+   threshold = curriculum_threshold(
+       iteration=50,
+       max_iter=200,
+       init_threshold=0.3,   # initially only easy samples
+       final_threshold=1.0,  # eventually all samples
+       schedule='linear',
+   )
+   weights = curriculum_weights(per_sample_loss, threshold, mode='soft')
+
+   # Or use the combined pipeline
+   weighted_loss = apply_curriculum_to_loss(
+       per_sample_losses,
+       iteration=50,
+       max_iter=200,
+       init_threshold=0.3,
+       final_threshold=1.0,
+   )
+
+Three weighting modes are available:
+
+- ``'hard'``: binary — include (weight=1) or exclude (weight=0)
+- ``'soft'``: smooth sigmoid transition at the threshold
+- ``'linear'``: linearly decrease weight from 1 to 0 as loss increases
+
+Three scheduling strategies:
+
+- ``'linear'``: threshold increases linearly with iteration
+- ``'exponential'``: slow start, fast growth
+- ``'cosine'``: smooth cosine schedule from init to final threshold
+
+Prototype Regularization
+-------------------------
+
+Prototype Diversity (DPP)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Prevent same-class prototypes from collapsing onto each other using a
+determinantal point process (DPP) inspired penalty. The log-determinant
+of the distance kernel matrix encourages spread:
+
+.. code-block:: python
+
+   from prosemble.core.regularization import prototype_diversity_loss
+
+   # Add as a regularization term to the loss
+   div_loss = prototype_diversity_loss(
+       prototypes, proto_labels,
+       sigma_div=1.0,
+   )
+   total_loss = classification_loss + 0.01 * div_loss
+
+Sparse Relevance Regularization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For relevance learning models (GRLVQ), encourage sparsity in the
+learned relevance profile via proximal gradient operators:
+
+.. code-block:: python
+
+   from prosemble.core.regularization import (
+       sparse_relevance_proximal,
+       elastic_net_proximal,
+   )
+
+   # L1 soft-thresholding (promotes exact zeros)
+   sparse_rel = sparse_relevance_proximal(
+       relevances, l1_weight=0.01, lr=0.01,
+   )
+
+   # Elastic net (L1 + L2 combination)
+   sparse_rel = elastic_net_proximal(
+       relevances, l1_weight=0.01, l2_weight=0.001, lr=0.01,
+   )
+
+Geodesic Interpolation
+------------------------
+
+For Riemannian models, geodesic utilities enable visualization and
+analysis of decision boundaries on curved manifolds.
+
+.. code-block:: python
+
+   from prosemble.core.geodesic import (
+       geodesic_interpolation,
+       geodesic_midpoint,
+       decision_boundary_point,
+       prototype_geodesic_distances,
+       inter_class_geodesics,
+   )
+   from prosemble.core.manifolds import SO
+
+   manifold = SO(3)
+
+   # Compute geodesic path between two SO(3) prototypes
+   path = geodesic_interpolation(manifold, proto_a, proto_b, n_points=50)
+
+   # Find the decision boundary along the geodesic
+   boundary_pt, t_boundary = decision_boundary_point(
+       manifold, proto_a, proto_b,
+   )
+   print(f"Boundary at t={t_boundary:.3f}")  # t=0.5 for symmetric manifolds
+
+   # Pairwise geodesic distance matrix between all prototypes
+   dist_matrix = prototype_geodesic_distances(
+       manifold, prototypes, proto_labels,
+   )
+
+   # All inter-class geodesics with boundary locations
+   geodesics = inter_class_geodesics(
+       manifold, prototypes, proto_labels,
+   )

@@ -6,7 +6,7 @@ cross-platform deployment.  An exported ONNX model reproduces the ``predict()``
 output of the original model and runs anywhere ONNX Runtime is available —
 no JAX or prosemble dependency needed at inference time.
 
-**88 of 102 models** are supported.
+**88 of 114 models** are supported.
 
 Installation
 ------------

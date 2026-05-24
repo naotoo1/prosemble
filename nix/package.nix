@@ -5,8 +5,8 @@
 # 2. Add to pkgs/top-level/python-packages.nix:
 #      prosemble = callPackage ../development/python-modules/prosemble { };
 # 3. Update the hash after publishing to PyPI:
-#      nix-prefetch-url --unpack https://github.com/naotoo1/prosemble/archive/refs/tags/v2.2.0.tar.gz
-# 4. PR title: python3Packages.prosemble: init at 2.2.0
+#      nix-prefetch-url --unpack https://github.com/naotoo1/prosemble/archive/refs/tags/v2.3.0.tar.gz
+# 4. PR title: python3Packages.prosemble: init at 2.3.0
 {
   lib,
   buildPythonPackage,
@@ -29,7 +29,7 @@
 
 buildPythonPackage (finalAttrs: {
   pname = "prosemble";
-  version = "2.2.0";
+  version = "2.3.0";
   pyproject = true;
 
   src = fetchFromGitHub {

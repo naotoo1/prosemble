@@ -150,6 +150,90 @@ distance only in directions orthogonal to the invariance subspace:
    )
    model.fit(X_train, y_train)
 
+Wasserstein Prototype LVQ
+--------------------------
+
+The Wasserstein LVQ family uses Gaussian distributional prototypes instead
+of point prototypes.  Each prototype :math:`k` is a diagonal Gaussian
+:math:`\mathcal{N}(\mu_k, \text{diag}(\sigma_k^2))`.  The distance from
+a data point :math:`x` (treated as a Dirac delta) to prototype :math:`k`
+is the squared 2-Wasserstein distance:
+
+.. math::
+
+   W_2^2(\delta_x, \mathcal{N}(\mu_k, \text{diag}(\sigma_k^2)))
+   = \|x - \mu_k\|^2 + \sum_j \sigma_{kj}^2
+
+The variance term acts as a per-prototype learned "spread" — prototypes
+with smaller variance are more specific and attract nearby points more
+strongly.
+
+**WGLVQ** — Wasserstein GLVQ (base variant):
+
+.. code-block:: python
+
+   from prosemble.models import WGLVQ
+
+   model = WGLVQ(
+       n_prototypes_per_class=2,
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
+   # Learned prototype means and variances
+   print(model.prototype_means.shape)      # (n_prototypes, n_features)
+   print(model.prototype_variances.shape)   # (n_prototypes, n_features)
+
+**WGMLVQ** — Adds a global :math:`\Omega` matrix projection:
+
+.. math::
+
+   W_2^2(x, k) = \|\Omega(x - \mu_k)\|^2 + \sum_j \sigma_{kj}^2
+
+.. code-block:: python
+
+   from prosemble.models import WGMLVQ
+
+   model = WGMLVQ(
+       n_prototypes_per_class=2,
+       latent_dim=2,          # project to 2D
+       max_iter=100,
+       lr=0.001,
+   )
+   model.fit(X_train, y_train)
+
+   print(model.omega_matrix.shape)   # (n_features, latent_dim)
+   print(model.lambda_matrix)        # Omega^T @ Omega
+
+**WGRLVQ** — Adds per-feature relevance weighting:
+
+.. math::
+
+   W_2^2(x, k) = \sum_j \lambda_j (x_j - \mu_{kj})^2 + \sum_j \sigma_{kj}^2
+
+where :math:`\lambda_j \geq 0` and :math:`\sum_j \lambda_j = 1`.
+
+.. code-block:: python
+
+   from prosemble.models import WGRLVQ
+
+   model = WGRLVQ(
+       n_prototypes_per_class=2,
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
+   # Learned relevance profile
+   print(model.relevance_profile)   # shape: (n_features,), sums to 1
+
+.. note::
+
+   Variances are parameterized internally as :math:`\log(\sigma^2)` to ensure
+   positivity during gradient optimization.  Access the actual variances via
+   ``model.prototype_variances``.
+
 CELVQ — Cross-Entropy
 ----------------------
 

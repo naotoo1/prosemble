@@ -284,6 +284,8 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
             hp['manifold_n'] = manifold.n
         if hasattr(manifold, 'k'):
             hp['manifold_k'] = manifold.k
+        if hasattr(manifold, 'd'):
+            hp['manifold_d'] = manifold.d
         return hp
 
     def _get_fitted_arrays(self):
@@ -303,7 +305,7 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
     @classmethod
     def _reconstruct_manifold(cls, hp):
         """Reconstruct manifold from saved hyperparameters."""
-        from prosemble.core.manifolds import SO, SPD, Grassmannian
+        from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
         mtype = hp.get('manifold_type', '')
         if mtype == 'SO':
             return SO(int(hp['manifold_n']))
@@ -311,6 +313,8 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
             return SPD(int(hp['manifold_n']))
         elif mtype == 'Grassmannian':
             return Grassmannian(int(hp['manifold_n']), int(hp['manifold_k']))
+        elif mtype == 'HyperbolicPoincare':
+            return HyperbolicPoincare(int(hp['manifold_d']))
         else:
             raise ValueError(f"Unknown manifold type: {mtype}")
 
@@ -320,5 +324,6 @@ class RiemannianNeuralGas(UnsupervisedPrototypeModel):
         hyperparams.pop('manifold_type', None)
         hyperparams.pop('manifold_n', None)
         hyperparams.pop('manifold_k', None)
+        hyperparams.pop('manifold_d', None)
         hyperparams['manifold'] = manifold
         return hyperparams

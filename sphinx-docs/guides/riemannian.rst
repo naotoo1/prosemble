@@ -26,15 +26,84 @@ Supported Manifolds
      - :math:`k`-dimensional subspaces of :math:`\mathbb{R}^n`
      - Hyperspectral imaging, video analysis, subspace tracking
 
-All three are available from ``prosemble.core.manifolds``:
+.. list-table::
+   :header-rows: 1
+   :widths: 20 30 50
+
+   * - Manifold
+     - Points
+     - Applications
+   * - **HyperbolicPoincare(d)**
+     - Vectors in :math:`\mathbb{B}^d = \{x \in \mathbb{R}^d : \|x\| < 1\}`
+     - Hierarchical data, taxonomy embeddings, NLP trees
+
+All four are available from ``prosemble.core.manifolds``:
 
 .. code-block:: python
 
-   from prosemble.core.manifolds import SO, SPD, Grassmannian
+   from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
 
    so3 = SO(3)           # 3x3 rotation matrices
    spd4 = SPD(4)         # 4x4 SPD matrices
    gr5_2 = Grassmannian(5, 2)  # 2D subspaces of R^5
+   hyp8 = HyperbolicPoincare(8)  # 8D Poincare ball
+
+HyperbolicPoincare
+~~~~~~~~~~~~~~~~~~
+
+The Poincare ball model of hyperbolic geometry.  Points live in the open
+unit ball :math:`\mathbb{B}^d = \{x \in \mathbb{R}^d : \|x\| < 1\}` with
+the Riemannian metric tensor :math:`g_x = \lambda_x^2 I` where
+:math:`\lambda_x = 2/(1 - \|x\|^2)` is the conformal factor.
+
+The geodesic distance is:
+
+.. math::
+
+   d(x, y) = \text{arcosh}\!\left(1 + \frac{2\|x - y\|^2}{(1 - \|x\|^2)(1 - \|y\|^2)}\right)
+
+Prototype updates use the exponential and logarithmic maps based on
+Mobius addition:
+
+.. math::
+
+   \text{Exp}_x(v) = x \oplus \left(\tanh\!\left(\frac{\lambda_x \|v\|}{2}\right) \cdot \frac{v}{\|v\|}\right)
+
+.. math::
+
+   \text{Log}_x(y) = \frac{2}{\lambda_x} \text{arctanh}(\|-x \oplus y\|) \cdot \frac{-x \oplus y}{\|-x \oplus y\|}
+
+Hyperbolic space is particularly suited for data with hierarchical or
+tree-like structure, as distances grow exponentially toward the boundary.
+
+.. code-block:: python
+
+   from prosemble.models import RiemannianSRNG
+   from prosemble.core.manifolds import HyperbolicPoincare
+   import jax
+   import jax.numpy as jnp
+
+   manifold = HyperbolicPoincare(4)
+
+   # Generate data inside the Poincare ball
+   key = jax.random.PRNGKey(0)
+   X = jax.random.normal(key, (40, 4)) * 0.3
+   X = jax.vmap(manifold.project)(X)  # ensure points lie in ball
+   X = X.reshape(40, -1)
+   y = jnp.array([0] * 20 + [1] * 20)
+
+   model = RiemannianSRNG(
+       manifold=manifold,
+       n_prototypes_per_class=2,
+       max_iter=50,
+       lr=0.01,
+   )
+   model.fit(X, y)
+   labels = model.predict(X)
+
+All supervised Riemannian models (RiemannianSRNG, RiemannianSMNG,
+RiemannianSLNG, RiemannianSTNG) and the unsupervised RiemannianNeuralGas
+work with ``HyperbolicPoincare`` without any code changes.
 
 RiemannianSRNG
 --------------
@@ -222,3 +291,23 @@ Choosing a Model
    * - RiemannianNeuralGas
      - Geodesic distance
      - Unsupervised manifold clustering
+
+.. list-table:: Supported Manifold Selection
+   :header-rows: 1
+   :widths: 25 35 40
+
+   * - Manifold
+     - Geometry
+     - Use When
+   * - SO(n)
+     - Rotation matrices
+     - Pose estimation, robotics, structural biology
+   * - SPD(n)
+     - Positive definite matrices
+     - Covariance matrices (EEG/BCI, DTI)
+   * - Grassmannian(n, k)
+     - Subspaces of :math:`\mathbb{R}^n`
+     - Video/image subspace analysis
+   * - HyperbolicPoincare(d)
+     - Poincare ball :math:`\mathbb{B}^d`
+     - Hierarchical/tree-structured data

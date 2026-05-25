@@ -134,9 +134,10 @@ class RiemannianSMNG(RiemannianSRNG):
         Dispatches to the appropriate differentiable log map based on
         manifold type.
         """
-        from prosemble.core.manifolds import SO, SPD, Grassmannian
+        from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
         from prosemble.models.riemannian_srng import (
             _so_log_map_diff, _spd_log_map_diff, _grassmannian_log_map_diff,
+            _hyperbolic_log_map_diff,
         )
         if isinstance(self.manifold, SO):
             return _so_log_map_diff(w, x)
@@ -144,6 +145,8 @@ class RiemannianSMNG(RiemannianSRNG):
             return _spd_log_map_diff(w, x)
         elif isinstance(self.manifold, Grassmannian):
             return _grassmannian_log_map_diff(w, x)
+        elif isinstance(self.manifold, HyperbolicPoincare):
+            return _hyperbolic_log_map_diff(w, x, eps=self.manifold.eps)
         else:
             return self.manifold.log_map(w, x)
 

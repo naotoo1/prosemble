@@ -28,9 +28,10 @@ from prosemble.models.prototype_base import SupervisedState
 from prosemble.core.activations import sigmoid_beta
 from prosemble.core.initializers import identity_omega_init
 from prosemble.core.competitions import wtac
-from prosemble.core.manifolds import SO, SPD, Grassmannian
+from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
 from prosemble.models.riemannian_srng import (
     _so_log_map_diff, _spd_log_map_diff, _grassmannian_log_map_diff,
+    _hyperbolic_log_map_diff,
 )
 
 
@@ -172,6 +173,8 @@ class RiemannianDKGMLVQ(RiemannianSRNG):
             return _spd_log_map_diff(w, x)
         elif isinstance(self.manifold, Grassmannian):
             return _grassmannian_log_map_diff(w, x)
+        elif isinstance(self.manifold, HyperbolicPoincare):
+            return _hyperbolic_log_map_diff(w, x, eps=self.manifold.eps)
         else:
             return self.manifold.log_map(w, x)
 

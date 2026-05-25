@@ -117,6 +117,12 @@ try:
     from .dk_kohonen_som import DKKohonenSOM
     from .dk_heskes_som import DKHeskesSOM
 
+    # Wasserstein LVQ models
+    from .wasserstein_glvq import WGLVQ
+    from .wasserstein_gmlvq import WGMLVQ
+    from .wasserstein_grlvq import WGRLVQ
+
+
     # One-Class Differentiating Kernel models
     from .oc_dk_glvq import OCDKGLVQ
     from .oc_dk_relevance_lvq import OCDKGRLVQ
@@ -191,6 +197,8 @@ try:
         'OCDKGMLVQ': OCDKGMLVQ,
         'OCDKGLVQ_NG': OCDKGLVQ_NG, 'OCDKGRLVQ_NG': OCDKGRLVQ_NG,
         'OCDKGMLVQ_NG': OCDKGMLVQ_NG,
+        # Wasserstein LVQ
+        'WGLVQ': WGLVQ, 'WGMLVQ': WGMLVQ, 'WGRLVQ': WGRLVQ,
     }
 
     JAX_AVAILABLE = True
@@ -250,6 +258,8 @@ __all__ = [
     # One-Class Differentiating Kernel
     'OCDKGLVQ', 'OCDKGRLVQ', 'OCDKGMLVQ',
     'OCDKGLVQ_NG', 'OCDKGRLVQ_NG', 'OCDKGMLVQ_NG',
+    # Wasserstein LVQ
+    'WGLVQ', 'WGMLVQ', 'WGRLVQ',
     # Status
     'JAX_AVAILABLE',
 ]

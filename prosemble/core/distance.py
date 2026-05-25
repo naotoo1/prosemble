@@ -432,6 +432,185 @@ def tangent_distance_matrix(
 
 
 # ============================================================================
+# Wasserstein Distance Functions
+# ============================================================================
+
+
+@jit
+def wasserstein2_distance_matrix(
+    X: chex.Array,
+    means: chex.Array,
+    log_variances: chex.Array
+) -> chex.Array:
+    """
+    Compute pairwise squared 2-Wasserstein distances from points to Gaussian prototypes.
+
+    Each prototype is a diagonal Gaussian :math:`\\mathcal{N}(\\mu_k, \\text{diag}(\\sigma_k^2))`.
+    Each input point :math:`x` is treated as a Dirac delta distribution :math:`\\delta_x`.
+
+    The squared 2-Wasserstein distance from a point to a diagonal Gaussian is:
+
+    .. math::
+
+        W_2^2(\\delta_x, \\mathcal{N}(\\mu_k, \\text{diag}(\\sigma_k^2)))
+        = \\sum_j (x_j - \\mu_{kj})^2 + \\sum_j \\sigma_{kj}^2
+
+    This decomposes into the squared Euclidean distance from the point to the
+    mean, plus the total variance (trace of covariance). Prototypes with
+    smaller variance are effectively "more certain" and attract nearby points
+    more strongly.
+
+    Parameters
+    ----------
+    X : array of shape (n, d)
+        Data points.
+    means : array of shape (p, d)
+        Prototype mean vectors.
+    log_variances : array of shape (p, d)
+        Log of prototype variances (ensures positivity via ``exp``).
+
+    Returns
+    -------
+    D : array of shape (n, p)
+        Squared 2-Wasserstein distances.
+
+    References
+    ----------
+    .. [1] Villani, C. (2009). Optimal Transport: Old and New.
+           Springer. Chapter 2.
+    .. [2] Givens, C. R. & Shortt, R. M. (1984). A class of Wasserstein
+           metrics for probability distributions. Michigan Math. J., 31(2).
+    """
+    chex.assert_rank(X, 2)
+    chex.assert_rank(means, 2)
+    chex.assert_rank(log_variances, 2)
+    chex.assert_equal(X.shape[1], means.shape[1])
+    chex.assert_equal(means.shape, log_variances.shape)
+
+    # Squared Euclidean from points to means
+    eucl = squared_euclidean_distance_matrix(X, means)  # (n, p)
+
+    # Variance spread penalty per prototype
+    variances = jnp.exp(log_variances)  # (p, d)
+    spread = jnp.sum(variances, axis=1)  # (p,)
+
+    return eucl + spread[None, :]
+
+
+@jit
+def wasserstein2_omega_distance_matrix(
+    X: chex.Array,
+    means: chex.Array,
+    log_variances: chex.Array,
+    omega: chex.Array
+) -> chex.Array:
+    """
+    Squared 2-Wasserstein distance with global metric adaptation.
+
+    Projects data and means through :math:`\\Omega` before computing
+    the Euclidean component, while variances contribute directly:
+
+    .. math::
+
+        W_2^2(x, k) = \\|\\Omega(x - \\mu_k)\\|^2 + \\sum_j \\sigma_{kj}^2
+
+    Parameters
+    ----------
+    X : array of shape (n, d)
+        Data points.
+    means : array of shape (p, d)
+        Prototype mean vectors.
+    log_variances : array of shape (p, d)
+        Log of prototype variances.
+    omega : array of shape (d, l)
+        Global projection matrix.
+
+    Returns
+    -------
+    D : array of shape (n, p)
+        Squared 2-Wasserstein distances in projected space.
+    """
+    chex.assert_rank(X, 2)
+    chex.assert_rank(means, 2)
+    chex.assert_rank(log_variances, 2)
+    chex.assert_rank(omega, 2)
+    chex.assert_equal(X.shape[1], means.shape[1])
+    chex.assert_equal(means.shape, log_variances.shape)
+    chex.assert_equal(X.shape[1], omega.shape[0])
+
+    # Project and compute squared Euclidean in projected space
+    X_proj = X @ omega  # (n, l)
+    M_proj = means @ omega  # (p, l)
+    eucl = squared_euclidean_distance_matrix(X_proj, M_proj)  # (n, p)
+
+    # Variance spread penalty
+    variances = jnp.exp(log_variances)  # (p, d)
+    spread = jnp.sum(variances, axis=1)  # (p,)
+
+    return eucl + spread[None, :]
+
+
+@jit
+def wasserstein2_relevance_distance_matrix(
+    X: chex.Array,
+    means: chex.Array,
+    log_variances: chex.Array,
+    relevances: chex.Array
+) -> chex.Array:
+    """
+    Squared 2-Wasserstein distance with feature relevance weighting.
+
+    Applies per-feature relevance weights :math:`\\lambda_j` to the
+    Euclidean component:
+
+    .. math::
+
+        W_2^2(x, k) = \\sum_j \\lambda_j (x_j - \\mu_{kj})^2 + \\sum_j \\sigma_{kj}^2
+
+    where :math:`\\lambda_j = \\text{softmax}(r)_j` ensures non-negative
+    weights that sum to 1.
+
+    Parameters
+    ----------
+    X : array of shape (n, d)
+        Data points.
+    means : array of shape (p, d)
+        Prototype mean vectors.
+    log_variances : array of shape (p, d)
+        Log of prototype variances.
+    relevances : array of shape (d,)
+        Raw relevance logits (softmax applied internally).
+
+    Returns
+    -------
+    D : array of shape (n, p)
+        Relevance-weighted squared 2-Wasserstein distances.
+    """
+    chex.assert_rank(X, 2)
+    chex.assert_rank(means, 2)
+    chex.assert_rank(log_variances, 2)
+    chex.assert_rank(relevances, 1)
+    chex.assert_equal(X.shape[1], means.shape[1])
+    chex.assert_equal(means.shape, log_variances.shape)
+    chex.assert_equal(X.shape[1], relevances.shape[0])
+
+    # Softmax relevance weights
+    lambdas = jax.nn.softmax(relevances)  # (d,)
+
+    # Weighted squared differences
+    # (n, 1, d) - (1, p, d) -> (n, p, d)
+    diff_sq = (X[:, None, :] - means[None, :, :]) ** 2
+    weighted = diff_sq * lambdas[None, None, :]  # (n, p, d)
+    eucl = jnp.sum(weighted, axis=2)  # (n, p)
+
+    # Variance spread penalty
+    variances = jnp.exp(log_variances)  # (p, d)
+    spread = jnp.sum(variances, axis=1)  # (p,)
+
+    return eucl + spread[None, :]
+
+
+# ============================================================================
 # Kernel Functions
 # ============================================================================
 
@@ -764,6 +943,10 @@ __all__ = [
     'omega_distance_matrix',
     'lomega_distance_matrix',
     'tangent_distance_matrix',
+    # Wasserstein distance functions
+    'wasserstein2_distance_matrix',
+    'wasserstein2_omega_distance_matrix',
+    'wasserstein2_relevance_distance_matrix',
     # Kernel functions
     'gaussian_kernel_matrix',
     'polynomial_kernel_matrix',

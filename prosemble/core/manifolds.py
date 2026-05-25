@@ -7,6 +7,7 @@ for manifolds commonly arising in machine learning:
 - SO(n): Special orthogonal group (rotation matrices)
 - SPD(n): Symmetric positive definite matrices
 - Grassmannian Gr(n, k): k-dimensional subspaces of R^n
+- HyperbolicPoincare(d): Poincare ball model of hyperbolic space
 
 All operations are JIT-compilable and vmap-compatible.
 
@@ -15,6 +16,9 @@ References
 Schwarz, Psenickova, Villmann, Röhrbein (2026).
 Topology-Preserving Prototype Learning on Riemannian Manifolds.
 ESANN 2026.
+
+Ganea, O., Becigneul, G., & Hofmann, T. (2018). Hyperbolic Neural
+Networks. NeurIPS 2018.
 """
 
 from __future__ import annotations
@@ -323,3 +327,165 @@ class Grassmannian:
     def injectivity_radius(self, Q):
         """Injectivity radius of Gr(n,k) is :math:`\\pi/2`."""
         return jnp.pi / 2.0
+
+
+# ---------------------------------------------------------------------------
+# HyperbolicPoincare(d) — Poincaré Ball Model of Hyperbolic Space
+# ---------------------------------------------------------------------------
+
+def _mobius_add(x, y, eps=1e-7):
+    """Möbius addition in the Poincaré ball.
+
+    .. math::
+
+        x \\oplus y = \\frac{(1 + 2\\langle x, y\\rangle + \\|y\\|^2) x
+                           + (1 - \\|x\\|^2) y}
+                          {1 + 2\\langle x, y\\rangle + \\|x\\|^2 \\|y\\|^2}
+
+    Parameters
+    ----------
+    x, y : arrays of shape (d,)
+
+    Returns
+    -------
+    result : array of shape (d,)
+    """
+    x_sq = jnp.sum(x ** 2)
+    y_sq = jnp.sum(y ** 2)
+    xy = jnp.sum(x * y)
+    num = (1.0 + 2.0 * xy + y_sq) * x + (1.0 - x_sq) * y
+    denom = 1.0 + 2.0 * xy + x_sq * y_sq
+    return num / (denom + eps)
+
+
+def _conformal_factor(x, eps=1e-7):
+    """Conformal factor :math:`\\lambda_x = 2 / (1 - \\|x\\|^2)`.
+
+    Parameters
+    ----------
+    x : array of shape (d,)
+
+    Returns
+    -------
+    scalar
+    """
+    return 2.0 / (1.0 - jnp.sum(x ** 2) + eps)
+
+
+class HyperbolicPoincare:
+    """Poincaré ball model of hyperbolic space :math:`\\mathbb{H}^d`.
+
+    Points are vectors in :math:`\\mathbb{B}^d = \\{x \\in \\mathbb{R}^d : \\|x\\| < 1\\}`.
+    The Riemannian metric is :math:`g_x = \\lambda_x^2 g_E` where
+    :math:`\\lambda_x = 2/(1-\\|x\\|^2)` is the conformal factor.
+
+    This manifold is the natural geometry for hierarchical and
+    tree-structured data — it can embed trees with arbitrarily low
+    distortion (Sarkar 2011).
+
+    Parameters
+    ----------
+    d : int
+        Dimension of the hyperbolic space.
+    eps : float
+        Numerical safety margin for boundary clamping.
+    """
+
+    def __init__(self, d: int, eps: float = 1e-5):
+        self.d = d
+        self.eps = eps
+        self.point_shape = (d,)
+
+    def distance(self, x, y):
+        """Geodesic distance in the Poincaré ball.
+
+        .. math::
+
+            d(x, y) = \\operatorname{arcosh}\\!\\left(1 + \\frac{2\\|x - y\\|^2}
+                      {(1 - \\|x\\|^2)(1 - \\|y\\|^2)}\\right)
+        """
+        diff_sq = jnp.sum((x - y) ** 2)
+        x_sq = jnp.sum(x ** 2)
+        y_sq = jnp.sum(y ** 2)
+        denom = (1.0 - x_sq) * (1.0 - y_sq)
+        arg = 1.0 + 2.0 * diff_sq / (denom + self.eps)
+        # Stable arcosh with safe gradient: arcosh(z) = log(z + sqrt(z^2-1))
+        # Clamp arg >= 1 + eps to prevent gradient blow-up near z=1
+        arg = jnp.maximum(arg, 1.0 + 1e-6)
+        return jnp.arccosh(arg)
+
+    def distance_squared(self, x, y):
+        """Squared geodesic distance."""
+        d = self.distance(x, y)
+        return d ** 2
+
+    def log_map(self, x, y):
+        """Logarithmic map: tangent vector at x pointing toward y.
+
+        .. math::
+
+            \\text{Log}_x(y) = \\frac{2}{\\lambda_x}
+            \\operatorname{arctanh}(\\|-x \\oplus y\\|)
+            \\frac{-x \\oplus y}{\\|-x \\oplus y\\|}
+        """
+        neg_x = -x
+        add_result = _mobius_add(neg_x, y, eps=self.eps)
+        norm = jnp.linalg.norm(add_result)
+        norm_safe = jnp.maximum(norm, 1e-10)
+        # arctanh is only defined for |z| < 1, clamp
+        norm_clamped = jnp.minimum(norm, 1.0 - 1e-7)
+        lam_x = _conformal_factor(x, eps=self.eps)
+        scale = (2.0 / lam_x) * jnp.arctanh(norm_clamped)
+        return scale * add_result / norm_safe
+
+    def exp_map(self, x, v):
+        """Exponential map: move from x along tangent vector v.
+
+        .. math::
+
+            \\text{Exp}_x(v) = x \\oplus \\left(
+            \\tanh\\!\\left(\\frac{\\lambda_x \\|v\\|}{2}\\right)
+            \\frac{v}{\\|v\\|}\\right)
+        """
+        v_norm = jnp.linalg.norm(v)
+        v_norm_safe = jnp.maximum(v_norm, 1e-10)
+        lam_x = _conformal_factor(x, eps=self.eps)
+        direction = v / v_norm_safe
+        t = jnp.tanh(lam_x * v_norm / 2.0) * direction
+        return _mobius_add(x, t, eps=self.eps)
+
+    def random_point(self, key):
+        """Generate a random point uniformly in the Poincaré ball.
+
+        Uses the radial transform: sample direction uniformly on S^{d-1},
+        then radius r ~ Beta(1, d) to get uniform distribution in B^d,
+        scaled to stay safely inside the ball.
+        """
+        key1, key2 = jax.random.split(key)
+        # Random direction on unit sphere
+        direction = jax.random.normal(key1, (self.d,))
+        direction = direction / (jnp.linalg.norm(direction) + 1e-10)
+        # Uniform radius in ball: r^d ~ U[0,1] => r = U^{1/d}
+        u = jax.random.uniform(key2, (), minval=0.01, maxval=0.95)
+        r = u ** (1.0 / self.d)
+        # Scale to stay inside ball with margin
+        r = r * (1.0 - self.eps)
+        return r * direction
+
+    def belongs(self, x):
+        """Check if x is in the Poincaré ball: :math:`\\|x\\| < 1`."""
+        return jnp.sum(x ** 2) < 1.0
+
+    def project(self, x):
+        """Project to the interior of the Poincaré ball.
+
+        Clamps the norm to be strictly less than 1.
+        """
+        max_norm = 1.0 - self.eps
+        norm = jnp.linalg.norm(x)
+        scale = jnp.minimum(max_norm / (norm + 1e-10), 1.0)
+        return x * scale
+
+    def injectivity_radius(self, x):
+        """Hyperbolic space has infinite injectivity radius."""
+        return jnp.inf

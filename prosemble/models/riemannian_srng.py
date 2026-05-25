@@ -6,7 +6,7 @@ using geodesic distances and Neural Gas neighborhood cooperation.
 Prototypes live on the manifold and are updated via projected gradient
 descent (Euclidean gradient + manifold projection).
 
-Supports SO(n), SPD(n), and Grassmannian(n,k) manifolds.
+Supports SO(n), SPD(n), Grassmannian(n,k), and HyperbolicPoincare(d) manifolds.
 """
 
 import jax
@@ -15,7 +15,7 @@ import numpy as np
 
 from prosemble.models.prototype_base import SupervisedPrototypeModel, SupervisedState
 from prosemble.core.activations import sigmoid_beta
-from prosemble.core.manifolds import SO, SPD, Grassmannian
+from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
 from prosemble.core.protocols import Manifold
 
 
@@ -126,6 +126,79 @@ def _grassmannian_log_map_diff(Q1, Q2):
     smooth everywhere.
     """
     return Q2 - Q1 @ (Q1.T @ Q2)
+
+
+def _hyperbolic_distance_squared_diff(x, y, eps=1e-5):
+    """Differentiable squared geodesic distance on the Poincare ball.
+
+    .. math::
+
+        d^2(x, y) = \\left(\\text{arcosh}\\left(1 + \\frac{2\\|x - y\\|^2}
+        {(1 - \\|x\\|^2)(1 - \\|y\\|^2)}\\right)\\right)^2
+
+    Parameters
+    ----------
+    x : array of shape (d,)
+        Point in the Poincare ball.
+    y : array of shape (d,)
+        Point in the Poincare ball.
+    eps : float
+        Numerical stability constant.
+
+    Returns
+    -------
+    float
+        Squared geodesic distance.
+    """
+    diff_sq = jnp.sum((x - y) ** 2)
+    x_sq = jnp.sum(x ** 2)
+    y_sq = jnp.sum(y ** 2)
+    denom = (1.0 - x_sq) * (1.0 - y_sq)
+    arg = 1.0 + 2.0 * diff_sq / (denom + eps)
+    # Clamp arg >= 1 + eps to prevent gradient blow-up at z=1
+    # where d/dz arcosh(z) = 1/sqrt(z^2 - 1) diverges
+    arg = jnp.maximum(arg, 1.0 + 1e-6)
+    dist = jnp.arccosh(arg)
+    return dist ** 2
+
+
+def _hyperbolic_log_map_diff(x, y, eps=1e-5):
+    """Differentiable log map on the Poincare ball.
+
+    .. math::
+
+        \\text{Log}_x(y) = \\frac{2}{\\lambda_x} \\text{arctanh}(\\|-x \\oplus y\\|)
+        \\cdot \\frac{-x \\oplus y}{\\|-x \\oplus y\\|}
+
+    where :math:`\\lambda_x = 2 / (1 - \\|x\\|^2)` is the conformal factor
+    and :math:`\\oplus` is Mobius addition.
+
+    Parameters
+    ----------
+    x : array of shape (d,)
+        Base point in the Poincare ball.
+    y : array of shape (d,)
+        Target point in the Poincare ball.
+    eps : float
+        Numerical stability constant.
+
+    Returns
+    -------
+    array of shape (d,)
+        Tangent vector at x pointing toward y.
+    """
+    from prosemble.core.manifolds import _mobius_add, _conformal_factor
+    neg_x = -x
+    add_result = _mobius_add(neg_x, y, eps=eps)
+    # Gradient-safe norm: jnp.linalg.norm has 0/0 gradient at zero
+    norm_sq = jnp.sum(add_result ** 2)
+    norm = jnp.sqrt(norm_sq + 1e-16)
+    # Clamp norm for arctanh domain (-1, 1)
+    norm_clamped = jnp.minimum(norm, 1.0 - 1e-7)
+    lam_x = _conformal_factor(x, eps=eps)
+    # arctanh(t)/t → 1 as t → 0; use this limit to avoid 0/0 gradient
+    coeff = jnp.where(norm > 1e-7, jnp.arctanh(norm_clamped) / norm, 1.0)
+    return (2.0 / lam_x) * coeff * add_result
 
 
 class RiemannianSRNG(SupervisedPrototypeModel):
@@ -281,6 +354,8 @@ class RiemannianSRNG(SupervisedPrototypeModel):
             return _spd_distance_squared_diff(x, w)
         elif isinstance(self.manifold, Grassmannian):
             return _grassmannian_distance_squared_diff(x, w)
+        elif isinstance(self.manifold, HyperbolicPoincare):
+            return _hyperbolic_distance_squared_diff(x, w, eps=self.manifold.eps)
         else:
             return self.manifold.distance_squared(x, w)
 
@@ -450,12 +525,14 @@ class RiemannianSRNG(SupervisedPrototypeModel):
             hp['manifold_n'] = manifold.n
         if hasattr(manifold, 'k'):
             hp['manifold_k'] = manifold.k
+        if hasattr(manifold, 'd'):
+            hp['manifold_d'] = manifold.d
         return hp
 
     @classmethod
     def _reconstruct_manifold(cls, hp):
         """Reconstruct manifold from saved hyperparameters."""
-        from prosemble.core.manifolds import SO, SPD, Grassmannian
+        from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
         mtype = hp.get('manifold_type', '')
         if mtype == 'SO':
             return SO(int(hp['manifold_n']))
@@ -463,6 +540,8 @@ class RiemannianSRNG(SupervisedPrototypeModel):
             return SPD(int(hp['manifold_n']))
         elif mtype == 'Grassmannian':
             return Grassmannian(int(hp['manifold_n']), int(hp['manifold_k']))
+        elif mtype == 'HyperbolicPoincare':
+            return HyperbolicPoincare(int(hp['manifold_d']))
         else:
             raise ValueError(f"Unknown manifold type: {mtype}")
 
@@ -472,5 +551,6 @@ class RiemannianSRNG(SupervisedPrototypeModel):
         hyperparams.pop('manifold_type', None)
         hyperparams.pop('manifold_n', None)
         hyperparams.pop('manifold_k', None)
+        hyperparams.pop('manifold_d', None)
         hyperparams['manifold'] = manifold
         return hyperparams

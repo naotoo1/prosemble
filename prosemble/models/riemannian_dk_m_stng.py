@@ -126,7 +126,8 @@ class RiemannianDKMSTNG(RiemannianSTNG):
 
     def __init__(self, manifold, kernel_latent_dim=None, omega_hat_scale=0.1,
                  subspace_dim=None, beta=10.0, gamma_init=None,
-                 gamma_final=0.01, gamma_decay=None, tau=0.95,
+                 gamma_final=0.01, gamma_decay=None, lr_ratio=0.5,
+                 tau=0.95,
                  n_prototypes_per_class=1, max_iter=100, lr=0.01,
                  epsilon=1e-6, random_seed=42, optimizer='adam',
                  transfer_fn=None, margin=0.0, callbacks=None,
@@ -156,6 +157,7 @@ class RiemannianDKMSTNG(RiemannianSTNG):
         )
         self.kernel_latent_dim = kernel_latent_dim
         self.omega_hat_scale = omega_hat_scale
+        self.lr_ratio = lr_ratio
         self.omega_hat_ = None
 
     def _get_resume_params(self, params):
@@ -223,6 +225,11 @@ class RiemannianDKMSTNG(RiemannianSTNG):
 
         d_diff = jnp.where(~same_class, distances, INF)
         dm = jnp.min(d_diff, axis=1)
+
+        # Separate learning rates (Hammer et al. 2003: epsilon^- = lr_ratio * epsilon^+)
+        # Scale gradient through dm by lr_ratio; forward pass unchanged.
+        dm = jax.lax.stop_gradient(dm) + self.lr_ratio * (
+            dm - jax.lax.stop_gradient(dm))
 
         mu = (distances - dm[:, None]) / (distances + dm[:, None] + 1e-10)
 
@@ -304,4 +311,5 @@ class RiemannianDKMSTNG(RiemannianSTNG):
         hp['omega_hat_scale'] = self.omega_hat_scale
         if self.kernel_latent_dim is not None:
             hp['kernel_latent_dim'] = self.kernel_latent_dim
+        hp['lr_ratio'] = self.lr_ratio
         return hp

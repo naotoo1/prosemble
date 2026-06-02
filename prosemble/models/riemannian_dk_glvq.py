@@ -120,7 +120,8 @@ class RiemannianDKGLVQ(RiemannianSRNG):
 
     def __init__(self, manifold, sigma_init='median', sigma_min=1e-3,
                  beta=10.0, gamma_init=None, gamma_final=0.01,
-                 gamma_decay=None, tau=0.95, n_prototypes_per_class=1,
+                 gamma_decay=None, tau=0.95, lr_ratio=0.5,
+                 n_prototypes_per_class=1,
                  max_iter=100, lr=0.01, epsilon=1e-6, random_seed=42,
                  optimizer='adam', transfer_fn=None, margin=0.0,
                  callbacks=None, use_scan=False, batch_size=None,
@@ -133,7 +134,7 @@ class RiemannianDKGLVQ(RiemannianSRNG):
         super().__init__(
             manifold=manifold, beta=beta,
             gamma_init=gamma_init, gamma_final=gamma_final,
-            gamma_decay=gamma_decay, tau=tau,
+            gamma_decay=gamma_decay, tau=tau, lr_ratio=lr_ratio,
             n_prototypes_per_class=n_prototypes_per_class,
             max_iter=max_iter, lr=lr, epsilon=epsilon,
             random_seed=random_seed, optimizer=optimizer,

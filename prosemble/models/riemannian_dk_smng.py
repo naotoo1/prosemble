@@ -124,7 +124,8 @@ class RiemannianDKSMNG(RiemannianSMNG):
 
     def __init__(self, manifold, sigma_init='median', sigma_min=1e-3,
                  latent_dim=None, beta=10.0, gamma_init=None,
-                 gamma_final=0.01, gamma_decay=None, tau=0.95,
+                 gamma_final=0.01, gamma_decay=None, lr_ratio=0.5,
+                 tau=0.95,
                  n_prototypes_per_class=1, max_iter=100, lr=0.01,
                  epsilon=1e-6, random_seed=42, optimizer='adam',
                  transfer_fn=None, margin=0.0, callbacks=None,
@@ -154,6 +155,7 @@ class RiemannianDKSMNG(RiemannianSMNG):
         )
         self.sigma_init = sigma_init
         self.sigma_min = sigma_min
+        self.lr_ratio = lr_ratio
         self.sigmas_ = None
 
     def _estimate_sigmas(self, X, y, params, proto_labels):
@@ -242,6 +244,11 @@ class RiemannianDKSMNG(RiemannianSMNG):
         d_diff = jnp.where(~same_class, distances, INF)
         dm = jnp.min(d_diff, axis=1)
 
+        # Separate learning rates (Hammer et al. 2003: epsilon^- = lr_ratio * epsilon^+)
+        # Scale gradient through dm by lr_ratio; forward pass unchanged.
+        dm = jax.lax.stop_gradient(dm) + self.lr_ratio * (
+            dm - jax.lax.stop_gradient(dm))
+
         mu = (distances - dm[:, None]) / (distances + dm[:, None] + 1e-10)
 
         transfer = self.transfer_fn or sigmoid_beta
@@ -316,4 +323,5 @@ class RiemannianDKSMNG(RiemannianSMNG):
         hp = super()._get_hyperparams()
         hp['sigma_init'] = self.sigma_init
         hp['sigma_min'] = self.sigma_min
+        hp['lr_ratio'] = self.lr_ratio
         return hp

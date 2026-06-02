@@ -172,7 +172,7 @@ class STNG(SupervisedPrototypeModel):
     """
 
     def __init__(self, subspace_dim=2, beta=10.0, gamma_init=None,
-                 gamma_final=0.01, gamma_decay=None,
+                 gamma_final=0.01, gamma_decay=None, lr_ratio=0.5,
                  n_prototypes_per_class=1, max_iter=100, lr=0.01,
                  epsilon=1e-6, random_seed=42, distance_fn=None,
                  optimizer='adam', transfer_fn=None, margin=0.0,
@@ -203,6 +203,7 @@ class STNG(SupervisedPrototypeModel):
         self.gamma_init = gamma_init
         self.gamma_final = gamma_final
         self.gamma_decay = gamma_decay
+        self.lr_ratio = lr_ratio
         self.omegas_ = None
         self.gamma_ = None
 
@@ -301,6 +302,11 @@ class STNG(SupervisedPrototypeModel):
         d_diff = jnp.where(~same_class, distances, INF)
         dm = jnp.min(d_diff, axis=1)  # (n,)
 
+        # 5b. Separate learning rates (Hammer et al. 2003: ε⁻ = lr_ratio × ε⁺)
+        # Scale gradient through dm by lr_ratio; forward pass unchanged.
+        dm = jax.lax.stop_gradient(dm) + self.lr_ratio * (
+            dm - jax.lax.stop_gradient(dm))
+
         # 6. GLVQ mu for each (sample, same-class prototype) pair
         mu = (distances - dm[:, None]) / (distances + dm[:, None] + 1e-10)  # (n, p)
 
@@ -361,4 +367,5 @@ class STNG(SupervisedPrototypeModel):
         hp['gamma_init'] = self.gamma_init
         hp['gamma_final'] = self.gamma_final
         hp['gamma_decay'] = self.gamma_decay
+        hp['lr_ratio'] = self.lr_ratio
         return hp

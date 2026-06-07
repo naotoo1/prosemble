@@ -120,6 +120,9 @@ Supported Models
    * - Supervised NG (global omega)
      - 3
      - SMNG, MCELVQ_NG, MRSLVQ_NG
+   * - Supervised NG (class-wise omega)
+     - 1
+     - SCMNG
    * - Supervised NG (local omega)
      - 3
      - SLNG, LCELVQ_NG, LMRSLVQ_NG
@@ -215,7 +218,7 @@ Distance Functions in ONNX
      - GLVQ family, NG, NeuralGas, FCM, OC, SVQ-OCC, Encoders, CBC
    * - Global Omega
      - Project then squared Euclidean
-     - GMLVQ, MRSLVQ, SMNG, OCGMLVQ, SVQOCC_M
+     - GMLVQ, MRSLVQ, SMNG, SCMNG, OCGMLVQ, SVQOCC_M
    * - Local Omega
      - Batched MatMul per prototype
      - LGMLVQ, SLNG, OCLGMLVQ, SVQOCC_LM

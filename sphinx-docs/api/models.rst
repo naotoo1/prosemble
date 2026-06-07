@@ -138,6 +138,10 @@ Supervised Neural Gas
    :members: fit, predict, predict_proba
    :undoc-members:
 
+.. autoclass:: prosemble.models.SCMNG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
 .. autoclass:: prosemble.models.SLNG
    :members: fit, predict, predict_proba
    :undoc-members:

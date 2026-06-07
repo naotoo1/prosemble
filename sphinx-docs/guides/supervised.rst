@@ -485,6 +485,7 @@ per-feature relevance weights (like GRLVQ).
        n_prototypes_per_class=3,
        lambda_init=5.0,       # initial neighborhood range
        lambda_final=0.01,     # final (narrower)
+       lr_ratio=0.5,          # separate learning rates (Hammer et al. 2003)
        max_iter=100,
        lr=0.01,
    )
@@ -493,12 +494,29 @@ per-feature relevance weights (like GRLVQ).
    # Inspect relevances (SRNG learns feature weights like GRLVQ)
    print(model.relevances_)
 
-Supervised Matrix Neural Gas (SMNG, SLNG, STNG)
-------------------------------------------------
+Supervised Matrix Neural Gas (SMNG, SCMNG, SLNG, STNG)
+-------------------------------------------------------
 
 The SMNG family extends SRNG with matrix metric adaptation while keeping
 Neural Gas neighborhood cooperation. All same-class prototypes participate
 in the loss weighted by rank.
+
+All supervised NG models support a ``lr_ratio`` parameter that controls
+separate learning rates for correct-class and wrong-class prototypes
+(Hammer et al. 2003). Setting ``lr_ratio < 1.0`` reduces the gradient
+magnitude flowing through the closest wrong-class prototype:
+
+.. code-block:: python
+
+   model = SMNG(
+       n_prototypes_per_class=5,
+       lr_ratio=0.5,   # wrong-class lr = 0.5 * correct-class lr
+       max_iter=200,
+       lr=0.01,
+   )
+
+When ``lr_ratio=1.0`` (default), correct and wrong-class prototypes
+receive equal gradient magnitude.
 
 **SMNG** — Global Omega matrix (like GMLVQ + Neural Gas):
 
@@ -516,6 +534,27 @@ in the loss weighted by rank.
    model.fit(X_train, y_train)
    print(model.omega_matrix.shape)   # (n_features, latent_dim)
    print(model.lambda_matrix.shape)  # (n_features, n_features)
+
+**SCMNG** — Per-class Omega matrices (like class-wise GMLVQ + Neural Gas):
+
+.. code-block:: python
+
+   from prosemble.models import SCMNG
+
+   model = SCMNG(
+       n_prototypes_per_class=3,
+       gamma_init=5.0,
+       gamma_final=0.01,
+       max_iter=200,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+   print(model.omegas_.shape)  # (n_classes, n_features, latent_dim)
+
+Each class shares a single :math:`\Omega_c` matrix, so cooperating same-class
+prototypes contribute aligned gradients to the metric. This avoids the gradient
+dilution of a global :math:`\Omega` (SMNG) while using fewer parameters than
+per-prototype matrices (SLNG).
 
 **SLNG** — Per-prototype Omega matrices (like LGMLVQ + Neural Gas):
 

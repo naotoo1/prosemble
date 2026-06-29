@@ -51,6 +51,9 @@ class OCRSLVQNGMixin:
     gamma_decay : float, optional
         Per-step multiplicative decay for gamma.
         Default: computed from max_iter so gamma reaches gamma_final.
+    lr_ratio : float
+        Ratio of wrong-class to correct-class learning rate (ε⁻/ε⁺).
+        Default: 0.5.
     n_prototypes : int
         Number of prototypes for the target class.
     target_label : int, optional

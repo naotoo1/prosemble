@@ -100,6 +100,9 @@ class MRSLVQ_NG(SupervisedPrototypeModel):
     gamma_decay : float, optional
         Per-step multiplicative decay factor for gamma.
         Default: computed from max_iter so gamma reaches gamma_final.
+    lr_ratio : float
+        Ratio of wrong-class to correct-class learning rate (ε⁻/ε⁺).
+        Default: 0.5.
     rejection_confidence : float, optional
         Minimum class probability for confident prediction (0 to 1).
         Samples below this threshold are rejected (label -1).
@@ -414,6 +417,9 @@ class LMRSLVQ_NG(SupervisedPrototypeModel):
     gamma_decay : float, optional
         Per-step multiplicative decay factor for gamma.
         Default: computed from max_iter so gamma reaches gamma_final.
+    lr_ratio : float
+        Ratio of wrong-class to correct-class learning rate (ε⁻/ε⁺).
+        Default: 0.5.
     rejection_confidence : float, optional
         Minimum class probability for confident prediction (0 to 1).
         Samples below this threshold are rejected (label -1).

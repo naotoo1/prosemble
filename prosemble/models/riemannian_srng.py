@@ -235,6 +235,9 @@ class RiemannianSRNG(SupervisedPrototypeModel):
     gamma_decay : float, optional
         Per-step multiplicative decay factor for gamma.
         Default: computed from max_iter so gamma reaches gamma_final.
+    lr_ratio : float
+        Ratio of wrong-class to correct-class learning rate (ε⁻/ε⁺).
+        Default: 0.5.
     tau : float
         Injectivity radius safety factor for manifold projection.
         Default: 0.95.
@@ -410,7 +413,12 @@ class RiemannianSRNG(SupervisedPrototypeModel):
         if self.gamma_decay is not None:
             self._gamma_decay = self.gamma_decay
         else:
-            self._gamma_decay = (self.gamma_final / gamma_init) ** (1.0 / self.max_iter)
+            if self.batch_size is not None:
+                steps_per_epoch = (X.shape[0] + self.batch_size - 1) // self.batch_size
+            else:
+                steps_per_epoch = 1
+            total_steps = self.max_iter * steps_per_epoch
+            self._gamma_decay = (self.gamma_final / gamma_init) ** (1.0 / total_steps)
 
         params = {
             'prototypes': prototypes,

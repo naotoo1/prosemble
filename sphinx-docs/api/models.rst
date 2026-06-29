@@ -130,6 +130,10 @@ Classification-By-Components
 Supervised Neural Gas
 ---------------------
 
+.. autoclass:: prosemble.models.SNG
+   :members: fit, predict, predict_proba
+   :undoc-members:
+
 .. autoclass:: prosemble.models.SRNG
    :members: fit, predict, predict_proba
    :undoc-members:

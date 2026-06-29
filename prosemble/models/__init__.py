@@ -32,6 +32,7 @@ try:
     # Supervised prototype models (LVQ family)
     from .glvq import GLVQ, GLVQ1, GLVQ21
     from .relevance_lvq import GRLVQ
+    from .sng import SNG
     from .srng import SRNG
     from .smng import SMNG
     from .scmng import SCMNG
@@ -140,7 +141,7 @@ try:
         'KPFCM': KPFCM, 'KIPCM': KIPCM, 'KIPCM2': KIPCM2,
         # Supervised LVQ
         'GLVQ': GLVQ, 'GLVQ1': GLVQ1, 'GLVQ21': GLVQ21,
-        'GRLVQ': GRLVQ, 'SRNG': SRNG, 'SMNG': SMNG, 'SCMNG': SCMNG, 'SLNG': SLNG, 'STNG': STNG,
+        'GRLVQ': GRLVQ, 'SNG': SNG, 'SRNG': SRNG, 'SMNG': SMNG, 'SCMNG': SCMNG, 'SLNG': SLNG, 'STNG': STNG,
         'GMLVQ': GMLVQ, 'LGMLVQ': LGMLVQ,
         'GTLVQ': GTLVQ, 'CELVQ': CELVQ, 'CELVQ_NG': CELVQ_NG,
         'MCELVQ_NG': MCELVQ_NG, 'LCELVQ_NG': LCELVQ_NG, 'TCELVQ_NG': TCELVQ_NG,
@@ -223,7 +224,7 @@ __all__ = [
     'PCM', 'PFCM', 'SOM',
     # Supervised LVQ family
     'GLVQ', 'GLVQ1', 'GLVQ21',
-    'GRLVQ', 'SRNG', 'SMNG', 'SCMNG', 'SLNG', 'STNG',
+    'GRLVQ', 'SNG', 'SRNG', 'SMNG', 'SCMNG', 'SLNG', 'STNG',
     'GMLVQ', 'LGMLVQ', 'GTLVQ',
     'CELVQ', 'CELVQ_NG', 'MCELVQ_NG', 'LCELVQ_NG', 'TCELVQ_NG',
     'LVQ1', 'LVQ21', 'MedianLVQ',

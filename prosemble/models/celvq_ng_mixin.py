@@ -35,6 +35,9 @@ class CELVQNGMixin:
     gamma_decay : float, optional
         Per-step multiplicative decay for gamma.
         Default: computed from max_iter so gamma reaches gamma_final.
+    lr_ratio : float
+        Ratio of wrong-class to correct-class learning rate (ε⁻/ε⁺).
+        Default: 0.5.
     n_prototypes_per_class : int
         Number of prototypes per class.
     max_iter : int
@@ -157,7 +160,7 @@ class CELVQNGMixin:
         params['gamma'] = jnp.array(gamma, dtype=jnp.float32)
         return params
 
-    def _compute_gamma_init(self):
+    def _compute_gamma_init(self, X):
         """Compute gamma_init from prototype count if not set."""
         if isinstance(self.n_prototypes_per_class, int):
             max_per_class = self.n_prototypes_per_class
@@ -173,7 +176,12 @@ class CELVQNGMixin:
         if self.gamma_decay is not None:
             self._gamma_decay = self.gamma_decay
         else:
-            self._gamma_decay = (self.gamma_final / gamma_init) ** (1.0 / self.max_iter)
+            if self.batch_size is not None:
+                steps_per_epoch = (X.shape[0] + self.batch_size - 1) // self.batch_size
+            else:
+                steps_per_epoch = 1
+            total_steps = self.max_iter * steps_per_epoch
+            self._gamma_decay = (self.gamma_final / gamma_init) ** (1.0 / total_steps)
 
         return gamma_init
 
@@ -183,7 +191,7 @@ class CELVQNGMixin:
             X, y, self.n_prototypes_per_class, key1
         )
 
-        gamma_init = self._compute_gamma_init()
+        gamma_init = self._compute_gamma_init(X)
 
         params = {
             'prototypes': prototypes,

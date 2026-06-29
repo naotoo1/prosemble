@@ -470,6 +470,28 @@ classification.
    )
    model.fit(X_train, y_train)
 
+Supervised Neural Gas (SNG)
+--------------------------
+
+The simplest Supervised Neural Gas variant. Combines GLVQ loss with Neural Gas
+neighborhood cooperation using squared Euclidean distance. All same-class
+prototypes are updated per sample, weighted by rank. When :math:`\gamma \to 0`,
+SNG recovers standard GLVQ.
+
+.. code-block:: python
+
+   from prosemble.models import SNG
+
+   model = SNG(
+       n_prototypes_per_class=3,
+       gamma_init=5.0,         # initial neighborhood range
+       gamma_final=0.01,       # final (narrower)
+       lr_ratio=0.5,           # separate learning rates (Hammer et al. 2003)
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
 Supervised Relevance Neural Gas (SRNG)
 --------------------------------------
 

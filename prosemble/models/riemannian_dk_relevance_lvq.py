@@ -70,6 +70,9 @@ class RiemannianDKGRLVQ(RiemannianSRNG):
         Final neighborhood range. Default: 0.01.
     gamma_decay : float, optional
         Per-step multiplicative decay factor for gamma.
+    lr_ratio : float
+        Ratio of wrong-class to correct-class learning rate (ε⁻/ε⁺).
+        Default: 0.5.
     tau : float
         Injectivity radius safety factor. Default: 0.95.
     n_prototypes_per_class : int

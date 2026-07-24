@@ -35,7 +35,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from prosemble.models.oc_glvq import OCGLVQ
+from prosemble.models.oc_glvq import OCGLVQ, _voronoi_mean_distances, _init_radii
 from prosemble.core.initializers import identity_omega_init
 from prosemble.core.activations import sigmoid_beta
 
@@ -192,7 +192,9 @@ class OCMRSLVQ(OCGLVQ):
         diff = X_target[:, None, :] - prototypes[None, :, :]
         projected = jnp.einsum('nkd,dl->nkl', diff, omega)
         dists = jnp.sum(projected ** 2, axis=2)
-        params['thetas'] = jnp.sqrt(jnp.mean(dists, axis=0) + 1e-10)
+        thetas = _voronoi_mean_distances(dists, self.n_prototypes)
+        key_r = jax.random.split(self.key, 3)[2]
+        params['radii'] = _init_radii(thetas, self._n_features, key_r)
 
         opt_state = self._optimizer.init(params)
         from prosemble.models.prototype_base import SupervisedState
@@ -207,7 +209,7 @@ class OCMRSLVQ(OCGLVQ):
 
     def _compute_loss(self, params, X, y, proto_labels):
         prototypes = params['prototypes']
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
         omega = params['omega']
 
         # Omega-projected squared distances: (n, K)
@@ -461,7 +463,9 @@ class OCLMRSLVQ(OCGLVQ):
         diff = X_target[:, None, :] - prototypes[None, :, :]
         projected = jnp.einsum('nkd,kdl->nkl', diff, omegas)
         dists = jnp.sum(projected ** 2, axis=2)
-        params['thetas'] = jnp.sqrt(jnp.mean(dists, axis=0) + 1e-10)
+        thetas = _voronoi_mean_distances(dists, self.n_prototypes)
+        key_r = jax.random.split(self.key, 3)[2]
+        params['radii'] = _init_radii(thetas, self._n_features, key_r)
 
         opt_state = self._optimizer.init(params)
         from prosemble.models.prototype_base import SupervisedState
@@ -476,7 +480,7 @@ class OCLMRSLVQ(OCGLVQ):
 
     def _compute_loss(self, params, X, y, proto_labels):
         prototypes = params['prototypes']
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
         omegas = params['omegas']  # (K, d, l)
 
         # Local omega-projected squared distances: (n, K)

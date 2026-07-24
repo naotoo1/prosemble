@@ -19,6 +19,10 @@ visibility threshold :math:`\\theta_k`:
 
 where :math:`k^*` is the nearest prototype and :math:`s_i = +1` for target, :math:`-1` for outlier.
 
+The threshold is parameterized via a scalar square root :math:`\\alpha_k`
+where :math:`\\theta_k = \\alpha_k^2`. This gives gradient magnitude :math:`O(1/\\sqrt{d})`
+for both :math:`\\alpha_k` and the prototypes :math:`w_k`, ensuring balanced optimization.
+
 - Target with :math:`d < \\theta`: :math:`\\mu < 0 \\to f(\\mu) \\approx 0` -- low cost (correct)
 - Target with :math:`d > \\theta`: :math:`\\mu > 0 \\to f(\\mu) \\approx 1` -- high cost (misclassified)
 - Outlier with :math:`d > \\theta`: :math:`\\mu < 0 \\to f(\\mu) \\approx 0` -- low cost (correct)
@@ -41,6 +45,26 @@ import numpy as np
 from prosemble.models.prototype_base import SupervisedPrototypeModel
 from prosemble.core.initializers import stratified_selection_init
 from prosemble.core.activations import sigmoid_beta
+
+
+def _voronoi_mean_distances(dists, n_protos):
+    """Compute mean distance per prototype using only Voronoi-assigned samples."""
+    n = dists.shape[0]
+    nearest = jnp.argmin(dists, axis=1)
+    d_to_nearest = dists[jnp.arange(n), nearest]
+    seg_sums = jax.ops.segment_sum(d_to_nearest, nearest, num_segments=n_protos)
+    seg_counts = jax.ops.segment_sum(jnp.ones(n), nearest, num_segments=n_protos)
+    global_mean = jnp.mean(d_to_nearest)
+    return jnp.where(seg_counts > 0, seg_sums / seg_counts, global_mean)
+
+
+def _init_radii(thetas, n_features=None, key=None):
+    """Initialize alpha_k such that alpha_k^2 = theta_k.
+
+    The scalar square-root parameterization gives gradient magnitude
+    O(1/sqrt(d)), matching prototype gradients exactly.
+    """
+    return jnp.sqrt(jnp.maximum(thetas, 1e-10))
 
 
 class OCGLVQ(SupervisedPrototypeModel):
@@ -135,7 +159,9 @@ class OCGLVQ(SupervisedPrototypeModel):
     Attributes
     ----------
     thetas_ : array of shape (n_prototypes,)
-        Learned per-prototype visibility thresholds.
+        Learned per-prototype visibility thresholds (:math:`\\theta_k = \\alpha_k^2`).
+    radii_ : array of shape (n_prototypes,)
+        Learned scalar square roots whose squares define the thresholds.
     """
 
     def __init__(self, n_prototypes=3, target_label=None, beta=10.0,
@@ -169,11 +195,17 @@ class OCGLVQ(SupervisedPrototypeModel):
 
         # Fitted attributes
         self.thetas_ = None
+        self.radii_ = None
         self._target_label = None
         self._non_target_label = None
+        self._n_features = None
+
+    def _recover_thetas(self, params):
+        """Compute theta_k = alpha_k^2 from scalar square roots."""
+        return params['radii'] ** 2
 
     def _get_resume_params(self, params):
-        params['thetas'] = self.thetas_
+        params['radii'] = self.radii_
         return params
 
     def _init_state(self, X, y, key):
@@ -210,14 +242,19 @@ class OCGLVQ(SupervisedPrototypeModel):
             self.n_prototypes, self._target_label, dtype=jnp.int32
         )
 
-        # Initialize thetas: sqrt of mean squared distance per prototype
+        self._n_features = X.shape[1]
+
+        # Voronoi-local theta: mean squared distance using only assigned samples
         from prosemble.core.distance import squared_euclidean_distance_matrix
         dists = squared_euclidean_distance_matrix(X_target, prototypes)
-        thetas = jnp.sqrt(jnp.mean(dists, axis=0) + 1e-10)
+        thetas = _voronoi_mean_distances(dists, self.n_prototypes)
+
+        # Initialize radius vectors: ||r_k||^2 = theta_k
+        radii = _init_radii(thetas, self._n_features, key2)
 
         params = {
             'prototypes': prototypes,
-            'thetas': thetas,
+            'radii': radii,
         }
         opt_state = self._optimizer.init(params)
         from prosemble.models.prototype_base import SupervisedState
@@ -232,7 +269,7 @@ class OCGLVQ(SupervisedPrototypeModel):
 
     def _compute_loss(self, params, X, y, proto_labels):
         prototypes = params['prototypes']
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
 
         # Squared Euclidean distances: (n, K)
         distances = self.distance_fn(X, prototypes)
@@ -254,15 +291,15 @@ class OCGLVQ(SupervisedPrototypeModel):
         return jnp.mean(transfer(mu + self.margin, self.beta))
 
     def _post_update(self, params):
-        thetas = jnp.maximum(params['thetas'], 1e-6)
-        return {**params, 'thetas': thetas}
+        return params
 
     def _extract_results(self, params, proto_labels, loss_history, n_iter,
                          **kwargs):
         super()._extract_results(
             params, proto_labels, loss_history, n_iter, **kwargs
         )
-        self.thetas_ = jnp.maximum(params['thetas'], 1e-6)
+        self.radii_ = params['radii']
+        self.thetas_ = self._recover_thetas(params)
 
     def decision_function(self, X):
         """Compute target-likeness scores.
@@ -366,26 +403,36 @@ class OCGLVQ(SupervisedPrototypeModel):
         attrs = super()._get_quantizable_attrs()
         if self.thetas_ is not None:
             attrs.append('thetas_')
+        if self.radii_ is not None:
+            attrs.append('radii_')
         return attrs
 
     def _get_fitted_arrays(self):
         arrays = super()._get_fitted_arrays()
         if self.thetas_ is not None:
             arrays['thetas_'] = np.asarray(self.thetas_)
+        if self.radii_ is not None:
+            arrays['radii_'] = np.asarray(self.radii_)
         if self._target_label is not None:
             arrays['_target_label'] = np.asarray(self._target_label)
         if self._non_target_label is not None:
             arrays['_non_target_label'] = np.asarray(self._non_target_label)
+        if self._n_features is not None:
+            arrays['_n_features'] = np.asarray(self._n_features)
         return arrays
 
     def _set_fitted_arrays(self, arrays):
         super()._set_fitted_arrays(arrays)
+        if 'radii_' in arrays:
+            self.radii_ = jnp.asarray(arrays['radii_'])
         if 'thetas_' in arrays:
             self.thetas_ = jnp.asarray(arrays['thetas_'])
         if '_target_label' in arrays:
             self._target_label = int(arrays['_target_label'])
         if '_non_target_label' in arrays:
             self._non_target_label = int(arrays['_non_target_label'])
+        if '_n_features' in arrays:
+            self._n_features = int(arrays['_n_features'])
 
     def _get_hyperparams(self):
         hp = super()._get_hyperparams()

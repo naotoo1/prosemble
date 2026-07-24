@@ -22,7 +22,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from prosemble.models.oc_glvq import OCGLVQ
+from prosemble.models.oc_glvq import (
+    OCGLVQ, _voronoi_mean_distances, _init_radii,
+)
 from prosemble.core.initializers import random_omega_init
 from prosemble.core.utils import orthogonalize
 from prosemble.core.activations import sigmoid_beta
@@ -167,6 +169,17 @@ class OCGTLVQ(OCGLVQ):
         params['omegas'] = jnp.stack([
             random_omega_init(n_features, self.subspace_dim, k) for k in keys
         ])
+        # Recompute theta in tangent distance space (Voronoi-local)
+        X_target = X[y == self._target_label]
+        omegas = params['omegas']
+        diff = X_target[:, None, :] - params['prototypes'][None, :, :]
+        proj = jnp.einsum('nkd,kds->nks', diff, omegas)
+        recon = jnp.einsum('nks,kds->nkd', proj, omegas)
+        tang_diff = diff - recon
+        metric_dists = jnp.sum(tang_diff ** 2, axis=2)
+        thetas = _voronoi_mean_distances(metric_dists, self.n_prototypes)
+        key_r = jax.random.split(self.key, 4)[3]
+        params['radii'] = _init_radii(thetas, self._n_features, key_r)
         opt_state = self._optimizer.init(params)
         from prosemble.models.prototype_base import SupervisedState
         state = SupervisedState(
@@ -180,7 +193,7 @@ class OCGTLVQ(OCGLVQ):
 
     def _compute_loss(self, params, X, y, proto_labels):
         prototypes = params['prototypes']
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
         omegas = params['omegas']
 
         # Tangent distance: ||(I - Omega_k Omega_k^T)(x - w_k)||^2

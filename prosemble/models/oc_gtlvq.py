@@ -170,15 +170,13 @@ class OCGTLVQ(OCGLVQ):
             random_omega_init(n_features, self.subspace_dim, k) for k in keys
         ])
         # Recompute theta in tangent distance space (Voronoi-local)
-        # Scale by d/(d - subspace_dim) to compensate for dimensionality reduction
         X_target = X[y == self._target_label]
         omegas = params['omegas']
         diff = X_target[:, None, :] - params['prototypes'][None, :, :]
         proj = jnp.einsum('nkd,kds->nks', diff, omegas)
         recon = jnp.einsum('nks,kds->nkd', proj, omegas)
         tang_diff = diff - recon
-        tang_scale = n_features / (n_features - self.subspace_dim)
-        metric_dists = tang_scale * jnp.sum(tang_diff ** 2, axis=2)
+        metric_dists = jnp.sum(tang_diff ** 2, axis=2)
         thetas = _voronoi_mean_distances(metric_dists, self.n_prototypes)
         key_r = jax.random.split(self.key, 4)[3]
         params['radii'] = _init_radii(thetas, self._n_features, key_r)
@@ -199,13 +197,11 @@ class OCGTLVQ(OCGLVQ):
         omegas = params['omegas']
 
         # Tangent distance: ||(I - Omega_k Omega_k^T)(x - w_k)||^2
-        # Scale by d/(d - subspace_dim) to compensate for dimensionality reduction
         diff = X[:, None, :] - prototypes[None, :, :]  # (n, K, d)
         proj = jnp.einsum('nkd,kds->nks', diff, omegas)  # (n, K, s)
         recon = jnp.einsum('nks,kds->nkd', proj, omegas)  # (n, K, d)
         tang_diff = diff - recon  # orthogonal complement
-        tang_scale = self._n_features / (self._n_features - self.subspace_dim)
-        distances = tang_scale * jnp.sum(tang_diff ** 2, axis=2)
+        distances = jnp.sum(tang_diff ** 2, axis=2)  # (n, K)
 
         # OC-GLVQ mu
         n = X.shape[0]
@@ -238,8 +234,7 @@ class OCGTLVQ(OCGLVQ):
         proj = jnp.einsum('nkd,kds->nks', diff, self.omegas_)
         recon = jnp.einsum('nks,kds->nkd', proj, self.omegas_)
         tang_diff = diff - recon
-        tang_scale = self._n_features / (self._n_features - self.subspace_dim)
-        distances = tang_scale * jnp.sum(tang_diff ** 2, axis=2)
+        distances = jnp.sum(tang_diff ** 2, axis=2)
         n = X.shape[0]
         nearest_idx = jnp.argmin(distances, axis=1)
         d_nearest = distances[jnp.arange(n), nearest_idx]

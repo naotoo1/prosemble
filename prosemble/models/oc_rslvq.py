@@ -166,7 +166,7 @@ class OCRSLVQ(OCGLVQ):
 
     def _compute_loss(self, params, X, y, proto_labels):
         prototypes = params['prototypes']
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
 
         # Squared Euclidean distances: (n, K)
         distances = self.distance_fn(X, prototypes)

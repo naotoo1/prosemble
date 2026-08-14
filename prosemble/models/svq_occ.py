@@ -279,10 +279,10 @@ class SVQOCC(SupervisedPrototypeModel):
             self.n_prototypes, self._target_label, dtype=jnp.int32
         )
 
-        # Initialize thetas: sqrt of mean squared distance per prototype
+        # Initialize thetas: mean squared distance per prototype
         from prosemble.core.distance import squared_euclidean_distance_matrix
         dists = squared_euclidean_distance_matrix(X_target, prototypes)
-        thetas = jnp.sqrt(jnp.mean(dists, axis=0) + 1e-10)
+        thetas = jnp.mean(dists, axis=0)
 
         # Lambda NG setup
         lambda_init = (

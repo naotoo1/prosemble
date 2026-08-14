@@ -24,7 +24,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from prosemble.models.oc_glvq import OCGLVQ
+from prosemble.models.oc_glvq import OCGLVQ, _voronoi_mean_distances, _init_radii
 from prosemble.core.activations import sigmoid_beta
 from prosemble.core.kernel import kernel_distance_squared_relevance
 
@@ -197,12 +197,13 @@ class OCDKGRLVQ(OCGLVQ):
         kernel_dists = kernel_distance_squared_relevance(
             X_target, prototypes, sigmas, lam
         )
-        thetas = jnp.sqrt(jnp.mean(kernel_dists, axis=0) + 1e-10)
+        thetas = _voronoi_mean_distances(kernel_dists, self.n_prototypes)
 
         # Update params
         params['sigmas'] = sigmas
         params['relevances'] = relevances
-        params['thetas'] = thetas
+        key_r = jax.random.split(self.key, 3)[2]
+        params['radii'] = _init_radii(thetas, self._n_features, key_r)
 
         # Re-initialize optimizer
         opt_state = self._optimizer.init(params)
@@ -218,7 +219,7 @@ class OCDKGRLVQ(OCGLVQ):
 
     def _compute_loss(self, params, X, y, proto_labels):
         prototypes = params['prototypes']
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
         sigmas = jnp.maximum(params['sigmas'], self.sigma_min)
         lam = jax.nn.softmax(params['relevances'])
 

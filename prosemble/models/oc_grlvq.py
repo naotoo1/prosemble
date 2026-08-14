@@ -22,7 +22,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from prosemble.models.oc_glvq import OCGLVQ
+from prosemble.models.oc_glvq import OCGLVQ, _voronoi_mean_distances, _init_radii
 from prosemble.core.activations import sigmoid_beta
 
 
@@ -155,7 +155,18 @@ class OCGRLVQ(OCGLVQ):
     def _init_state(self, X, y, key):
         state, params, proto_labels = super()._init_state(X, y, key)
         n_features = X.shape[1]
-        params['relevances'] = jnp.ones(n_features) / n_features
+        relevances = jnp.ones(n_features) / n_features
+        params['relevances'] = relevances
+
+        # Recompute theta in relevance-weighted space (Voronoi-local)
+        X_target = X[y == self._target_label]
+        lam = jax.nn.softmax(relevances)
+        diff = X_target[:, None, :] - params['prototypes'][None, :, :]
+        rel_dists = jnp.sum(lam[None, None, :] * diff ** 2, axis=2)
+        thetas = _voronoi_mean_distances(rel_dists, self.n_prototypes)
+        key_r = jax.random.split(self.key, 3)[2]
+        params['radii'] = _init_radii(thetas, self._n_features, key_r)
+
         opt_state = self._optimizer.init(params)
         from prosemble.models.prototype_base import SupervisedState
         state = SupervisedState(
@@ -169,13 +180,13 @@ class OCGRLVQ(OCGLVQ):
 
     def _compute_loss(self, params, X, y, proto_labels):
         prototypes = params['prototypes']
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
         relevances = params['relevances']
 
         # Relevance-weighted squared Euclidean distances
         lam = jax.nn.softmax(relevances)  # (d,)
         diff = X[:, None, :] - prototypes[None, :, :]  # (n, K, d)
-        distances = jnp.sum(lam[None, None, :] * diff ** 2, axis=2)  # (n, K)
+        distances = jnp.sum(lam[None, None, :] * diff ** 2, axis=2)
 
         # OC-GLVQ mu
         n = X.shape[0]

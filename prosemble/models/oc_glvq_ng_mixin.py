@@ -207,7 +207,7 @@ class NGCooperationMixin:
         raise NotImplementedError
 
     def _compute_loss(self, params, X, y, proto_labels):
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
         gamma = params['gamma']
 
         distances = self._compute_distances(params, X)

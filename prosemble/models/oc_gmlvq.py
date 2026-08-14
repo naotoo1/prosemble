@@ -23,7 +23,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from prosemble.models.oc_glvq import OCGLVQ
+from prosemble.models.oc_glvq import (
+    OCGLVQ, _voronoi_mean_distances, _init_radii,
+)
 from prosemble.core.initializers import identity_omega_init
 from prosemble.core.activations import sigmoid_beta
 
@@ -162,6 +164,15 @@ class OCGMLVQ(OCGLVQ):
         n_features = X.shape[1]
         latent_dim = self.latent_dim if self.latent_dim is not None else n_features
         params['omega'] = identity_omega_init(n_features, latent_dim)
+        # Recompute theta in omega-projected space (Voronoi-local)
+        X_target = X[y == self._target_label]
+        omega = params['omega']
+        diff = X_target[:, None, :] - params['prototypes'][None, :, :]
+        projected = jnp.einsum('nkd,dl->nkl', diff, omega)
+        metric_dists = jnp.sum(projected ** 2, axis=2)
+        thetas = _voronoi_mean_distances(metric_dists, self.n_prototypes)
+        key_r = jax.random.split(self.key, 3)[2]
+        params['radii'] = _init_radii(thetas, self._n_features, key_r)
         opt_state = self._optimizer.init(params)
         from prosemble.models.prototype_base import SupervisedState
         state = SupervisedState(
@@ -173,9 +184,16 @@ class OCGMLVQ(OCGLVQ):
         )
         return state, params, proto_labels
 
+    def _post_update(self, params):
+        params = super()._post_update(params)
+        omega = params['omega']
+        lam = omega.T @ omega
+        scale = jnp.sqrt(self._n_features / jnp.trace(lam))
+        return {**params, 'omega': omega * scale}
+
     def _compute_loss(self, params, X, y, proto_labels):
         prototypes = params['prototypes']
-        thetas = params['thetas']
+        thetas = self._recover_thetas(params)
         omega = params['omega']
 
         # Omega-projected squared distances

@@ -27,7 +27,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from prosemble.models.oc_glvq import OCGLVQ, _init_radii
+from prosemble.models.oc_glvq import OCGLVQ, _voronoi_mean_distances, _init_radii
 from prosemble.core.activations import sigmoid_beta
 from prosemble.core.initializers import identity_omega_init
 from prosemble.core.kernel import exponential_kernel_distance_squared
@@ -180,7 +180,7 @@ class OCDKGMLVQ(OCGLVQ):
         kernel_dists = exponential_kernel_distance_squared(
             X_target, prototypes, omega_hat
         )
-        thetas = jnp.mean(kernel_dists, axis=0)
+        thetas = _voronoi_mean_distances(kernel_dists, self.n_prototypes)
 
         # Update params
         params['omega_hat'] = omega_hat

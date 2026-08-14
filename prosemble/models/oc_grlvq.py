@@ -159,11 +159,10 @@ class OCGRLVQ(OCGLVQ):
         params['relevances'] = relevances
 
         # Recompute theta in relevance-weighted space (Voronoi-local)
-        # Scale by n_features to preserve Euclidean distance magnitude
         X_target = X[y == self._target_label]
         lam = jax.nn.softmax(relevances)
         diff = X_target[:, None, :] - params['prototypes'][None, :, :]
-        rel_dists = n_features * jnp.sum(lam[None, None, :] * diff ** 2, axis=2)
+        rel_dists = jnp.sum(lam[None, None, :] * diff ** 2, axis=2)
         thetas = _voronoi_mean_distances(rel_dists, self.n_prototypes)
         key_r = jax.random.split(self.key, 3)[2]
         params['radii'] = _init_radii(thetas, self._n_features, key_r)
@@ -185,10 +184,9 @@ class OCGRLVQ(OCGLVQ):
         relevances = params['relevances']
 
         # Relevance-weighted squared Euclidean distances
-        # Scale by n_features to preserve Euclidean distance magnitude
         lam = jax.nn.softmax(relevances)  # (d,)
         diff = X[:, None, :] - prototypes[None, :, :]  # (n, K, d)
-        distances = self._n_features * jnp.sum(lam[None, None, :] * diff ** 2, axis=2)
+        distances = jnp.sum(lam[None, None, :] * diff ** 2, axis=2)
 
         # OC-GLVQ mu
         n = X.shape[0]
@@ -214,7 +212,7 @@ class OCGRLVQ(OCGLVQ):
         X = jnp.asarray(X, dtype=jnp.float32)
 
         diff = X[:, None, :] - self.prototypes_[None, :, :]
-        distances = self._n_features * jnp.sum(
+        distances = jnp.sum(
             self.relevances_[None, None, :] * diff ** 2, axis=2
         )
         n = X.shape[0]

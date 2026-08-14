@@ -197,7 +197,7 @@ class OCDKGRLVQ(OCGLVQ):
         kernel_dists = kernel_distance_squared_relevance(
             X_target, prototypes, sigmas, lam
         )
-        thetas = jnp.mean(kernel_dists, axis=0)
+        thetas = _voronoi_mean_distances(kernel_dists, self.n_prototypes)
 
         # Update params
         params['sigmas'] = sigmas

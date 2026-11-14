@@ -5,7 +5,7 @@ Requirements
 ------------
 
 - Python 3.11 or later
-- JAX (with optional GPU support)
+- JAX (installed automatically; GPU support is optional)
 
 Install with pip
 ----------------
@@ -24,15 +24,11 @@ Install with uv
 GPU Support
 -----------
 
-For GPU acceleration, install JAX with CUDA support first:
+For GPU acceleration, install the CUDA 12 extra:
 
 .. code-block:: bash
 
-   # For CUDA 12
-   pip install jax[cuda12]
-
-   # Then install prosemble
-   pip install prosemble
+   pip install "prosemble[jax-cuda12]"
 
 Development Installation
 ------------------------
@@ -53,6 +49,6 @@ Verify Installation
 
    >>> import prosemble
    >>> print(prosemble.__version__)
-   2.0.0
+   2.4.0
    >>> import jax
    >>> print(jax.devices())  # Check available devices

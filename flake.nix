@@ -14,7 +14,7 @@
 
         prosemble = python.pkgs.buildPythonPackage {
           pname = "prosemble";
-          version = "1.0.0";
+          version = (builtins.fromTOML (builtins.readFile ./pyproject.toml)).project.version;
           pyproject = true;
           src = ./.;
 
@@ -27,11 +27,11 @@
             numpy
             scikit-learn
             matplotlib
+            jax
+            jaxlib
+            chex
+            optax
           ];
-
-          optional-dependencies = with python.pkgs; {
-            jax = [ jax jaxlib chex optax ];
-          };
 
           doCheck = false;
 

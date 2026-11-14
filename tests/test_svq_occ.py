@@ -197,7 +197,7 @@ class TestSVQOCCLambdaDecay:
         )
         model.fit(X, y)
         assert model.lambda_ < 5.0
-        assert model.lambda_ >= 0.01
+        assert model.lambda_ >= 0.01 - 1e-6  # float32 precision
 
     def test_custom_lambda_decay(self, occ_2d):
         X, y = occ_2d

@@ -10,6 +10,7 @@ Both follow prosemble's established patterns:
 - Callback system for visualization/monitoring
 """
 
+import functools
 import json
 from abc import ABC, abstractmethod
 from typing import NamedTuple, Self
@@ -139,6 +140,36 @@ def _transform_unsupervised_jit(X, prototypes, distance_fn):
     return distance_fn(X, prototypes)
 
 
+#: Named optimizers whose optax implementation needs a float learning rate.
+_OPTIMIZERS_WITHOUT_SCHEDULE_SUPPORT = frozenset({'sm3', 'rprop'})
+
+
+# --- Label decoding for predict() ---
+
+def _decode_predictions(predict):
+    """Wrap a ``predict`` method so it returns the original class labels.
+
+    Models work internally with labels encoded as ``0..n_classes-1``. The
+    wrapper decodes the output of the outermost ``predict`` call only, so a
+    subclass that delegates to ``super().predict()`` is decoded once.
+    """
+    if getattr(predict, '_decodes_labels', False):
+        return predict
+
+    @functools.wraps(predict)
+    def wrapper(self, *args, **kwargs):
+        depth = getattr(self, '_predict_depth', 0)
+        self._predict_depth = depth + 1
+        try:
+            out = predict(self, *args, **kwargs)
+        finally:
+            self._predict_depth = depth
+        return self._decode_y(out) if depth == 0 else out
+
+    wrapper._decodes_labels = True
+    return wrapper
+
+
 # --- Supervised Base ---
 
 class SupervisedState(NamedTuple):
@@ -198,13 +229,16 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         but runs all max_iter iterations even after convergence).
         If False, use a Python for-loop with true early stopping (no wasted
         compute after convergence, but slower per iteration).
+        The Python loop is also used automatically when ``patience``,
+        ``restore_best``, ``class_weight``, ``ema_decay``, ``lookahead``,
+        ``sample_weight`` or ``validation_data`` is given, because the scan
+        loop does not implement them.
     batch_size : int, optional
         Mini-batch size. If None (default), use full-batch training.
         When set, each epoch iterates over shuffled mini-batches of this size.
     patience : int, optional
         Number of consecutive epochs with no improvement before stopping.
         If None (default), stops after a single non-improving step (epsilon check).
-        Requires use_scan=False for true early stopping.
     restore_best : bool
         If True, restore the parameters that achieved the lowest loss
         (or validation loss if validation data is provided). Default: False.
@@ -233,7 +267,9 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         Learning rate schedule. Supported strings: 'exponential_decay',
         'cosine_decay', 'warmup_cosine_decay', 'warmup_exponential_decay',
         'warmup_constant', 'polynomial', 'linear', 'piecewise_constant',
-        'sgdr'. Or pass a custom optax.Schedule. Default: None.
+        'sgdr'. Or pass a custom optax.Schedule. The schedule replaces the
+        constant learning rate of the chosen optimizer, so ``optimizer``
+        must be given by name. Default: None.
     lr_scheduler_kwargs : dict, optional
         Keyword arguments passed to the learning rate scheduler
         (e.g. ``decay_rate``, ``transition_steps``). Default: None.
@@ -331,17 +367,14 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             transfer_fn = identity
         self.transfer_fn = transfer_fn
 
-        # Optimizer
+        # Optimizer (the learning rate is the schedule when one is given)
         self._optimizer_spec = optimizer
-        self._optimizer = self._build_optimizer(optimizer, lr)
-
-        # Learning rate scheduler
         self.lr_scheduler = lr_scheduler
         self.lr_scheduler_kwargs = lr_scheduler_kwargs or {}
         if lr_scheduler is not None:
-            self._optimizer = self._apply_lr_scheduler(
-                self._optimizer, lr_scheduler
-            )
+            self._optimizer = self._apply_lr_scheduler(optimizer, lr_scheduler)
+        else:
+            self._optimizer = self._build_optimizer(optimizer, lr)
 
         # Lookahead config (applied in Python training loops)
         self.lookahead = lookahead
@@ -470,12 +503,16 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         return optimizer
 
     def _apply_lr_scheduler(self, optimizer, scheduler):
-        """Chain a learning rate scheduler with the optimizer.
+        """Build the optimizer with a learning rate schedule.
+
+        The schedule replaces the constant learning rate of the optimizer
+        named by ``optimizer``, so the optimizer's own update rule
+        (momentum, adaptive scaling, weight decay, ...) is preserved.
 
         Parameters
         ----------
-        optimizer : optax.GradientTransformation
-            Base optimizer.
+        optimizer : str
+            Optimizer name (see ``_build_optimizer``).
         scheduler : optax.Schedule or str
             Learning rate schedule. String options:
             - 'exponential_decay': exponential decay
@@ -492,19 +529,35 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         Returns
         -------
         optax.GradientTransformation
+
+        Raises
+        ------
+        ValueError
+            If ``optimizer`` is a pre-built optax transformation. Its
+            learning rate is already fixed, so a schedule cannot be applied;
+            build the optimizer with the schedule instead. Also raised for
+            the named optimizers that only take a constant learning rate
+            ('sm3', 'rprop').
         """
-        import optax
-        kw = self.lr_scheduler_kwargs
+        if not isinstance(optimizer, str):
+            raise ValueError(
+                "lr_scheduler cannot be combined with a pre-built optax "
+                "optimizer, because its learning rate is already fixed. "
+                "Pass the optimizer by name (e.g. optimizer='adam'), or build "
+                "it with the schedule yourself, e.g. "
+                "optax.adam(learning_rate=schedule), and leave "
+                "lr_scheduler=None."
+            )
+        if optimizer in _OPTIMIZERS_WITHOUT_SCHEDULE_SUPPORT:
+            raise ValueError(
+                f"optimizer '{optimizer}' only accepts a constant learning "
+                "rate, so lr_scheduler cannot be used with it."
+            )
         if isinstance(scheduler, str):
-            schedule_fn = self._build_schedule(scheduler, kw)
+            schedule_fn = self._build_schedule(scheduler, self.lr_scheduler_kwargs)
         else:
             schedule_fn = scheduler
-
-        return optax.chain(
-            optax.scale_by_adam() if self._optimizer_spec == 'adam' else optax.identity(),
-            optax.scale_by_schedule(schedule_fn),
-            optax.scale(-1.0),
-        )
+        return self._build_optimizer(optimizer, schedule_fn)
 
     def _build_schedule(self, name, kw):
         """Build an optax schedule from a string name and kwargs."""
@@ -579,6 +632,68 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                 f"Unknown scheduler '{name}'. Options: {', '.join(valid)}, "
                 "or pass a custom optax.Schedule."
             )
+
+    # --- Class label encoding ---
+
+    #: When True, class labels are encoded to ``0..n_classes-1`` in ``fit``
+    #: and decoded back in ``predict``. One-class models, whose labels mean
+    #: target / non-target rather than classes, turn this off.
+    _encode_labels = True
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Resolve through the MRO so a predict() supplied by a mixin is
+        # wrapped too; an inherited, already-wrapped predict is left alone.
+        predict = getattr(cls, 'predict', None)
+        if predict is not None and not getattr(predict, '_decodes_labels', False):
+            cls.predict = _decode_predictions(predict)
+
+    def _prepare_labels(self, y):
+        """Record the classes seen in ``fit`` and return encoded labels.
+
+        Sets ``classes_`` (sorted original labels) and ``n_classes_``.
+        The returned labels are indices into ``classes_``, which is what
+        the losses, pooling and one-hot code throughout the library expect.
+        """
+        y = jnp.asarray(y, dtype=jnp.int32)
+        classes = jnp.unique(y)
+        self.classes_ = classes
+        self.n_classes_ = int(len(classes))
+        self._labels_are_indices = bool(
+            jnp.array_equal(classes, jnp.arange(len(classes)))
+        )
+        if not self._encode_labels or self._labels_are_indices:
+            return y
+        return jnp.searchsorted(classes, y).astype(jnp.int32)
+
+    def _encode_y(self, y):
+        """Encode labels with the classes recorded by ``fit``."""
+        y = jnp.asarray(y, dtype=jnp.int32)
+        if (
+            not self._encode_labels
+            or self.classes_ is None
+            or getattr(self, '_labels_are_indices', True)
+        ):
+            return y
+        idx = jnp.clip(jnp.searchsorted(self.classes_, y), 0, len(self.classes_) - 1)
+        unseen = self.classes_[idx] != y
+        if bool(jnp.any(unseen)):
+            bad = sorted(set(np.asarray(y[unseen]).tolist()))
+            raise ValueError(
+                f"y contains labels not seen during fit: {bad}. "
+                f"Known classes: {np.asarray(self.classes_).tolist()}"
+            )
+        return idx.astype(jnp.int32)
+
+    def _decode_y(self, labels):
+        """Map encoded labels (indices into ``classes_``) back to originals."""
+        if (
+            not self._encode_labels
+            or self.classes_ is None
+            or getattr(self, '_labels_are_indices', True)
+        ):
+            return labels
+        return self.classes_[labels]
 
     def _init_prototypes(self, X, y, n_per_class, key):
         """Initialize prototypes using the configured initializer.
@@ -845,10 +960,12 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             raise ValueError("Cannot use both resume=True and initial_prototypes")
 
         X = jnp.asarray(X, dtype=jnp.float32)
-        y = jnp.asarray(y, dtype=jnp.int32)
 
         if X.ndim != 2:
             raise ValueError(f"X must be 2D, got shape {X.shape}")
+
+        # Record classes and encode labels to 0..n_classes-1
+        y = self._prepare_labels(y)
 
         # Multi-device sharding setup
         if self.devices is not None:
@@ -861,9 +978,6 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                     f"number of devices ({n_devices}) for data parallelism."
                 )
             X, y = shard_data(X, y, self._mesh)
-
-        self.classes_ = jnp.unique(y)
-        self.n_classes_ = int(len(self.classes_))
 
         # Compute sample weights from class_weight if provided
         if sample_weight is not None:
@@ -878,7 +992,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             X_val, y_val = validation_data
             self._val_data = (
                 jnp.asarray(X_val, dtype=jnp.float32),
-                jnp.asarray(y_val, dtype=jnp.int32),
+                self._encode_y(y_val),
             )
         else:
             self._val_data = None
@@ -894,7 +1008,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             if initial_prototypes is not None:
                 params['prototypes'] = jnp.asarray(initial_prototypes, dtype=jnp.float32)
                 if initial_labels is not None:
-                    proto_labels = jnp.asarray(initial_labels, dtype=jnp.int32)
+                    proto_labels = self._encode_y(initial_labels)
 
         # Apply parameter freezing if requested
         optimizer = self._optimizer
@@ -948,7 +1062,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         """
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
-        y = jnp.asarray(y, dtype=jnp.int32)
+        y = self._encode_y(y)
 
         # Shard data if multi-device
         if self._mesh is not None:
@@ -1019,7 +1133,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                 n_c = int(jnp.sum(y == c))
                 weight_map[c_int] = n_samples / (n_classes * n_c)
         elif isinstance(self.class_weight, dict):
-            weight_map = self.class_weight
+            weight_map = self._class_weight_for_encoded()
         else:
             raise ValueError(
                 f"class_weight must be 'balanced' or dict, got {type(self.class_weight)}"
@@ -1029,6 +1143,18 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         for c, w in weight_map.items():
             weights = jnp.where(y == c, w, weights)
         return weights
+
+    def _class_weight_for_encoded(self):
+        """Return ``class_weight`` re-keyed by encoded class index."""
+        if not isinstance(self.class_weight, dict):
+            return self.class_weight
+        if not self._encode_labels or getattr(self, '_labels_are_indices', True):
+            return self.class_weight
+        classes = np.asarray(self.classes_).tolist()
+        return {
+            classes.index(int(c)): w
+            for c, w in self.class_weight.items() if int(c) in classes
+        }
 
     @partial(jit, static_argnums=(0,))
     def _training_step_scan(self, state, X, y, proto_labels):
@@ -1087,14 +1213,32 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         )
         return final_state, loss_history
 
+    def _needs_python_loop(self):
+        """True if an option is set that only the Python loops implement."""
+        return (
+            self._sample_weight is not None
+            or self._val_data is not None
+            or self.patience is not None
+            or self.restore_best
+            or self.ema_decay is not None
+            or self.lookahead is not None
+        )
+
     def _fit_loop(self, X, y, params, opt_state, proto_labels):
-        """Training loop without callbacks. Routes based on use_scan and batch_size."""
+        """Training loop without callbacks. Routes based on use_scan and batch_size.
+
+        The scan loops are a fixed compiled graph and do not implement
+        sample weighting, validation monitoring, patience, best-parameter
+        restoring, EMA or lookahead. When any of those is requested the
+        Python loop is used, so the option takes effect.
+        """
+        use_scan = self.use_scan and not self._needs_python_loop()
         if self.batch_size is not None:
-            if self.use_scan:
+            if use_scan:
                 return self._fit_minibatch_scan(X, y, params, opt_state, proto_labels)
             else:
                 return self._fit_minibatch_python(X, y, params, opt_state, proto_labels)
-        if self.use_scan:
+        if use_scan:
             return self._fit_loop_scan(X, y, params, opt_state, proto_labels)
         else:
             return self._fit_loop_python(X, y, params, opt_state, proto_labels)
@@ -1471,12 +1615,15 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         Returns
         -------
         labels : array of shape (n_samples,)
+            Predicted labels, as the original values passed to ``fit``.
         """
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_supervised_jit(
             X, self.prototypes_, self.prototype_labels_, self.distance_fn
         )
+
+    predict = _decode_predictions(predict)
 
     def predict_proba(self, X):
         """Predict class probabilities via softmin of distances.
@@ -1488,6 +1635,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         Returns
         -------
         proba : array of shape (n_samples, n_classes)
+            Columns follow the order of ``classes_``.
         """
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
@@ -1517,7 +1665,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         """
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
-        y = jnp.asarray(y, dtype=jnp.int32)
+        y = self._encode_y(y)
         distances = self.distance_fn(X, self.prototypes_)
         nearest = jnp.argmin(distances, axis=1)
         nearest_labels = self.prototype_labels_[nearest]
@@ -1560,7 +1708,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         n_features = self.prototypes_.shape[1]
 
         prototypes = self.prototypes_
-        proto_labels = self.prototype_labels_
+        proto_labels = self._decode_y(self.prototype_labels_)
         distance_fn = self.distance_fn
 
         @jit
@@ -1654,14 +1802,31 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             'n_iter_': self.n_iter_,
             'loss_': self.loss_,
             'n_classes_': self.n_classes_,
+            'classes_': (
+                np.asarray(self.classes_).tolist()
+                if self.classes_ is not None else None
+            ),
         }
 
     def _restore_metadata(self, metadata):
         self.n_iter_ = metadata.get('n_iter_')
         self.loss_ = metadata.get('loss_')
         self.n_classes_ = metadata.get('n_classes_')
-        if self.prototype_labels_ is not None:
+        saved_classes = metadata.get('classes_')
+        if saved_classes is not None:
+            self.classes_ = jnp.asarray(saved_classes, dtype=jnp.int32)
+        elif self.prototype_labels_ is not None:
+            # File saved before classes_ was stored: prototype labels hold the
+            # original class values, so recover the classes and encode them.
             self.classes_ = jnp.unique(self.prototype_labels_)
+            if self._encode_labels:
+                self.prototype_labels_ = jnp.searchsorted(
+                    self.classes_, self.prototype_labels_
+                ).astype(self.prototype_labels_.dtype)
+        if self.classes_ is not None:
+            self._labels_are_indices = bool(jnp.array_equal(
+                self.classes_, jnp.arange(len(self.classes_))
+            ))
 
     def _save_optimizer_state(self, arrays, metadata):
         if hasattr(self, '_opt_state') and self._opt_state is not None:

@@ -29,6 +29,19 @@ import chex
 # ============================================================================
 
 
+def _safe_sqrt(x: chex.Array) -> chex.Array:
+    """Square root that is 0 with a zero gradient wherever ``x <= 0``.
+
+    ``jnp.sqrt`` has an infinite derivative at 0, which turns into NaN
+    gradients as soon as two points coincide (for example a prototype
+    initialised on a training sample). Non-positive entries, including the
+    tiny negatives produced by floating-point cancellation, are masked out
+    before the root is taken so both the value and the gradient stay finite.
+    """
+    positive = x > 0.0
+    return jnp.where(positive, jnp.sqrt(jnp.where(positive, x, 1.0)), 0.0)
+
+
 @jit
 def euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
     """
@@ -61,7 +74,8 @@ def euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
         1.414...
 
     Notes:
-        - Numerically stable: Uses maximum(D_sq, 0) to avoid sqrt of negatives
+        - Numerically stable: zero and slightly negative squared distances
+          give 0 with a zero gradient (no NaN when points coincide)
         - GPU-compatible: All operations are JAX primitives
         - JIT-compiled: First call compiles, subsequent calls are fast
     """
@@ -79,10 +93,7 @@ def euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
     # Apply distance formula
     D_sq = X_sq + Y_sq - 2 * XY
 
-    # Ensure non-negative (numerical stability)
-    D_sq = jnp.maximum(D_sq, 0.0)
-
-    return jnp.sqrt(D_sq)
+    return _safe_sqrt(D_sq)
 
 
 @jit
@@ -761,7 +772,7 @@ def euclidean_distance(x: chex.Array, y: chex.Array) -> chex.Array:
         Array(1.732..., dtype=float32)
     """
     chex.assert_equal_shape([x, y])
-    return jnp.sqrt(jnp.sum((x - y) ** 2))
+    return _safe_sqrt(jnp.sum((x - y) ** 2))
 
 
 @jit

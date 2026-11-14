@@ -300,7 +300,7 @@ class MRSLVQ(SupervisedPrototypeModel):
         proba = self.predict_proba(X)
         max_proba = jnp.max(proba, axis=1)
         preds = jnp.argmax(proba, axis=1)
-        return jnp.where(max_proba >= threshold, preds, -1)
+        return jnp.where(max_proba >= threshold, self._decode_y(preds), -1)
 
     def _get_quantizable_attrs(self):
         attrs = super()._get_quantizable_attrs()
@@ -545,7 +545,7 @@ class LMRSLVQ(SupervisedPrototypeModel):
         proba = self.predict_proba(X)
         max_proba = jnp.max(proba, axis=1)
         preds = jnp.argmax(proba, axis=1)
-        return jnp.where(max_proba >= threshold, preds, -1)
+        return jnp.where(max_proba >= threshold, self._decode_y(preds), -1)
 
     def _get_quantizable_attrs(self):
         attrs = super()._get_quantizable_attrs()

@@ -164,6 +164,10 @@ class OCGLVQ(SupervisedPrototypeModel):
         Learned scalar square roots whose squares define the thresholds.
     """
 
+    # Labels mean target / non-target here (see ``target_label``), not
+    # classes to be indexed, so they are used as given.
+    _encode_labels = False
+
     def __init__(self, n_prototypes=3, target_label=None, beta=10.0,
                  max_iter=100, lr=0.01, epsilon=1e-6, random_seed=42,
                  distance_fn=None, optimizer='adam', transfer_fn=None,

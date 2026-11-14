@@ -68,7 +68,15 @@ class RiemannianDKSLNG(RiemannianSLNG):
         Ratio of wrong-class to correct-class learning rate (ε⁻/ε⁺).
         Default: 0.5.
     tau : float
-        Injectivity radius safety factor. Default: 0.95.
+        Safety factor in (0, 1]. With ``update_rule='riemannian'`` the
+        geodesic length of a prototype step is limited to ``tau`` times
+        the injectivity radius of the manifold. Default: 0.95.
+    update_rule : {'riemannian', 'projected'}
+        How prototypes are moved. ``'riemannian'`` (default) takes the
+        optimizer step in the tangent space, using the Riemannian
+        gradient, and follows the geodesic with the exponential map.
+        ``'projected'`` takes a Euclidean step and projects the result
+        back onto the manifold.
     n_prototypes_per_class : int
         Number of prototypes per class.
     max_iter : int
@@ -128,7 +136,7 @@ class RiemannianDKSLNG(RiemannianSLNG):
     def __init__(self, manifold, sigma_init='median', sigma_min=1e-3,
                  latent_dim=None, beta=10.0, gamma_init=None,
                  gamma_final=0.01, gamma_decay=None, lr_ratio=0.5,
-                 tau=0.95,
+                 tau=0.95, update_rule='riemannian',
                  n_prototypes_per_class=1, max_iter=100, lr=0.01,
                  epsilon=1e-6, random_seed=42, optimizer='adam',
                  transfer_fn=None, margin=0.0, callbacks=None,
@@ -141,7 +149,7 @@ class RiemannianDKSLNG(RiemannianSLNG):
         super().__init__(
             manifold=manifold, latent_dim=latent_dim, beta=beta,
             gamma_init=gamma_init, gamma_final=gamma_final,
-            gamma_decay=gamma_decay, tau=tau,
+            gamma_decay=gamma_decay, tau=tau, update_rule=update_rule,
             n_prototypes_per_class=n_prototypes_per_class,
             max_iter=max_iter, lr=lr, epsilon=epsilon,
             random_seed=random_seed, optimizer=optimizer,

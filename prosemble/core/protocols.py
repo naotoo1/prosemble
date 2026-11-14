@@ -41,6 +41,18 @@ class Manifold(Protocol):
     :class:`~prosemble.core.manifolds.SPD`, and
     :class:`~prosemble.core.manifolds.Grassmannian` all satisfy this
     protocol structurally — no explicit subclassing is required.
+
+    Three further methods are optional. A manifold that provides them
+    can be trained with intrinsic updates (``update_rule='riemannian'``
+    in the supervised Riemannian models, see
+    :func:`~prosemble.core.riemannian_optim.riemannian_update`):
+
+    - ``gradient_to_frame(point, euclidean_grad)``: coordinates of the
+      Riemannian gradient in an orthonormal frame of the tangent space.
+    - ``frame_to_tangent(point, coords)``: tangent vector with the given
+      coordinates in that frame.
+    - ``tangent_norm(point, tangent)``: Riemannian norm of a tangent
+      vector.
     """
 
     @property

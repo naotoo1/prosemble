@@ -9,6 +9,8 @@ descent (Euclidean gradient + manifold projection).
 Supports SO(n), SPD(n), Grassmannian(n,k), and HyperbolicPoincare(d) manifolds.
 """
 
+import warnings
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -17,6 +19,9 @@ from prosemble.models.prototype_base import SupervisedPrototypeModel, Supervised
 from prosemble.core.activations import sigmoid_beta
 from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
 from prosemble.core.protocols import Manifold
+from prosemble.core.riemannian_optim import (
+    riemannian_update, supports_riemannian_update,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -242,10 +247,22 @@ class RiemannianSRNG(SupervisedPrototypeModel):
     - Geodesic distance: :math:`d(x, w)` computed via the manifold's
       intrinsic metric (matrix logarithm + Frobenius norm)
 
-    Prototypes live on the manifold and are updated via projected gradient
-    descent: optax computes Euclidean gradients, then
-    :meth:`manifold.project` maps prototypes back to the manifold after
-    each step.
+    Prototypes live on the manifold and are updated intrinsically
+    (``update_rule='riemannian'``). The Euclidean gradient is converted
+    to the Riemannian gradient and expressed in an orthonormal frame of
+    the tangent space, the optimizer computes its step there, and the
+    prototype follows the geodesic:
+
+    .. math::
+
+        w \\leftarrow \\operatorname{Exp}_w(v), \\qquad
+        \\|v\\|_w \\le \\tau \\cdot \\operatorname{inj}(w).
+
+    The step length is therefore a geodesic length, independent of how
+    the manifold is embedded, and the prototype never leaves the
+    manifold. With ``optimizer='sgd'`` this is Riemannian gradient
+    descent. ``update_rule='projected'`` instead takes a Euclidean step
+    and maps the result back with :meth:`manifold.project`.
 
     The neighborhood range :math:`\\gamma` decays during training from
     :math:`\\gamma_{\\text{init}}` to :math:`\\gamma_{\\text{final}}`.
@@ -269,8 +286,15 @@ class RiemannianSRNG(SupervisedPrototypeModel):
         Ratio of wrong-class to correct-class learning rate (ε⁻/ε⁺).
         Default: 0.5.
     tau : float
-        Injectivity radius safety factor for manifold projection.
-        Default: 0.95.
+        Safety factor in (0, 1]. With ``update_rule='riemannian'`` the
+        geodesic length of a prototype step is limited to ``tau`` times
+        the injectivity radius of the manifold. Default: 0.95.
+    update_rule : {'riemannian', 'projected'}
+        How prototypes are moved. ``'riemannian'`` (default) takes the
+        optimizer step in the tangent space, using the Riemannian
+        gradient, and follows the geodesic with the exponential map.
+        ``'projected'`` takes a Euclidean step and projects the result
+        back onto the manifold.
     n_prototypes_per_class : int
         Number of prototypes per class.
     max_iter : int
@@ -321,7 +345,8 @@ class RiemannianSRNG(SupervisedPrototypeModel):
     """
 
     def __init__(self, manifold: Manifold, beta=10.0, gamma_init=None, gamma_final=0.01,
-                 gamma_decay=None, lr_ratio=0.5, tau=0.95, n_prototypes_per_class=1,
+                 gamma_decay=None, lr_ratio=0.5, tau=0.95,
+                 update_rule='riemannian', n_prototypes_per_class=1,
                  max_iter=100, lr=0.01, epsilon=1e-6, random_seed=42,
                  optimizer='adam', transfer_fn=None, margin=0.0,
                  callbacks=None, use_scan=False, batch_size=None,
@@ -353,13 +378,40 @@ class RiemannianSRNG(SupervisedPrototypeModel):
         self.gamma_decay = gamma_decay
         self.lr_ratio = lr_ratio
         self.tau = tau
+        self.update_rule = update_rule
         self.gamma_ = None
+
+        if self._resolve_update_rule() == 'riemannian':
+            self._optimizer = riemannian_update(
+                self._optimizer, self.manifold, tau=self.tau,
+            )
+            self._active_optimizer = self._optimizer
 
         # Ensure gamma is frozen from optimizer (not trainable)
         if self.freeze_params is None:
             self.freeze_params = ['gamma']
         elif 'gamma' not in self.freeze_params:
             self.freeze_params = list(self.freeze_params) + ['gamma']
+
+    def _resolve_update_rule(self):
+        """Validate ``update_rule`` and ``tau``; return the rule in effect."""
+        if self.update_rule not in ('riemannian', 'projected'):
+            raise ValueError(
+                "update_rule must be 'riemannian' or 'projected', "
+                f"got {self.update_rule!r}"
+            )
+        if not 0.0 < self.tau <= 1.0:
+            raise ValueError(f"tau must be in (0, 1], got {self.tau}")
+        if self.update_rule == 'riemannian' and not supports_riemannian_update(
+                self.manifold):
+            warnings.warn(
+                f"{type(self.manifold).__name__} does not provide "
+                "gradient_to_frame, frame_to_tangent and tangent_norm; "
+                "falling back to update_rule='projected'.",
+                stacklevel=3,
+            )
+            return 'projected'
+        return self.update_rule
 
     def _reshape_to_manifold(self, flat, n_points):
         """Reshape flat array to manifold point shape.
@@ -563,6 +615,7 @@ class RiemannianSRNG(SupervisedPrototypeModel):
         hp['gamma_decay'] = self.gamma_decay
         hp['lr_ratio'] = self.lr_ratio
         hp['tau'] = self.tau
+        hp['update_rule'] = self.update_rule
         # Store manifold type and params for reconstruction
         manifold = self.manifold
         hp['manifold_type'] = type(manifold).__name__
@@ -593,6 +646,9 @@ class RiemannianSRNG(SupervisedPrototypeModel):
     @classmethod
     def _pre_load_construct(cls, hyperparams, metadata):
         manifold = cls._reconstruct_manifold(hyperparams)
+        # Files written before update_rule existed were trained with
+        # projected updates.
+        hyperparams.setdefault('update_rule', 'projected')
         hyperparams.pop('manifold_type', None)
         hyperparams.pop('manifold_n', None)
         hyperparams.pop('manifold_k', None)

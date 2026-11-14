@@ -172,6 +172,10 @@ class SVQOCC(SupervisedPrototypeModel):
     _valid_costs = ('contrastive', 'brier', 'cross_entropy')
     _valid_responses = ('gaussian', 'student_t', 'uniform')
 
+    # Labels mean target / non-target here (see ``target_label``), not
+    # classes to be indexed, so they are used as given.
+    _encode_labels = False
+
     def __init__(self, n_prototypes=3, target_label=None, alpha=0.5,
                  cost_function='contrastive', response_type='gaussian',
                  sigma=0.1, gamma_resp=1.0, nu=1.0,

@@ -9,6 +9,8 @@ import chex
 from jax import jit
 from functools import partial
 
+from .distance import _safe_sqrt
+
 
 @jit
 def gaussian_kernel(x: chex.Array, y: chex.Array, sigma: float) -> chex.Array:
@@ -100,7 +102,7 @@ def kernel_distance(
         Distances in feature space, shape (n_samples, m_samples)
     """
     D_sq = kernel_distance_squared(X, Y, sigma)
-    return jnp.sqrt(jnp.maximum(D_sq, 0.0))
+    return _safe_sqrt(D_sq)
 
 
 @jit

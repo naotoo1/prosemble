@@ -139,13 +139,12 @@ class LVQ1(SupervisedPrototypeModel):
     def fit(self, X, y, initial_prototypes=None):
         """Fit LVQ1 using competitive learning (no gradients)."""
         X = jnp.asarray(X, dtype=jnp.float32)
-        y = jnp.asarray(y, dtype=jnp.int32)
 
         if X.ndim != 2:
             raise ValueError(f"X must be 2D, got shape {X.shape}")
 
-        self.classes_ = jnp.unique(y)
-        self.n_classes_ = int(len(self.classes_))
+        # Record classes and encode labels to 0..n_classes-1
+        y = self._prepare_labels(y)
 
         # Initialize prototypes
         key = self.key

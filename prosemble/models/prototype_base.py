@@ -814,6 +814,25 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
 
         return loss, grads
 
+    def _freeze(self, optimizer, params):
+        """Exclude the ``freeze_params`` entries of *params* from optimisation.
+
+        ``optax.masked`` on its own does not freeze anything: it applies
+        the optimizer to the selected entries and passes the others
+        through unchanged, so the update of an excluded entry is its raw
+        gradient, which ``optax.apply_updates`` then adds to the
+        parameter. The excluded entries are therefore set to zero
+        explicitly.
+        """
+        if self.freeze_params is None:
+            return optimizer
+        import optax
+        frozen = set(self.freeze_params)
+        return optax.chain(
+            optax.masked(optimizer, {k: k not in frozen for k in params}),
+            optax.masked(optax.set_to_zero(), {k: k in frozen for k in params}),
+        )
+
     def _post_update(self, params):
         """Apply constraints after gradient update (e.g., normalize relevances).
 
@@ -1011,11 +1030,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                     proto_labels = self._encode_y(initial_labels)
 
         # Apply parameter freezing if requested
-        optimizer = self._optimizer
-        if self.freeze_params is not None:
-            freeze_set = set(self.freeze_params)
-            mask = {k: (k not in freeze_set) for k in params}
-            optimizer = optax.masked(optimizer, mask)
+        optimizer = self._freeze(self._optimizer, params)
 
         # Store active optimizer (possibly with masking)
         self._active_optimizer = optimizer
@@ -1843,11 +1858,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                 for i in range(n_leaves)
             ]
             params = self._get_resume_params({'prototypes': self.prototypes_})
-            optimizer = self._optimizer
-            if self.freeze_params is not None:
-                freeze_set = set(self.freeze_params)
-                mask = {k: (k not in freeze_set) for k in params}
-                optimizer = optax.masked(optimizer, mask)
+            optimizer = self._freeze(self._optimizer, params)
             skeleton = optimizer.init(params)
             treedef = jax.tree.structure(skeleton)
             if len(saved_leaves) == len(jax.tree.leaves(skeleton)):

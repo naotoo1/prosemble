@@ -70,7 +70,7 @@ class TestSNGGammaDecay:
         )
         model.fit(X, y)
         assert model.gamma_ < 5.0
-        assert model.gamma_ >= 0.01
+        assert model.gamma_ >= 0.01 - 1e-6  # float32 precision
 
     def test_gamma_reaches_final(self, separable_2d):
         X, y = separable_2d

@@ -335,3 +335,96 @@ class TestEuclideanDistanceAtZero:
         assert bool(jnp.all(jnp.isfinite(model.prototypes_)))
         assert np.isfinite(model.loss_)
         assert float((np.asarray(model.predict(X)) == y).mean()) > 0.8
+
+
+# ---------------------------------------------------------------------------
+# Frozen parameters must not move
+# ---------------------------------------------------------------------------
+
+def _models_with_annealed_range():
+    """Registered models that anneal a neighbourhood range on a fixed schedule.
+
+    Returns ``(model name, attribute prefix)``: ``gamma`` for the
+    supervised neural-gas models and ``lambda`` for the SVQ-OCC family.
+    """
+    found = []
+    for name, cls in sorted(_MODEL_REGISTRY.items()):
+        if 'Riemannian' in name or not hasattr(cls, '_compute_loss'):
+            continue
+        try:
+            model = cls(max_iter=2)
+        except Exception:
+            continue
+        frozen = getattr(model, 'freeze_params', None) or []
+        if 'gamma' in frozen:
+            found.append((name, 'gamma'))
+        elif 'lambda_ng' in frozen:
+            found.append((name, 'lambda'))
+    return found
+
+
+class TestFrozenParameters:
+    """``freeze_params`` must keep the named parameters fixed.
+
+    The update of a frozen parameter used to be its raw gradient, so the
+    parameter drifted by one gradient per step.
+    """
+
+    @pytest.mark.parametrize('use_scan', [True, False])
+    def test_frozen_prototypes_do_not_move(self, iris, use_scan):
+        X, y = iris
+        fitted = []
+        for max_iter in (2, 40):
+            model = GLVQ(n_prototypes_per_class=1, max_iter=max_iter, lr=0.01,
+                         freeze_params=['prototypes'], use_scan=use_scan)
+            model.fit(X, y)
+            fitted.append(np.asarray(model.prototypes_))
+        np.testing.assert_array_equal(fitted[0], fitted[1])
+
+    def test_frozen_omega_does_not_move_while_prototypes_train(self, iris):
+        from prosemble.models import GMLVQ
+
+        X, y = iris
+        fitted = []
+        for max_iter in (2, 40):
+            model = GMLVQ(n_prototypes_per_class=1, max_iter=max_iter, lr=0.01,
+                          freeze_params=['omega'])
+            model.fit(X, y)
+            fitted.append((np.asarray(model.omega_), np.asarray(model.prototypes_)))
+        np.testing.assert_array_equal(fitted[0][0], fitted[1][0])
+        assert not np.allclose(fitted[0][1], fitted[1][1])
+
+    def test_unfrozen_training_is_unchanged_by_freezing_nothing(self, iris):
+        X, y = iris
+        plain = GLVQ(n_prototypes_per_class=1, max_iter=20, lr=0.01)
+        plain.fit(X, y)
+        empty = GLVQ(n_prototypes_per_class=1, max_iter=20, lr=0.01, freeze_params=[])
+        empty.fit(X, y)
+        np.testing.assert_allclose(plain.prototypes_, empty.prototypes_, rtol=1e-6)
+
+    @pytest.mark.parametrize('name, prefix', _models_with_annealed_range())
+    def test_range_follows_its_annealing_schedule(self, iris, name, prefix):
+        """The neighbourhood range is annealed and must not see a gradient."""
+        X, y = iris
+        cls = _MODEL_REGISTRY[name]
+        if not getattr(cls, '_encode_labels', True):
+            y = jnp.where(y == 0, 1, 0)
+        # Python loop: n_iter_ is then the number of steps actually taken.
+        model = cls(max_iter=15, lr=0.01, epsilon=1e-12, use_scan=False)
+        model.fit(X, y)
+        steps = int(model.n_iter_)
+        initial = getattr(model, f'_{prefix}_init_actual')
+        decay = getattr(model, f'_{prefix}_decay')
+        final = getattr(model, f'{prefix}_final')
+        np.testing.assert_allclose(
+            float(getattr(model, f'{prefix}_')),
+            max(initial * decay ** steps, final), rtol=1e-3)
+
+    def test_resume_with_frozen_parameter(self, iris):
+        X, y = iris
+        model = GLVQ(n_prototypes_per_class=1, max_iter=5, lr=0.01,
+                     freeze_params=['prototypes'])
+        model.fit(X, y)
+        before = np.asarray(model.prototypes_)
+        model.fit(X, y, resume=True)
+        np.testing.assert_array_equal(model.prototypes_, before)

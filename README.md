@@ -18,11 +18,10 @@ Prosemble can be installed using pip:
 pip install prosemble
 ```
 
-To install with JAX support:
+JAX is installed automatically. For GPU support (CUDA 12):
 
 ```bash
-pip install "prosemble[jax]"         # CPU
-pip install "prosemble[jax-cuda12]"  # GPU (CUDA 12)
+pip install "prosemble[jax-cuda12]"
 ```
 
 To install the development version:

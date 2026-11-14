@@ -27,8 +27,12 @@ classifiers = [
 dependencies = [
     "numpy",
     "scikit-learn",
-    "matplotlib"
-]    
+    "matplotlib",
+    "jax>=0.4.23",
+    "jaxlib>=0.4.23",
+    "chex>=0.1.85",
+    "optax>=0.2.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/naotoo1/prosemble"
@@ -46,21 +50,6 @@ exclude = ["docs*"]
 
 [tool.distutils.bdist_wheel]
 universal = true
-
-[tool.bumpversion]
-current_version = "2.0.0"
-commit = true
-tag = true
-
-[[tool.bumpversion.files]]
-filename = "pyproject.toml"
-search = 'version = "{current_version}"'
-replace = 'version = "{new_version}"'
-
-[[tool.bumpversion.files]]
-filename = "prosemble/__init__.py"
-search = '__version__ = "{current_version}"'
-replace = '__version__ = "{new_version}"'
 
 [project.optional-dependencies]
 dev = [
@@ -80,6 +69,8 @@ dev = [
     "autopep8",
     "pytest"
 ]
+# JAX is a core dependency; this extra is kept so that existing
+# ``pip install "prosemble[jax]"`` commands continue to work.
 jax = [
     "jax>=0.4.23",
     "jaxlib>=0.4.23",

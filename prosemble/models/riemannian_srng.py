@@ -23,16 +23,46 @@ from prosemble.core.protocols import Manifold
 # Differentiable manifold operations for autodiff-based training
 # ---------------------------------------------------------------------------
 
+@jax.custom_jvp
 def _logm_spd_diff(M):
     """Differentiable matrix log for SPD matrices via eigendecomposition.
 
     Unlike ``jsl.funm(A, jnp.log)`` (which uses Schur decomposition with
-    no JAX differentiation rule), this uses ``jnp.linalg.eigh`` which
-    has full autodiff support.
+    no JAX differentiation rule), this uses ``jnp.linalg.eigh``.
+
+    The derivative is given by a custom JVP (Daleckii-Krein formula)
+    rather than by differentiating through ``eigh``, whose JVP contains
+    ``1 / (lambda_i - lambda_j)`` and yields inf/NaN for (near-)repeated
+    eigenvalues, e.g. when a prototype coincides with a sample and
+    ``M`` is close to the identity.
     """
     eigvals, eigvecs = jnp.linalg.eigh(M)
     eigvals = jnp.maximum(eigvals, 1e-10)
     return eigvecs @ jnp.diag(jnp.log(eigvals)) @ eigvecs.T
+
+
+@_logm_spd_diff.defjvp
+def _logm_spd_diff_jvp(primals, tangents):
+    (M,), (dM,) = primals, tangents
+    eigvals, eigvecs = jnp.linalg.eigh(M)
+    eigvals = jnp.maximum(eigvals, 1e-10)
+    log_eig = jnp.log(eigvals)
+    out = eigvecs @ jnp.diag(log_eig) @ eigvecs.T
+
+    # Divided differences of log: (log li - log lj) / (li - lj),
+    # with the limit 1 / l on (near-)degenerate pairs.
+    li, lj = eigvals[:, None], eigvals[None, :]
+    diff = li - lj
+    close = jnp.abs(diff) <= 1e-6 * jnp.maximum(li, lj)
+    safe_diff = jnp.where(close, 1.0, diff)
+    L = jnp.where(close,
+                  2.0 / (li + lj),
+                  (log_eig[:, None] - log_eig[None, :]) / safe_diff)
+
+    dM_sym = (dM + dM.T) / 2.0
+    dM_eig = eigvecs.T @ dM_sym @ eigvecs
+    d_out = eigvecs @ (L * dM_eig) @ eigvecs.T
+    return out, d_out
 
 
 def _so_chordal_distance_squared(R, S):

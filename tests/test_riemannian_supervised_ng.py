@@ -386,3 +386,49 @@ class TestRiemannianSTNG:
         )
         model.fit(X, y)
         assert model.omegas_.shape == (2, 9, 3)
+
+
+# ---------------------------------------------------------------------------
+# SPD distance gradient with repeated eigenvalues
+# ---------------------------------------------------------------------------
+
+class TestSPDDistanceGradient:
+    """The SPD distance must be differentiable when eigenvalues coincide.
+
+    A prototype initialised on a sample gives ``A^{-1/2} B A^{-1/2}`` close
+    to the identity, whose eigenvalues can be exactly equal in float32.
+    """
+
+    def test_repeated_eigenvalues_give_exact_gradient(self):
+        from prosemble.models.riemannian_srng import _spd_distance_squared_diff
+
+        A = jnp.eye(3)
+        B = jnp.diag(jnp.array([2.0, 2.0, 3.0]))
+        grad = jax.grad(_spd_distance_squared_diff, argnums=1)(A, B)
+        # d/dB ||log B||_F^2 = 2 log(B) B^{-1}
+        expected = jnp.diag(2.0 * jnp.log(jnp.diag(B)) / jnp.diag(B))
+        np.testing.assert_allclose(grad, expected, atol=1e-6)
+
+    def test_prototype_equal_to_sample_gives_zero_gradient(self):
+        from prosemble.models.riemannian_srng import _spd_distance_squared_diff
+
+        A = SPD(3).random_point(jax.random.PRNGKey(0))
+        grad = jax.grad(_spd_distance_squared_diff, argnums=1)(A, A)
+        assert bool(jnp.all(jnp.isfinite(grad)))
+        np.testing.assert_allclose(grad, 0.0, atol=1e-4)
+
+    def test_matches_eigh_autodiff_for_distinct_eigenvalues(self):
+        from prosemble.core.manifolds import inv_sqrt_spd
+        from prosemble.models.riemannian_srng import _spd_distance_squared_diff
+
+        def reference(A, B):
+            A_isqrt = inv_sqrt_spd(A)
+            w, V = jnp.linalg.eigh(A_isqrt @ B @ A_isqrt)
+            return jnp.sum((V @ jnp.diag(jnp.log(w)) @ V.T) ** 2)
+
+        k1, k2 = jax.random.split(jax.random.PRNGKey(3))
+        A, B = SPD(3).random_point(k1), SPD(3).random_point(k2)
+        grad = jax.grad(_spd_distance_squared_diff, argnums=1)(A, B)
+        ref = jax.grad(reference, argnums=1)(A, B)
+        ref = (ref + ref.T) / 2.0
+        np.testing.assert_allclose(grad, ref, rtol=1e-3, atol=1e-5)

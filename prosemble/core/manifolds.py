@@ -159,6 +159,29 @@ class SO:
         """Injectivity radius of SO(n) is :math:`\\pi`."""
         return jnp.pi
 
+    def gradient_to_frame(self, R, egrad):
+        """Riemannian gradient in orthonormal tangent coordinates.
+
+        For the metric :math:`\\langle U, V \\rangle_R = \\tfrac12
+        \\operatorname{tr}(U^T V)` (the one for which :meth:`distance` is
+        the geodesic distance) the Riemannian gradient of a function with
+        Euclidean gradient ``egrad`` is
+        :math:`2 R \\operatorname{skew}(R^T G)`. Its coordinates in the
+        orthonormal frame :math:`\\Omega \\mapsto \\sqrt2 R \\Omega` are
+        :math:`\\sqrt2 \\operatorname{skew}(R^T G)`.
+        """
+        A = R.T @ egrad
+        return (A - A.T) / jnp.sqrt(2.0)
+
+    def frame_to_tangent(self, R, coords):
+        """Tangent vector at R with the given orthonormal coordinates."""
+        skew = (coords - coords.T) / 2.0
+        return R @ (jnp.sqrt(2.0) * skew)
+
+    def tangent_norm(self, R, V):
+        """Riemannian norm :math:`\\|V\\|_F / \\sqrt2` of a tangent vector."""
+        return jnp.sqrt(jnp.sum(V ** 2) / 2.0)
+
 
 # ---------------------------------------------------------------------------
 # SPD(n) — Symmetric Positive Definite Matrices
@@ -225,6 +248,30 @@ class SPD:
     def injectivity_radius(self, A):
         """SPD manifold has infinite injectivity radius."""
         return jnp.inf
+
+    def gradient_to_frame(self, A, egrad):
+        """Riemannian gradient in orthonormal tangent coordinates.
+
+        For the affine-invariant metric :math:`\\langle U, V \\rangle_A =
+        \\operatorname{tr}(A^{-1} U A^{-1} V)` the Riemannian gradient is
+        :math:`A \\operatorname{sym}(G) A`. Its coordinates in the
+        orthonormal frame :math:`C \\mapsto A^{1/2} C A^{1/2}` are
+        :math:`A^{1/2} \\operatorname{sym}(G) A^{1/2}`.
+        """
+        A_sqrt = sqrt_spd(A)
+        sym = (egrad + egrad.T) / 2.0
+        return A_sqrt @ sym @ A_sqrt
+
+    def frame_to_tangent(self, A, coords):
+        """Tangent vector at A with the given orthonormal coordinates."""
+        A_sqrt = sqrt_spd(A)
+        sym = (coords + coords.T) / 2.0
+        return A_sqrt @ sym @ A_sqrt
+
+    def tangent_norm(self, A, V):
+        """Riemannian norm :math:`\\|A^{-1/2} V A^{-1/2}\\|_F`."""
+        A_isqrt = inv_sqrt_spd(A)
+        return jnp.sqrt(jnp.sum((A_isqrt @ V @ A_isqrt) ** 2))
 
 
 # ---------------------------------------------------------------------------
@@ -306,8 +353,10 @@ class Grassmannian:
         cos_S = jnp.cos(S)
         sin_S = jnp.sin(S)
 
-        # New point: Q @ V_r @ diag(cos) + U @ diag(sin)
-        return Q @ (Vt.T * cos_S[None, :]) + U * sin_S[None, :]
+        # Q V cos(S) V^T + U sin(S) V^T (Edelman et al. 1998). The trailing
+        # V^T keeps the basis aligned with Q, so Exp_Q(V) = Q + V + O(|V|^2)
+        # as matrices and not merely as subspaces.
+        return (Q @ (Vt.T * cos_S[None, :]) + U * sin_S[None, :]) @ Vt
 
     def random_point(self, key):
         """Generate a random point on Gr(n, k) via QR decomposition."""
@@ -320,13 +369,38 @@ class Grassmannian:
         return jnp.allclose(Q.T @ Q, jnp.eye(self.k), atol=1e-4)
 
     def project(self, Q):
-        """Project to nearest orthonormal basis via QR."""
-        Q_new, _ = jnp.linalg.qr(Q)
-        return Q_new
+        """Orthonormalise via QR, keeping the basis aligned with ``Q``.
+
+        The columns are signed so that ``R`` has a positive diagonal, the
+        Gram-Schmidt convention. This makes the map the identity on
+        orthonormal input; without it QR may flip the sign of a column,
+        which leaves the subspace unchanged but not its representative.
+        """
+        Q_new, R = jnp.linalg.qr(Q)
+        signs = jnp.where(jnp.diagonal(R) < 0, -1.0, 1.0)
+        return Q_new * signs[None, :]
 
     def injectivity_radius(self, Q):
         """Injectivity radius of Gr(n,k) is :math:`\\pi/2`."""
         return jnp.pi / 2.0
+
+    def gradient_to_frame(self, Q, egrad):
+        """Riemannian gradient in orthonormal tangent coordinates.
+
+        Tangent vectors are the horizontal matrices :math:`Q^T V = 0`
+        with the Frobenius metric, so the Riemannian gradient is the
+        horizontal projection :math:`(I - Q Q^T) G` and the ambient
+        coordinates are already orthonormal.
+        """
+        return egrad - Q @ (Q.T @ egrad)
+
+    def frame_to_tangent(self, Q, coords):
+        """Tangent vector at Q: horizontal projection of ``coords``."""
+        return coords - Q @ (Q.T @ coords)
+
+    def tangent_norm(self, Q, V):
+        """Riemannian norm :math:`\\|V\\|_F` of a tangent vector."""
+        return jnp.sqrt(jnp.sum(V ** 2))
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +429,9 @@ def _mobius_add(x, y, eps=1e-7):
     xy = jnp.sum(x * y)
     num = (1.0 + 2.0 * xy + y_sq) * x + (1.0 - x_sq) * y
     denom = 1.0 + 2.0 * xy + x_sq * y_sq
-    return num / (denom + eps)
+    # denom >= (1 - |x||y|)^2 > 0 inside the ball. Guard only against
+    # underflow: adding eps instead would give x (+) 0 = x / (1 + eps).
+    return num / jnp.maximum(denom, eps)
 
 
 def _conformal_factor(x, eps=1e-7):
@@ -369,7 +445,7 @@ def _conformal_factor(x, eps=1e-7):
     -------
     scalar
     """
-    return 2.0 / (1.0 - jnp.sum(x ** 2) + eps)
+    return 2.0 / jnp.maximum(1.0 - jnp.sum(x ** 2), eps)
 
 
 class HyperbolicPoincare:
@@ -489,3 +565,21 @@ class HyperbolicPoincare:
     def injectivity_radius(self, x):
         """Hyperbolic space has infinite injectivity radius."""
         return jnp.inf
+
+    def gradient_to_frame(self, x, egrad):
+        """Riemannian gradient in orthonormal tangent coordinates.
+
+        The metric is :math:`\\lambda_x^2` times the Euclidean one, so the
+        Riemannian gradient is :math:`G / \\lambda_x^2` and its coordinates
+        in the orthonormal frame :math:`c \\mapsto c / \\lambda_x` are
+        :math:`G / \\lambda_x`.
+        """
+        return egrad / _conformal_factor(x, eps=self.eps)
+
+    def frame_to_tangent(self, x, coords):
+        """Tangent vector at x with the given orthonormal coordinates."""
+        return coords / _conformal_factor(x, eps=self.eps)
+
+    def tangent_norm(self, x, v):
+        """Riemannian norm :math:`\\lambda_x \\|v\\|` of a tangent vector."""
+        return _conformal_factor(x, eps=self.eps) * jnp.sqrt(jnp.sum(v ** 2))

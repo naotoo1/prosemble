@@ -145,6 +145,73 @@ geodesic distances.
    model.fit(X, y)
    labels = model.predict(X)
 
+Prototype Updates
+-----------------
+
+All supervised Riemannian models move their prototypes intrinsically
+(``update_rule='riemannian'``, the default).  One training step is:
+
+1. The Euclidean gradient :math:`G` of the loss is converted to the
+   Riemannian gradient, which accounts for the metric of the manifold,
+   and written in an orthonormal frame of the tangent space at the
+   prototype.  In these coordinates the metric is the ordinary Euclidean
+   one, so a step of length :math:`\eta` is a geodesic step of length
+   :math:`\eta` anywhere on the manifold.
+2. The optimizer (``adam`` by default) computes its step :math:`v` in
+   these coordinates.
+3. The step is limited to :math:`\|v\|_w \le \tau \cdot \text{inj}(w)`,
+   a fraction ``tau`` of the injectivity radius, inside which the
+   exponential map is one-to-one.
+4. The prototype follows the geodesic:
+   :math:`w \leftarrow \text{Exp}_w(v)`.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 38 40
+
+   * - Manifold
+     - Riemannian gradient
+     - Orthonormal coordinates
+   * - **SO(n)**
+     - :math:`2 R\,\text{skew}(R^T G)`
+     - :math:`\sqrt{2}\,\text{skew}(R^T G)`
+   * - **SPD(n)**
+     - :math:`W\,\text{sym}(G)\,W`
+     - :math:`W^{1/2}\,\text{sym}(G)\,W^{1/2}`
+   * - **Gr(n, k)**
+     - :math:`(I - Q Q^T) G`
+     - :math:`(I - Q Q^T) G`
+   * - **HyperbolicPoincare(d)**
+     - :math:`G / \lambda_x^2`
+     - :math:`G / \lambda_x`
+
+With ``optimizer='sgd'`` this is Riemannian gradient descent,
+:math:`w \leftarrow \text{Exp}_w(-\eta\,\text{grad} f(w))`.
+
+A consequence is that training respects the symmetries of the metric.
+On SPD matrices, for example, multiplying all data by a constant
+multiplies the learned prototypes by the same constant and changes
+nothing else.
+
+``update_rule='projected'`` selects the simpler alternative: an
+ordinary Euclidean optimizer step followed by ``manifold.project``.
+Models saved before ``update_rule`` existed load with this setting.
+
+.. code-block:: python
+
+   model = RiemannianSRNG(
+       manifold=SPD(4),
+       n_prototypes_per_class=2,
+       update_rule='riemannian',   # default
+       tau=0.95,                   # step limit, fraction of injectivity radius
+   )
+
+A custom manifold supports the intrinsic update if, in addition to the
+:class:`~prosemble.core.protocols.Manifold` protocol, it provides
+``gradient_to_frame(point, euclidean_grad)``,
+``frame_to_tangent(point, coords)`` and ``tangent_norm(point, tangent)``.
+Otherwise the model warns and uses ``'projected'``.
+
 RiemannianSMNG
 --------------
 

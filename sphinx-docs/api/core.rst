@@ -134,6 +134,12 @@ Manifolds
    :members:
    :undoc-members:
 
+Riemannian Optimisation
+-----------------------
+
+.. automodule:: prosemble.core.riemannian_optim
+   :members: riemannian_update, supports_riemannian_update
+
 Protocols
 ---------
 

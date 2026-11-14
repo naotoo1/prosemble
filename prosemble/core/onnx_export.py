@@ -981,10 +981,16 @@ def _riemannian_so_chordal_onnx(X_name, proto_name, n):
     return nodes, extra_initializers, 'distances_rsc'
 
 
-def _riemannian_so_tangent_onnx(X_name, proto_name, n):
-    r"""Compute SO(n) tangent vectors: Log_W(X) = W @ skew(W^T @ X).
+def _riemannian_so_tangent_onnx(X_name, proto_name, n, exact=False):
+    r"""Compute SO(n) tangent vectors at the prototypes.
 
-    skew(A) = (A - A^T) / 2
+    First order (``exact=False``): Log_W(X) ~ W @ skew(W^T @ X), with
+    skew(A) = (A - A^T) / 2.
+
+    Exact (``exact=True``, n = 2 or 3): Log_W(X) = W @ (phi * skew(W^T @ X)),
+    where phi = angle / sin(angle) is a scalar function of trace(W^T @ X).
+    This mirrors ``_so_log_map_exact`` in ``riemannian_srng``, including
+    the clamp at the cut locus and the series near the identity.
 
     Input X: (batch, n*n), prototypes W: (p, n*n).
     Output tangent: (p, batch, n*n) — ready for downstream metric.
@@ -1041,9 +1047,25 @@ def _riemannian_so_tangent_onnx(X_name, proto_name, n):
         'Div', ['_rst_skew_raw', '_rst_two'], ['_rst_skew'],
     ))
 
+    skew_name = '_rst_skew'
+    exact_initializers = []
+    if exact:
+        if n not in (2, 3):
+            raise NotImplementedError(
+                "The exact log map on SO(n) can only be exported for "
+                f"n = 2 or 3, got n = {n}."
+            )
+        phi_nodes, exact_initializers = _so_angle_ratio_onnx('_rst_RtS', n)
+        nodes.extend(phi_nodes)
+        # skew * phi, phi broadcast over the matrix dimensions
+        nodes.append(oh.make_node(
+            'Mul', ['_rst_skew', '_rsp_phi4'], ['_rst_skew_exact'],
+        ))
+        skew_name = '_rst_skew_exact'
+
     # tangent = W @ skew -> (batch, p, n, n)
     nodes.append(oh.make_node(
-        'MatMul', ['_rst_W4', '_rst_skew'], ['_rst_tangent4d'],
+        'MatMul', ['_rst_W4', skew_name], ['_rst_tangent4d'],
     ))
 
     # Reshape tangent -> (batch, p, n*n)
@@ -1066,7 +1088,114 @@ def _riemannian_so_tangent_onnx(X_name, proto_name, n):
                        [0, 0, n * n]),
         oh.make_tensor('_rst_two', TensorProto.FLOAT, [], [2.0]),
     ]
+    extra_initializers.extend(exact_initializers)
     return nodes, extra_initializers, 'tangent_so'
+
+
+def _so_angle_ratio_onnx(RtS_name, n):
+    r"""phi = angle / sin(angle) for each (sample, prototype) pair on SO(2/3).
+
+    Input ``RtS_name``: W^T @ X of shape (batch, p, n, n).
+    Output ``_rsp_phi4``: (batch, p, 1, 1).
+
+    With v = cos^2(angle / 2) = (1 + cos(angle)) / 2 and cos(angle) taken
+    from the trace, phi = arccos(sqrt(v)) / sqrt(v (1 - v)). The constants
+    and the two branches are those of ``_angle_ratio`` in
+    ``riemannian_srng``.
+
+    Returns
+    -------
+    nodes, initializers
+    """
+    import onnx.helper as oh
+    from onnx import TensorProto
+
+    from prosemble.models.riemannian_srng import (
+        _CUT_LOCUS_COS2, _SERIES_COS2,
+    )
+
+    nodes = []
+
+    # trace(RtS) -> (batch, p)
+    nodes.append(oh.make_node('Mul', [RtS_name, '_rsp_eye'], ['_rsp_diag']))
+    nodes.append(oh.make_node(
+        'ReduceSum', ['_rsp_diag', '_rsp_axes23'], ['_rsp_trace'], keepdims=0,
+    ))
+
+    # v = (1 + cos(angle)) / 2, with cos(angle) = trace / 2 on SO(2)
+    # and (trace - 1) / 2 on SO(3)
+    nodes.append(oh.make_node(
+        'Mul', ['_rsp_trace', '_rsp_v_scale'], ['_rsp_v_scaled'],
+    ))
+    nodes.append(oh.make_node(
+        'Add', ['_rsp_v_scaled', '_rsp_v_shift'], ['_rsp_v_raw'],
+    ))
+    nodes.append(oh.make_node(
+        'Clip', ['_rsp_v_raw', '_rsp_v_min', '_rsp_one'], ['_rsp_v'],
+    ))
+    nodes.append(oh.make_node(
+        'Greater', ['_rsp_v', '_rsp_series_above'], ['_rsp_near_one'],
+    ))
+
+    # Series in u = 1 - v near the identity
+    nodes.append(oh.make_node('Sub', ['_rsp_one', '_rsp_v'], ['_rsp_u_raw']))
+    nodes.append(oh.make_node(
+        'Where', ['_rsp_near_one', '_rsp_u_raw', '_rsp_zero'], ['_rsp_u'],
+    ))
+    acc = '_rsp_c5'
+    for i in (4, 3, 2, 1, 0):
+        nodes.append(oh.make_node('Mul', ['_rsp_u', acc], [f'_rsp_h{i}_mul']))
+        nodes.append(oh.make_node(
+            'Add', [f'_rsp_c{i}', f'_rsp_h{i}_mul'], [f'_rsp_h{i}'],
+        ))
+        acc = f'_rsp_h{i}'
+    series = acc
+
+    # Closed form elsewhere
+    nodes.append(oh.make_node(
+        'Where', ['_rsp_near_one', '_rsp_half', '_rsp_v'], ['_rsp_safe'],
+    ))
+    nodes.append(oh.make_node('Sqrt', ['_rsp_safe'], ['_rsp_sqrt_safe']))
+    nodes.append(oh.make_node('Acos', ['_rsp_sqrt_safe'], ['_rsp_theta']))
+    nodes.append(oh.make_node(
+        'Sub', ['_rsp_one', '_rsp_safe'], ['_rsp_one_minus'],
+    ))
+    nodes.append(oh.make_node(
+        'Mul', ['_rsp_safe', '_rsp_one_minus'], ['_rsp_prod'],
+    ))
+    nodes.append(oh.make_node('Sqrt', ['_rsp_prod'], ['_rsp_denom']))
+    nodes.append(oh.make_node(
+        'Div', ['_rsp_theta', '_rsp_denom'], ['_rsp_closed'],
+    ))
+
+    nodes.append(oh.make_node(
+        'Where', ['_rsp_near_one', series, '_rsp_closed'], ['_rsp_phi'],
+    ))
+    nodes.append(oh.make_node(
+        'Unsqueeze', ['_rsp_phi', '_rsp_axes23'], ['_rsp_phi4'],
+    ))
+
+    # v = trace * scale + shift
+    v_scale, v_shift = (0.25, 0.5) if n == 2 else (0.25, 0.25)
+    coefficients = [1.0, 2 / 3, 8 / 15, 16 / 35, 128 / 315, 256 / 693]
+    initializers = [
+        oh.make_tensor('_rsp_eye', TensorProto.FLOAT, [n, n],
+                       np.eye(n, dtype=np.float32).flatten().tolist()),
+        oh.make_tensor('_rsp_axes23', TensorProto.INT64, [2], [2, 3]),
+        oh.make_tensor('_rsp_v_scale', TensorProto.FLOAT, [], [v_scale]),
+        oh.make_tensor('_rsp_v_shift', TensorProto.FLOAT, [], [v_shift]),
+        oh.make_tensor('_rsp_v_min', TensorProto.FLOAT, [], [_CUT_LOCUS_COS2]),
+        oh.make_tensor('_rsp_series_above', TensorProto.FLOAT, [],
+                       [_SERIES_COS2]),
+        oh.make_tensor('_rsp_zero', TensorProto.FLOAT, [], [0.0]),
+        oh.make_tensor('_rsp_half', TensorProto.FLOAT, [], [0.5]),
+        oh.make_tensor('_rsp_one', TensorProto.FLOAT, [], [1.0]),
+    ]
+    initializers.extend(
+        oh.make_tensor(f'_rsp_c{i}', TensorProto.FLOAT, [], [c])
+        for i, c in enumerate(coefficients)
+    )
+    return nodes, initializers
 
 
 def _riemannian_gr_tangent_onnx(X_name, proto_name, n, k):
@@ -1343,9 +1472,18 @@ def _export_riemannian_onnx(model, batch_size, opset_version, path):
 
     else:
         # SMNG, SLNG, STNG: compute tangent vectors first, then apply metric
+        exact = getattr(model, 'log_map', 'first_order') == 'exact'
+        if exact and not (is_so and n in (2, 3)):
+            raise NotImplementedError(
+                "ONNX export of the exact log map is available on SO(2) "
+                f"and SO(3) only, not on {type(manifold).__name__}"
+                f"{tuple(point_shape)}. It needs an eigendecomposition, "
+                "which ONNX does not provide. Train the model with "
+                "log_map='first_order' to export it."
+            )
         if is_so:
             tang_nodes, tang_inits, tangent_out = _riemannian_so_tangent_onnx(
-                'X', 'prototypes', n,
+                'X', 'prototypes', n, exact=exact,
             )
         else:  # Grassmannian
             tang_nodes, tang_inits, tangent_out = _riemannian_gr_tangent_onnx(

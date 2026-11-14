@@ -70,6 +70,84 @@ def _logm_spd_diff_jvp(primals, tangents):
     return out, d_out
 
 
+# Exact log maps on SO(n) and Gr(n, k) both reduce to one scalar function of
+# the principal angles, applied to a symmetric matrix:
+#
+#     Phi(v) = theta / (sin(theta) cos(theta)),    v = cos^2(theta).
+#
+# On SO(n), theta is half the rotation angle, so Phi = angle / sin(angle).
+
+#: Below this value of cos^2(theta) the pair is treated as lying on the cut
+#: locus (rotation by pi, or a principal angle of pi / 2).
+_CUT_LOCUS_COS2 = 1e-6
+#: Above this value of cos^2(theta) the power series around theta = 0 is used.
+_SERIES_COS2 = 0.98
+
+
+def _angle_ratio(v):
+    """:math:`\\Phi(v) = \\arccos\\sqrt{v} / \\sqrt{v (1 - v)}` for v in (0, 1].
+
+    Equal to :math:`\\theta / (\\sin\\theta \\cos\\theta)` with
+    :math:`v = \\cos^2\\theta`. :math:`\\Phi(1) = 1`, and :math:`\\Phi`
+    diverges at the cut locus :math:`v = 0`, where ``v`` is clamped.
+    """
+    v = jnp.clip(v, _CUT_LOCUS_COS2, 1.0)
+    near_one = v > _SERIES_COS2
+    u = jnp.where(near_one, 1.0 - v, 0.0)
+    series = 1.0 + u * (2 / 3 + u * (8 / 15 + u * (
+        16 / 35 + u * (128 / 315 + u * 256 / 693))))
+    safe = jnp.where(near_one, 0.5, v)
+    closed = jnp.arccos(jnp.sqrt(safe)) / jnp.sqrt(safe * (1.0 - safe))
+    return jnp.where(near_one, series, closed)
+
+
+def _angle_ratio_prime(v):
+    """Derivative of :func:`_angle_ratio`; zero where ``v`` is clamped."""
+    inside = v > _CUT_LOCUS_COS2
+    v = jnp.clip(v, _CUT_LOCUS_COS2, 1.0)
+    near_one = v > _SERIES_COS2
+    u = jnp.where(near_one, 1.0 - v, 0.0)
+    series = -(2 / 3 + u * (16 / 15 + u * (48 / 35 + u * (
+        512 / 315 + u * 1280 / 693))))
+    safe = jnp.where(near_one, 0.5, v)
+    phi = jnp.arccos(jnp.sqrt(safe)) / jnp.sqrt(safe * (1.0 - safe))
+    closed = -(1.0 - (2.0 * safe - 1.0) * phi) / (2.0 * safe * (1.0 - safe))
+    return jnp.where(inside, jnp.where(near_one, series, closed), 0.0)
+
+
+@jax.custom_jvp
+def _angle_ratio_matrix(M):
+    """:func:`_angle_ratio` as a matrix function of a symmetric matrix.
+
+    The eigenvalues of ``M`` are repeated by construction (each rotation
+    plane of SO(n) contributes a pair), so the derivative is given by the
+    Daleckii-Krein formula instead of by differentiating through ``eigh``.
+    """
+    eigvals, eigvecs = jnp.linalg.eigh((M + M.T) / 2.0)
+    return (eigvecs * _angle_ratio(eigvals)[None, :]) @ eigvecs.T
+
+
+@_angle_ratio_matrix.defjvp
+def _angle_ratio_matrix_jvp(primals, tangents):
+    (M,), (dM,) = primals, tangents
+    eigvals, eigvecs = jnp.linalg.eigh((M + M.T) / 2.0)
+    values = _angle_ratio(eigvals)
+    out = (eigvecs * values[None, :]) @ eigvecs.T
+
+    # Divided differences, with the derivative on (near-)degenerate pairs.
+    li, lj = eigvals[:, None], eigvals[None, :]
+    diff = li - lj
+    close = jnp.abs(diff) <= 1e-3
+    safe_diff = jnp.where(close, 1.0, diff)
+    L = jnp.where(close,
+                  _angle_ratio_prime((li + lj) / 2.0),
+                  (values[:, None] - values[None, :]) / safe_diff)
+
+    dM_sym = (dM + dM.T) / 2.0
+    d_out = eigvecs @ (L * (eigvecs.T @ dM_sym @ eigvecs)) @ eigvecs.T
+    return out, d_out
+
+
 def _so_chordal_distance_squared(R, S):
     """Chordal (Frobenius) distance squared on SO(n).
 
@@ -115,20 +193,56 @@ def _grassmannian_distance_squared_diff(Q1, Q2):
 
 
 def _so_log_map_diff(R, S):
-    """Differentiable tangent vector approximation on SO(n).
+    """First-order approximation of the log map on SO(n).
 
     Returns the skew-symmetric part of R^T S mapped to the tangent
-    space at R. This is the first-order approximation of the true
-    logarithmic map, exact when R and S are close.
+    space at R.
 
     .. math::
 
         \\text{Log}_R(S) \\approx R \\cdot \\text{skew}(R^T S)
         = R \\cdot \\frac{R^T S - S^T R}{2}
+
+    The length of this vector is proportional to :math:`\\sin\\theta` for
+    a rotation angle :math:`\\theta`, not to :math:`\\theta`: it is
+    accurate for small angles, largest at 90 degrees and zero at 180
+    degrees, so distant rotations appear close. Use
+    :func:`_so_log_map_exact` unless this form is required.
     """
     RtS = R.T @ S
     skew = (RtS - RtS.T) / 2.0
     return R @ skew
+
+
+def _so_log_map_exact(R, S):
+    """Log map on SO(n), differentiable.
+
+    .. math::
+
+        \\text{Log}_R(S) = R \\log(R^T S), \\qquad
+        \\log Q = \\tfrac12 \\left(K \\, \\Phi(H) + \\Phi(H) \\, K\\right),
+
+    with :math:`K = (Q - Q^T) / 2`, :math:`H = (2 I + Q + Q^T) / 4` and
+    :math:`\\Phi` from :func:`_angle_ratio`. In each rotation plane
+    :math:`K` has magnitude :math:`\\sin\\theta` and :math:`H` has the
+    eigenvalue :math:`\\cos^2(\\theta / 2)`, on which
+    :math:`\\Phi = \\theta / \\sin\\theta`. For n = 2 and n = 3 there is
+    a single plane and :math:`\\Phi(H)` reduces to a scalar function of
+    the trace.
+
+    The log map is discontinuous at the cut locus, a rotation by
+    :math:`\\pi`. Within about 2e-3 rad of it the vector is scaled down
+    continuously to zero instead.
+    """
+    n = R.shape[-1]
+    Q = R.T @ S
+    K = (Q - Q.T) / 2.0
+    if n in (2, 3):
+        cos_angle = jnp.trace(Q) / 2.0 if n == 2 else (jnp.trace(Q) - 1.0) / 2.0
+        return R @ (_angle_ratio((1.0 + cos_angle) / 2.0) * K)
+    H = (2.0 * jnp.eye(n, dtype=Q.dtype) + Q + Q.T) / 4.0
+    G = _angle_ratio_matrix(H)
+    return R @ ((K @ G + G @ K) / 2.0)
 
 
 def _spd_log_map_diff(A, B):
@@ -159,8 +273,36 @@ def _grassmannian_log_map_diff(Q1, Q2):
     This is the orthogonal projection of Q2 onto the normal space of Q1's
     column span, which equals the exact log map to first order and is
     smooth everywhere.
+
+    Its singular values are :math:`\\sin\\theta_i` for the principal
+    angles :math:`\\theta_i`, and it depends on the basis chosen for
+    ``Q2``: another basis of the same subspace gives a different vector.
+    Use :func:`_grassmannian_log_map_exact` unless this form is required.
     """
     return Q2 - Q1 @ (Q1.T @ Q2)
+
+
+def _grassmannian_log_map_exact(Q1, Q2):
+    """Log map on the Grassmannian, differentiable.
+
+    With :math:`A = Q_1^T Q_2` and :math:`B = (I - Q_1 Q_1^T) Q_2`,
+
+    .. math::
+
+        \\text{Log}_{Q_1}(Q_2) = B A^T \\, \\Phi(A A^T),
+
+    with :math:`\\Phi` from :func:`_angle_ratio`. Writing the principal
+    angles as :math:`A = U \\cos\\Theta V^T`, :math:`B = W \\sin\\Theta V^T`,
+    this equals :math:`W \\Theta U^T`. It depends only on the subspace
+    spanned by ``Q2``, not on its basis.
+
+    The log map is discontinuous at the cut locus, a principal angle of
+    :math:`\\pi / 2`. Within about 1e-3 rad of it the vector is scaled
+    down continuously to zero instead.
+    """
+    A = Q1.T @ Q2
+    B = Q2 - Q1 @ A
+    return B @ A.T @ _angle_ratio_matrix(A @ A.T)
 
 
 def _hyperbolic_distance_squared_diff(x, y, eps=1e-5):
@@ -234,6 +376,47 @@ def _hyperbolic_log_map_diff(x, y, eps=1e-5):
     # arctanh(t)/t → 1 as t → 0; use this limit to avoid 0/0 gradient
     coeff = jnp.where(norm > 1e-7, jnp.arctanh(norm_clamped) / norm, 1.0)
     return (2.0 / lam_x) * coeff * add_result
+
+
+#: Accepted values of the ``log_map`` option of the tangent-space models.
+LOG_MAPS = ('exact', 'first_order')
+
+
+def _check_log_map(log_map, manifold):
+    """Validate ``log_map`` and resolve its manifold-dependent default.
+
+    The exact log map is the default on SO(n). On the Grassmannian the
+    default stays first order: the exact map cannot be exported to ONNX
+    there, and it did not improve accuracy for every model.
+    """
+    if log_map is None:
+        return 'first_order' if isinstance(manifold, Grassmannian) else 'exact'
+    if log_map not in LOG_MAPS:
+        raise ValueError(
+            f"log_map must be one of {LOG_MAPS} or None, got {log_map!r}"
+        )
+    return log_map
+
+
+def _tangent_vector(manifold, w, x, log_map='exact'):
+    """Differentiable tangent vector at prototype ``w`` pointing to ``x``.
+
+    ``log_map`` selects between the exact log map and its first-order
+    approximation on SO(n) and the Grassmannian. The SPD and hyperbolic
+    log maps are exact in either case.
+    """
+    exact = log_map == 'exact'
+    if isinstance(manifold, SO):
+        return _so_log_map_exact(w, x) if exact else _so_log_map_diff(w, x)
+    elif isinstance(manifold, SPD):
+        return _spd_log_map_diff(w, x)
+    elif isinstance(manifold, Grassmannian):
+        if exact:
+            return _grassmannian_log_map_exact(w, x)
+        return _grassmannian_log_map_diff(w, x)
+    elif isinstance(manifold, HyperbolicPoincare):
+        return _hyperbolic_log_map_diff(w, x, eps=manifold.eps)
+    return manifold.log_map(w, x)
 
 
 class RiemannianSRNG(SupervisedPrototypeModel):
@@ -649,6 +832,9 @@ class RiemannianSRNG(SupervisedPrototypeModel):
         # Files written before update_rule existed were trained with
         # projected updates.
         hyperparams.setdefault('update_rule', 'projected')
+        # Likewise for the log map of the tangent-space models.
+        if getattr(cls, '_uses_log_map', False):
+            hyperparams.setdefault('log_map', 'first_order')
         hyperparams.pop('manifold_type', None)
         hyperparams.pop('manifold_n', None)
         hyperparams.pop('manifold_k', None)

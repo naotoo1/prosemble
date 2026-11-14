@@ -1099,6 +1099,62 @@ def _make_grassmannian_data(n=30, dim_n=4, dim_k=2, n_classes=3, seed=42):
     return X, y
 
 
+def _make_so_data(dim, n=30, n_classes=3, seed=42):
+    """Generate random rotation matrices on SO(dim) with labels."""
+    from scipy.stats import special_ortho_group
+    rotations = special_ortho_group.rvs(dim, size=n, random_state=seed)
+    X = jnp.array(rotations.reshape(n, dim * dim).astype(np.float32))
+    y = jnp.array(np.tile(np.arange(n_classes), n // n_classes))
+    return X, y
+
+
+class TestRiemannianLogMapExport:
+    """The exported tangent vectors follow the model's ``log_map`` option."""
+
+    @pytest.mark.parametrize('name', ['RiemannianSMNG', 'RiemannianSLNG',
+                                      'RiemannianSTNG'])
+    @pytest.mark.parametrize('dim', [2, 3])
+    @pytest.mark.parametrize('log_map', ['exact', 'first_order'])
+    def test_numerical_match(self, name, dim, log_map):
+        import prosemble.models as models
+        from prosemble.core.manifolds import SO
+        X, y = _make_so_data(dim)
+        model = getattr(models, name)(
+            manifold=SO(dim), n_prototypes_per_class=2, max_iter=10,
+            random_seed=42, log_map=log_map,
+        )
+        model.fit(X, y)
+        npt.assert_array_equal(np.asarray(model.predict(X)),
+                               _onnx_predict(model, X))
+
+    def test_first_order_so4_still_exports(self):
+        from prosemble.models import RiemannianSMNG
+        from prosemble.core.manifolds import SO
+        X, y = _make_so_data(4)
+        model = RiemannianSMNG(
+            manifold=SO(4), n_prototypes_per_class=1, max_iter=3,
+            random_seed=42, log_map='first_order',
+        )
+        model.fit(X, y)
+        npt.assert_array_equal(np.asarray(model.predict(X)),
+                               _onnx_predict(model, X))
+
+    def test_log_map_changes_the_exported_model(self):
+        """Random rotations are far apart, so the two log maps disagree."""
+        from prosemble.models import RiemannianSMNG
+        from prosemble.core.manifolds import SO
+        X, y = _make_so_data(3, n=60)
+        outputs = {}
+        for log_map in ('exact', 'first_order'):
+            model = RiemannianSMNG(
+                manifold=SO(3), n_prototypes_per_class=2, max_iter=30,
+                random_seed=42, log_map=log_map,
+            )
+            model.fit(X, y)
+            outputs[log_map] = _onnx_predict(model, X)
+        assert not np.array_equal(outputs['exact'], outputs['first_order'])
+
+
 class TestRiemannianSRNGSO:
     """RiemannianSRNG + SO(n): chordal distance."""
 
@@ -1313,6 +1369,32 @@ class TestRiemannianONNXRejections:
         )
         model.fit(X, y)
         with pytest.raises(NotImplementedError, match="Grassmannian"):
+            model.export_onnx()
+
+    @pytest.mark.parametrize('name', ['RiemannianSMNG', 'RiemannianSLNG',
+                                      'RiemannianSTNG'])
+    def test_exact_log_map_on_grassmannian_raises(self, name):
+        import prosemble.models as models
+        from prosemble.core.manifolds import Grassmannian
+        X, y = _make_grassmannian_data()
+        model = getattr(models, name)(
+            manifold=Grassmannian(4, 2), n_prototypes_per_class=1,
+            max_iter=3, random_seed=42, log_map='exact',
+        )
+        model.fit(X, y)
+        with pytest.raises(NotImplementedError, match="log_map='first_order'"):
+            model.export_onnx()
+
+    def test_exact_log_map_on_so4_raises(self):
+        from prosemble.models import RiemannianSMNG
+        from prosemble.core.manifolds import SO
+        X, y = _make_so_data(4)
+        model = RiemannianSMNG(
+            manifold=SO(4), n_prototypes_per_class=1, max_iter=3,
+            random_seed=42,
+        )
+        model.fit(X, y)
+        with pytest.raises(NotImplementedError, match="log_map='first_order'"):
             model.export_onnx()
 
     def test_riemannian_neural_gas_raises(self):

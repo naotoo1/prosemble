@@ -101,7 +101,7 @@ class TestRiemannianDKGLVQ:
         )
         model.fit(X, y)
         assert model.gamma_ < 5.0
-        assert model.gamma_ >= 0.01
+        assert model.gamma_ >= 0.01 - 1e-6  # float32 precision
 
     def test_sigmas_learned(self):
         manifold, X, y = _make_so3_data()
@@ -207,7 +207,7 @@ class TestRiemannianDKGRLVQ:
         )
         model.fit(X, y)
         assert model.gamma_ < 5.0
-        assert model.gamma_ >= 0.01
+        assert model.gamma_ >= 0.01 - 1e-6  # float32 precision
 
     def test_sigmas_learned(self):
         manifold, X, y = _make_so3_data()
@@ -323,7 +323,7 @@ class TestRiemannianDKGMLVQ:
         )
         model.fit(X, y)
         assert model.gamma_ < 5.0
-        assert model.gamma_ >= 0.01
+        assert model.gamma_ >= 0.01 - 1e-6  # float32 precision
 
     def test_omega_hat_learned(self):
         manifold, X, y = _make_so3_data()

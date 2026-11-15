@@ -145,6 +145,44 @@ geodesic distances.
    model.fit(X, y)
    labels = model.predict(X)
 
+RiemannianRSLVQ
+---------------
+
+Riemannian Robust Soft LVQ.  A labelled mixture on the manifold with
+components :math:`p(x | k) \propto \exp(-d^2(x, w_k) / 2\sigma^2)`,
+trained by maximising the likelihood ratio
+
+.. math::
+
+   \sum_i \log
+   \frac{\sum_{k: c(k) = y_i} \exp(-d^2(x_i, w_k) / 2\sigma^2)}
+        {\sum_k \exp(-d^2(x_i, w_k) / 2\sigma^2)}
+
+On SPD matrices with the affine-invariant metric this is the model of
+Tang et al. (2021).  Here it is available on all four manifolds, the
+width :math:`\sigma` can be learned, and prototypes move along geodesics
+as described under *Prototype Updates* below.  On SO(n) the distance is
+the chordal one, which makes each component a matrix Fisher
+distribution centred at its prototype.
+
+.. code-block:: python
+
+   from prosemble.models import RiemannianRSLVQ
+   from prosemble.core.manifolds import SPD
+
+   model = RiemannianRSLVQ(
+       manifold=SPD(4),
+       n_prototypes_per_class=2,
+       sigma='auto',          # initial width from the data
+       adapt_sigma=True,      # learn it during training
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X, y)
+
+   proba = model.predict_proba(X)          # class posteriors
+   labels = model.predict_with_rejection(X, confidence=0.8)
+
 Prototype Updates
 -----------------
 

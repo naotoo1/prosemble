@@ -5,6 +5,7 @@ All loss functions are differentiable by jax.grad and JIT-compatible.
 They use jnp.where masking (not boolean indexing) for d+/d- extraction.
 """
 
+import jax
 import jax.numpy as jnp
 from jax import jit
 from functools import partial
@@ -298,6 +299,62 @@ def ng_rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0, gamma=1
 
     # 5. RSLVQ objective: -log(P_correct)
     return jnp.mean(-jnp.log(correct + 1e-10))
+
+
+@jit
+def likelihood_ratio_loss(logits, target_labels, prototype_labels):
+    """Negative log-likelihood ratio of a labelled mixture.
+
+    With component scores :math:`f_k(x) = \\log P(k) + \\log p(x|k)`, up
+    to a constant shared by all components,
+
+    .. math::
+
+        \\text{loss} = -\\frac{1}{n} \\sum_i \\log
+        \\frac{\\sum_{k: c(k) = y_i} e^{f_k(x_i)}}{\\sum_k e^{f_k(x_i)}}
+        = -\\frac{1}{n} \\sum_i \\log P(y_i | x_i).
+
+    This is the robust soft LVQ cost written for arbitrary component
+    scores, so priors, variances and normalising terms may differ between
+    components. It is evaluated with log-sum-exp and needs no clipping.
+
+    Parameters
+    ----------
+    logits : array of shape (n, p)
+        Component scores :math:`f_k(x_i)`.
+    target_labels : array of shape (n,)
+    prototype_labels : array of shape (p,)
+
+    Returns
+    -------
+    scalar
+    """
+    same_class = target_labels[:, None] == prototype_labels[None, :]
+    correct = jax.scipy.special.logsumexp(
+        jnp.where(same_class, logits, -jnp.inf), axis=1)
+    whole = jax.scipy.special.logsumexp(logits, axis=1)
+    return -jnp.mean(correct - whole)
+
+
+def class_log_posterior(logits, prototype_labels, n_classes):
+    """Log class posteriors :math:`\\log P(c | x)` of a labelled mixture.
+
+    Parameters
+    ----------
+    logits : array of shape (n, p)
+        Component scores :math:`\\log P(k) + \\log p(x|k)` up to a shared
+        constant.
+    prototype_labels : array of shape (p,)
+    n_classes : int
+
+    Returns
+    -------
+    array of shape (n, n_classes)
+    """
+    member = prototype_labels[:, None] == jnp.arange(n_classes)[None, :]
+    per_class = jax.scipy.special.logsumexp(
+        jnp.where(member[None, :, :], logits[:, :, None], -jnp.inf), axis=1)
+    return per_class - jax.scipy.special.logsumexp(logits, axis=1, keepdims=True)
 
 
 # --- Cross-Entropy LVQ Loss ---

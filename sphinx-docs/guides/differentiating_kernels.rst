@@ -160,6 +160,42 @@ semi-definite matrix :math:`\hat\Lambda = \hat\Omega \hat\Omega^T`,
 which can be analyzed for feature correlations learned by the model.
 
 
+DKRSLVQ
+~~~~~~~
+
+Differentiable Kernel Robust Soft LVQ, the probabilistic counterpart of
+DKGLVQ.  The Gaussian kernel distance with one bandwidth
+:math:`\gamma_k` per prototype enters the robust soft LVQ cost:
+
+.. math::
+
+   E = -\sum_i \log
+   \frac{\sum_{k: c(k) = y_i} \exp(-d_\kappa^2(x_i, w_k) / 2\sigma^2)}
+        {\sum_k \exp(-d_\kappa^2(x_i, w_k) / 2\sigma^2)}
+
+Prototypes, bandwidths and the width :math:`\sigma` are learned together.
+The model returns class posteriors and supports rejection.
+
+.. code-block:: python
+
+   from prosemble.models import DKRSLVQ
+
+   model = DKRSLVQ(
+       n_prototypes_per_class=2,
+       sigma='auto',          # initial width from the data
+       adapt_sigma=True,      # learn it during training
+       max_iter=200,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
+   proba = model.predict_proba(X_test)
+   labels = model.predict_with_rejection(X_test, confidence=0.8)
+   print(model.sigma_, model.kernel_bandwidths)
+
+The kernel distance is bounded by 2, so a sample far from every prototype
+receives nearly uniform posteriors rather than a confident label.
+
 One-Class Models
 -----------------
 

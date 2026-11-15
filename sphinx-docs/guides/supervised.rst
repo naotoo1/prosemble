@@ -228,6 +228,29 @@ where :math:`\lambda_j \geq 0` and :math:`\sum_j \lambda_j = 1`.
    # Learned relevance profile
    print(model.relevance_profile)   # shape: (n_features,), sums to 1
 
+**WRSLVQ** — the probabilistic counterpart of WGLVQ.  The 2-Wasserstein
+distance enters the robust soft LVQ cost with scores
+:math:`f_k(x) = -W_2^2(x, k) / 2\sigma^2`.  Since
+:math:`W_2^2(x, k) = \|x - \mu_k\|^2 + \operatorname{tr}\Sigma_k`, the
+variance of a prototype acts as a learned prior weight
+:math:`P(k) \propto \exp(-\operatorname{tr}\Sigma_k / 2\sigma^2)`:
+
+.. code-block:: python
+
+   from prosemble.models import WRSLVQ
+
+   model = WRSLVQ(
+       n_prototypes_per_class=2,
+       sigma='auto',          # initial width from the data
+       adapt_sigma=True,      # learn it during training
+       max_iter=200,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+
+   proba = model.predict_proba(X_test)
+   labels = model.predict_with_rejection(X_test, confidence=0.8)
+
 .. note::
 
    Variances are parameterized internally as :math:`\log(\sigma^2)` to ensure

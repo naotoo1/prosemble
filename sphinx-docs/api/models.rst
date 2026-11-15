@@ -386,6 +386,10 @@ Supervised
    :members: fit, predict, predict_proba, omega_hat_matrix, lambda_hat_matrix
    :undoc-members:
 
+.. autoclass:: prosemble.models.DKRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection, kernel_bandwidths
+   :undoc-members:
+
 Supervised (Neural Gas)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -435,11 +439,34 @@ Topology-Preserving Models
    :members: fit, predict
    :undoc-members:
 
+Wasserstein LVQ
+---------------
+
+.. autoclass:: prosemble.models.WGLVQ
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.WGMLVQ
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.WGRLVQ
+   :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.WRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection
+   :undoc-members:
+
 Riemannian Models
 -----------------
 
 .. autoclass:: prosemble.models.RiemannianSRNG
    :members: fit, predict
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection
    :undoc-members:
 
 .. autoclass:: prosemble.models.RiemannianSMNG

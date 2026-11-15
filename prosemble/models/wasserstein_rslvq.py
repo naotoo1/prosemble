@@ -151,18 +151,21 @@ class WRSLVQ(SoftAssignmentMixin, WGLVQ):
         )
         self._setup_soft(sigma, adapt_sigma, rejection_confidence)
 
+    def _wasserstein_distances(self, params, X):
+        return wasserstein2_distance_matrix(
+            X, params['prototypes'], params['log_variances'])
+
     def _init_state(self, X, y, key):
         state, params, proto_labels = super()._init_state(X, y, key)
-        distances = wasserstein2_distance_matrix(
-            X, params['prototypes'], params['log_variances'])
-        params['log_sigma'] = self._initial_log_sigma(distances, y, proto_labels)
+        params = self._add_metric_params(params, X.shape[1])
+        params['log_sigma'] = self._initial_log_sigma(
+            self._wasserstein_distances(params, X), y, proto_labels)
         state = state._replace(opt_state=self._optimizer.init(params))
         return state, params, proto_labels
 
     def _logits(self, params, X):
-        distances = wasserstein2_distance_matrix(
-            X, params['prototypes'], params['log_variances'])
-        return self._scale_by_sigma(distances, params['log_sigma'])
+        return self._scale_by_sigma(
+            self._wasserstein_distances(params, X), params['log_sigma'])
 
     def _get_resume_params(self, params):
         params = super()._get_resume_params(params)

@@ -419,6 +419,30 @@ def _tangent_vector(manifold, w, x, log_map='exact'):
     return manifold.log_map(w, x)
 
 
+def _tangent_coordinates(manifold, w, x, log_map='exact'):
+    """Orthonormal coordinates of the tangent vector at ``w`` pointing to ``x``.
+
+    The coordinates :math:`u` of :math:`\\xi = \\operatorname{Log}_w(x)`
+    in the orthonormal tangent frame of the manifold, so that
+    :math:`\\|u\\|^2 = \\|\\xi\\|_w^2` is the squared Riemannian norm:
+    :math:`w^T \\xi / \\sqrt2` on SO(n),
+    :math:`w^{-1/2} \\xi w^{-1/2} = \\log(w^{-1/2} x w^{-1/2})` on SPD(n),
+    :math:`\\xi` on the Grassmannian and :math:`\\lambda_w \\xi` in the
+    Poincare ball. They have the shape of a point of the manifold.
+    """
+    if isinstance(manifold, SPD):
+        from prosemble.core.manifolds import inv_sqrt_spd
+        w_isqrt = inv_sqrt_spd(w)
+        return _logm_spd_diff(w_isqrt @ x @ w_isqrt)
+    xi = _tangent_vector(manifold, w, x, log_map)
+    if isinstance(manifold, SO):
+        return (w.T @ xi) / jnp.sqrt(2.0)
+    if isinstance(manifold, HyperbolicPoincare):
+        from prosemble.core.manifolds import _conformal_factor
+        return _conformal_factor(w, eps=manifold.eps) * xi
+    return xi
+
+
 class RiemannianSRNG(SupervisedPrototypeModel):
     """Supervised Riemannian Neural Gas.
 

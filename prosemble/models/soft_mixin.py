@@ -17,6 +17,7 @@ A model only has to say what its component scores are.
 
 import jax.numpy as jnp
 
+from prosemble.core.initializers import identity_omega_init
 from prosemble.core.losses import likelihood_ratio_loss, class_log_posterior
 
 
@@ -62,6 +63,14 @@ class SoftAssignmentMixin:
     def _fitted_params(self):
         """Parameter dict of the fitted model, as :meth:`_logits` expects it."""
         raise NotImplementedError
+
+    def _add_metric_params(self, params, n_features):
+        """Add the parameters of an adaptive metric, if the model has one.
+
+        Called at initialisation before the width is set, so that the
+        width is derived from the distance the model trains with.
+        """
+        return params
 
     # ------------------------------------------------------------------
     # Width
@@ -162,3 +171,83 @@ class SoftAssignmentMixin:
         for unused in ('margin', 'beta'):
             hp.pop(unused, None)
         return hp
+
+
+class SoftMetricMixin:
+    """An adaptive linear map inside the distance of a soft model.
+
+    Differences :math:`v` between a sample and a prototype are measured
+    as :math:`\\|\\Omega^T v\\|^2 = v^T \\Lambda v` with
+    :math:`\\Lambda = \\Omega \\Omega^T`. The map is either shared by
+    all prototypes (``params['omega']``, shape (d, l)) or separate for
+    each prototype (``params['omegas']``, shape (p, d, l)) when the class
+    sets ``_local_metric = True``. It is initialised to the identity, so
+    training starts from the model without a metric.
+
+    Place it before the soft model in the bases. The soft model calls
+    :meth:`_add_metric_params` when it initialises, and its distance
+    reads the map from ``params``.
+    """
+
+    _hyperparams = ('latent_dim',)
+    _fitted_array_names = ('omega_', 'omegas_')
+    _local_metric = False
+
+    def _setup_metric(self, latent_dim):
+        if latent_dim is not None and not (
+                isinstance(latent_dim, int) and latent_dim > 0):
+            raise ValueError(
+                f"latent_dim must be a positive integer or None, got {latent_dim!r}")
+        self.latent_dim = latent_dim
+        setattr(self, self._metric_attr, None)
+
+    @property
+    def _metric_key(self):
+        return 'omegas' if self._local_metric else 'omega'
+
+    @property
+    def _metric_attr(self):
+        return self._metric_key + '_'
+
+    def _add_metric_params(self, params, n_features):
+        omega = identity_omega_init(n_features, self.latent_dim or n_features)
+        if self._local_metric:
+            n_prototypes = params['prototypes'].shape[0]
+            omega = jnp.tile(omega[None, :, :], (n_prototypes, 1, 1))
+        return {**params, self._metric_key: omega}
+
+    @staticmethod
+    def _apply_metric(differences, omega):
+        """Map differences of shape (n, p, d) to shape (n, p, l)."""
+        if omega.ndim == 3:
+            return jnp.einsum('npd,pdl->npl', differences, omega)
+        return jnp.einsum('npd,dl->npl', differences, omega)
+
+    def _get_resume_params(self, params):
+        params = super()._get_resume_params(params)
+        params[self._metric_key] = getattr(self, self._metric_attr)
+        return params
+
+    def _extract_results(self, params, proto_labels, loss_history, n_iter, **kwargs):
+        super()._extract_results(params, proto_labels, loss_history, n_iter, **kwargs)
+        setattr(self, self._metric_attr, params[self._metric_key])
+
+    def _fitted_params(self):
+        return {**super()._fitted_params(),
+                self._metric_key: getattr(self, self._metric_attr)}
+
+    @property
+    def omega_matrix(self):
+        """The learned map :math:`\\Omega`: shape (d, l), or (p, d, l) if local."""
+        omega = getattr(self, self._metric_attr)
+        if omega is None:
+            raise ValueError("Model not fitted. Call fit() first.")
+        return omega
+
+    @property
+    def lambda_matrix(self):
+        """:math:`\\Lambda = \\Omega \\Omega^T`: shape (d, d), or (p, d, d) if local."""
+        omega = self.omega_matrix
+        if omega.ndim == 3:
+            return jnp.einsum('pdl,pel->pde', omega, omega)
+        return omega @ omega.T

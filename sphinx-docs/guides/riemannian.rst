@@ -183,6 +183,64 @@ distribution centred at its prototype.
    proba = model.predict_proba(X)          # class posteriors
    labels = model.predict_with_rejection(X, confidence=0.8)
 
+RiemannianMRSLVQ and RiemannianLMRSLVQ
+--------------------------------------
+
+RiemannianRSLVQ with a learned metric in the tangent space.  A sample
+is seen from prototype :math:`w_k` through its tangent vector
+:math:`\operatorname{Log}_{w_k}(x)`, written in orthonormal coordinates
+:math:`u_k(x)` of the tangent space, and each component is a Gaussian in
+these coordinates:
+
+.. math::
+
+   p(x | k) \propto \exp\left(
+       -\frac{u_k(x)^T \Lambda\, u_k(x)}{2\sigma^2}\right),
+   \qquad \Lambda = \Omega \Omega^T
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Manifold
+     - Coordinates :math:`u_k(x)`
+   * - SO(n)
+     - :math:`w_k^T \operatorname{Log}_{w_k}(x) / \sqrt2`
+   * - SPD(n)
+     - :math:`\log(w_k^{-1/2}\, x\, w_k^{-1/2})`
+   * - Grassmannian
+     - :math:`\operatorname{Log}_{w_k}(x)`
+   * - Poincaré ball
+     - :math:`\lambda_{w_k} \operatorname{Log}_{w_k}(x)`
+
+With the exact log map :math:`\|u_k(x)\|` is the geodesic distance, so
+:math:`\Lambda = I`, where training starts, is the isotropic component of
+RiemannianRSLVQ.  **RiemannianMRSLVQ** learns one matrix for all
+prototypes, **RiemannianLMRSLVQ** one matrix :math:`\Lambda_k` per
+prototype.
+
+.. code-block:: python
+
+   from prosemble.models import RiemannianMRSLVQ, RiemannianLMRSLVQ
+   from prosemble.core.manifolds import SPD
+
+   model = RiemannianMRSLVQ(
+       manifold=SPD(4),
+       n_prototypes_per_class=2,
+       latent_dim=None,       # columns of Omega; default: 16 for SPD(4)
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X, y)
+   print(model.lambda_matrix.shape)        # (16, 16)
+
+The matrix acts on the flattened coordinates and adds parameters.  When
+the classes are isotropic around their centres it has nothing to learn,
+and RiemannianRSLVQ is the better choice.  On synthetic data whose
+classes differ along a few tangent directions the matrix models were
+more accurate than RiemannianRSLVQ in the Poincaré ball and on the
+Grassmannian, and not on SPD(n) or SO(n), so compare both on your data.
+
 Prototype Updates
 -----------------
 

@@ -178,7 +178,8 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
         self.freeze_params = freeze_params
         self._setup_soft(sigma, adapt_sigma, rejection_confidence)
 
-    def _squared_distances(self, X, prototypes):
+    def _squared_distances(self, params, X):
+        prototypes = params['prototypes']
         X_m = self._reshape_to_manifold(X, X.shape[0])
         W_m = self._reshape_to_manifold(prototypes, prototypes.shape[0])
         return self._geodesic_distances(X_m, W_m)
@@ -194,11 +195,9 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
         prototypes, proto_labels = self._init_prototypes(
             X, y, self.n_prototypes_per_class, key1)
         prototypes = self._project(prototypes)
-        params = {
-            'prototypes': prototypes,
-            'log_sigma': self._initial_log_sigma(
-                self._squared_distances(X, prototypes), y, proto_labels),
-        }
+        params = self._add_metric_params({'prototypes': prototypes}, X.shape[1])
+        params['log_sigma'] = self._initial_log_sigma(
+            self._squared_distances(params, X), y, proto_labels)
         state = SupervisedState(
             prototypes=prototypes,
             opt_state=self._optimizer.init(params),
@@ -210,7 +209,7 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
 
     def _logits(self, params, X):
         return self._scale_by_sigma(
-            self._squared_distances(X, params['prototypes']), params['log_sigma'])
+            self._squared_distances(params, X), params['log_sigma'])
 
     def _post_update(self, params):
         return {**params, 'prototypes': self._project(params['prototypes'])}

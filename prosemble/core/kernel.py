@@ -222,3 +222,43 @@ def exponential_kernel_distance_squared(
                  - 2.0 * jnp.exp(xLw))
 
     return jnp.maximum(distances, 0.0)
+
+
+@jit
+def kernel_distance_squared_matrix(
+    X: chex.Array, W: chex.Array, sigmas: chex.Array, omega: chex.Array
+) -> chex.Array:
+    """
+    Squared kernel distance of a Gaussian kernel with an adaptive matrix.
+
+    The kernel is the Gaussian kernel after a linear map,
+    :math:`\\kappa(x, w_k) = \\exp(-\\|\\Omega^T (x - w_k)\\|^2 /
+    2\\sigma_k^2)`, so that
+
+    .. math::
+
+        d_\\kappa^2(x, w_k) = 2\\left(1 - \\exp\\left(
+            -\\frac{(x - w_k)^T \\Lambda (x - w_k)}{2\\sigma_k^2}
+        \\right)\\right), \\qquad \\Lambda = \\Omega \\Omega^T.
+
+    It stays in [0, 2] for every :math:`\\Omega`.
+
+    Args:
+        X: Data matrix, shape (n_samples, n_features).
+        W: Prototype matrix, shape (n_prototypes, n_features).
+        sigmas: Per-prototype bandwidths, shape (n_prototypes,).
+        omega: Linear map, shape (n_features, latent_dim) if shared by
+            all prototypes, or (n_prototypes, n_features, latent_dim) with
+            one map per prototype.
+
+    Returns:
+        Squared distances in feature space, shape (n_samples, n_prototypes).
+    """
+    diff = X[:, None, :] - W[None, :, :]                              # (n, p, d)
+    if omega.ndim == 3:
+        projected = jnp.einsum('npd,pdl->npl', diff, omega)
+    else:
+        projected = jnp.einsum('npd,dl->npl', diff, omega)
+    sq = jnp.sum(projected ** 2, axis=2)                              # (n, p)
+    K = jnp.exp(-sq / (2.0 * sigmas[None, :] ** 2))
+    return 2.0 * (1.0 - K)

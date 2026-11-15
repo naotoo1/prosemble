@@ -304,7 +304,7 @@ class TestRiemannianRSLVQ:
         X, y = _manifold_data(spd)
         model = RiemannianRSLVQ(manifold=spd, n_prototypes_per_class=1, max_iter=20)
         model.fit(X, y)
-        distances = model._squared_distances(X, model.prototypes_)
+        distances = model._squared_distances(model._fitted_params(), X)
         closest = model.prototype_labels_[jnp.argmin(distances, axis=1)]
         np.testing.assert_array_equal(model.predict(X), closest)
 

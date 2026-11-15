@@ -196,6 +196,46 @@ The model returns class posteriors and supports rejection.
 The kernel distance is bounded by 2, so a sample far from every prototype
 receives nearly uniform posteriors rather than a confident label.
 
+
+DKMRSLVQ and DKLMRSLVQ
+~~~~~~~~~~~~~~~~~~~~~~
+
+DKRSLVQ with an adaptive matrix inside the Gaussian kernel:
+
+.. math::
+
+   d_\kappa^2(x, w_k) = 2\left(1 - \exp\left(
+       -\frac{(x - w_k)^T \Lambda (x - w_k)}{2\gamma_k^2}
+   \right)\right), \qquad \Lambda = \Omega \Omega^T
+
+This is the Gaussian kernel of the linearly mapped data, so it is
+positive definite for every :math:`\Omega` and the distance stays in
+[0, 2].  **DKMRSLVQ** learns one matrix for all prototypes;
+**DKLMRSLVQ** learns one matrix :math:`\Lambda_k` per prototype, which
+gives every prototype its own kernel.  :math:`\Omega` starts at the
+identity, so training starts from DKRSLVQ.
+
+.. code-block:: python
+
+   from prosemble.models import DKMRSLVQ, DKLMRSLVQ
+
+   model = DKMRSLVQ(
+       n_prototypes_per_class=2,
+       latent_dim=None,       # columns of Omega; default: n_features
+       max_iter=200,
+       lr=0.01,
+   )
+   model.fit(X_train, y_train)
+   print(model.lambda_matrix.shape)    # (n_features, n_features)
+
+   local = DKLMRSLVQ(n_prototypes_per_class=2, max_iter=200, lr=0.01)
+   local.fit(X_train, y_train)
+   print(local.lambda_matrix.shape)    # (n_prototypes, n_features, n_features)
+
+The local model has ``n_prototypes * n_features * latent_dim`` matrix
+parameters.  On small datasets it can overfit; ``latent_dim`` limits the
+rank of each matrix.
+
 One-Class Models
 -----------------
 

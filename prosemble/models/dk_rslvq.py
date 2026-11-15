@@ -172,6 +172,7 @@ class DKRSLVQ(SoftAssignmentMixin, DKGLVQ):
 
     def _init_state(self, X, y, key):
         state, params, proto_labels = super()._init_state(X, y, key)
+        params = self._add_metric_params(params, X.shape[1])
         params['log_sigma'] = self._initial_log_sigma(
             self._kernel_distances(params, X), y, proto_labels)
         state = state._replace(opt_state=self._optimizer.init(params))

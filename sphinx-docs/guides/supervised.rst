@@ -251,6 +251,35 @@ variance of a prototype acts as a learned prior weight
    proba = model.predict_proba(X_test)
    labels = model.predict_with_rejection(X_test, confidence=0.8)
 
+**WMRSLVQ** and **WLMRSLVQ** — WRSLVQ with an adaptive matrix.  The map
+:math:`z \mapsto \Omega^T z` is applied to the sample and to the Gaussian
+prototype alike, and the distance is the 2-Wasserstein distance between
+the mapped measures:
+
+.. math::
+
+   W_2^2(x, k) = (x - \mu_k)^T \Lambda (x - \mu_k)
+                 + \operatorname{tr}(\Lambda \Sigma_k),
+   \qquad \Lambda = \Omega \Omega^T
+
+This is the expected adaptive distance from the sample to a point drawn
+from the prototype.  The variance of a feature counts in proportion to
+the weight the metric gives that feature.  WMRSLVQ learns one matrix,
+WLMRSLVQ one matrix :math:`\Lambda_k` per prototype:
+
+.. code-block:: python
+
+   from prosemble.models import WMRSLVQ, WLMRSLVQ
+
+   model = WMRSLVQ(n_prototypes_per_class=2, max_iter=200, lr=0.01)
+   model.fit(X_train, y_train)
+   print(model.lambda_matrix.shape)    # (n_features, n_features)
+
+   local = WLMRSLVQ(n_prototypes_per_class=2, latent_dim=None,
+                    max_iter=200, lr=0.01)
+   local.fit(X_train, y_train)
+   print(local.lambda_matrix.shape)    # (n_prototypes, n_features, n_features)
+
 .. note::
 
    Variances are parameterized internally as :math:`\log(\sigma^2)` to ensure

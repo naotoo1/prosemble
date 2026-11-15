@@ -390,6 +390,14 @@ Supervised
    :members: fit, predict, predict_proba, predict_with_rejection, kernel_bandwidths
    :undoc-members:
 
+.. autoclass:: prosemble.models.DKMRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection, kernel_bandwidths, omega_matrix, lambda_matrix
+   :undoc-members:
+
+.. autoclass:: prosemble.models.DKLMRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection, kernel_bandwidths, omega_matrix, lambda_matrix
+   :undoc-members:
+
 Supervised (Neural Gas)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -458,6 +466,14 @@ Wasserstein LVQ
    :members: fit, predict, predict_proba, predict_with_rejection
    :undoc-members:
 
+.. autoclass:: prosemble.models.WMRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
+   :undoc-members:
+
+.. autoclass:: prosemble.models.WLMRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
+   :undoc-members:
+
 Riemannian Models
 -----------------
 
@@ -467,6 +483,14 @@ Riemannian Models
 
 .. autoclass:: prosemble.models.RiemannianRSLVQ
    :members: fit, predict, predict_proba, predict_with_rejection
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianMRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
+   :undoc-members:
+
+.. autoclass:: prosemble.models.RiemannianLMRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
    :undoc-members:
 
 .. autoclass:: prosemble.models.RiemannianSMNG

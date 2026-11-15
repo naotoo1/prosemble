@@ -212,6 +212,87 @@ A custom manifold supports the intrinsic update if, in addition to the
 ``frame_to_tangent(point, coords)`` and ``tangent_norm(point, tangent)``.
 Otherwise the model warns and uses ``'projected'``.
 
+Tangent Vectors
+---------------
+
+The matrix and tangent variants (RiemannianSMNG, RiemannianSLNG,
+RiemannianSTNG and the differentiating-kernel models built on them)
+measure distance on the tangent vector :math:`\text{Log}_{w_k}(x)` from a
+prototype to a sample.  The ``log_map`` option selects how it is computed
+on SO(n) and on the Grassmannian.
+
+``log_map='exact'`` is the Riemannian log map, and the default on SO(n).
+Its length is the geodesic distance, and on the Grassmannian it depends
+only on the subspace, not on the basis used to represent it:
+
+.. math::
+
+   \text{Log}_R(S) = R \log(R^T S), \qquad
+   \text{Log}_{Q_1}(Q_2) = B A^T \, \Phi(A A^T),
+   \quad A = Q_1^T Q_2, \; B = (I - Q_1 Q_1^T) Q_2,
+
+with :math:`\Phi(\cos^2\theta) = \theta / (\sin\theta \cos\theta)` applied
+to the principal angles.
+
+``log_map='first_order'`` is the approximation for nearby points,
+:math:`R\,\text{skew}(R^T S)` and :math:`Q_2 - Q_1 Q_1^T Q_2`, and the
+default on the Grassmannian.  Its length is :math:`\sin\theta` rather
+than :math:`\theta`:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 35 35
+
+   * - Rotation angle on SO(3)
+     - Exact length
+     - First-order length
+   * - 30°
+     - 0.52
+     - 0.50
+   * - 90°
+     - 1.57
+     - 1.00
+   * - 150°
+     - 2.62
+     - 0.50
+   * - 175°
+     - 3.05
+     - 0.09
+
+(lengths in units of the geodesic distance).  With the first-order form
+a rotation by 150° is as close as one by 30°, and on the Grassmannian a
+different basis for the same subspace gives a different vector.
+
+The log map is discontinuous at the cut locus: a rotation by 180°, or a
+principal angle of 90°.  Within about 0.1° of it the exact vector is
+scaled down continuously to zero.
+
+.. code-block:: python
+
+   model = RiemannianSMNG(
+       manifold=SO(3),
+       n_prototypes_per_class=2,
+       log_map='exact',          # default on SO(n)
+   )
+
+   model = RiemannianSMNG(
+       manifold=Grassmannian(6, 2),
+       n_prototypes_per_class=2,
+       log_map='exact',          # opt-in on the Grassmannian
+   )
+
+On the Grassmannian the first-order form stays the default for two
+reasons.  The sine of a principal angle is still increasing up to 90°, so
+distant subspaces do not appear close.  And the exact log map needs an
+eigendecomposition, which ONNX does not provide.  It is worth selecting
+when samples of one subspace may come with different bases.
+
+On SO(2) and SO(3) the exact log map has a closed form and is exported to
+ONNX.  To export a model on SO(n) with n > 3, train it with
+``log_map='first_order'``.  Models saved before ``log_map`` existed load
+with ``'first_order'``.  The log maps on SPD and hyperbolic manifolds are
+exact in either case.
+
 RiemannianSMNG
 --------------
 

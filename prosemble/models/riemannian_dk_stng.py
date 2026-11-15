@@ -79,6 +79,14 @@ class RiemannianDKSTNG(RiemannianSTNG):
         gradient, and follows the geodesic with the exponential map.
         ``'projected'`` takes a Euclidean step and projects the result
         back onto the manifold.
+    log_map : {'exact', 'first_order'}, optional
+        Tangent vector used on SO(n) and on the Grassmannian. ``'exact'``
+        is the Riemannian log map, whose length is the geodesic distance.
+        ``'first_order'`` is its approximation for nearby points; its
+        length saturates with distance and, on SO(n), falls back to zero
+        for rotations approaching 180 degrees. Default: ``'exact'`` on
+        SO(n) and ``'first_order'`` on the Grassmannian. The log map on
+        SPD and hyperbolic manifolds is exact in either case.
     n_prototypes_per_class : int
         Number of prototypes per class.
     max_iter : int
@@ -139,7 +147,7 @@ class RiemannianDKSTNG(RiemannianSTNG):
     def __init__(self, manifold, sigma_init='median', sigma_min=1e-3,
                  subspace_dim=None, beta=10.0, gamma_init=None,
                  gamma_final=0.01, gamma_decay=None, lr_ratio=0.5,
-                 tau=0.95, update_rule='riemannian',
+                 tau=0.95, update_rule='riemannian', log_map=None,
                  n_prototypes_per_class=1, max_iter=100, lr=0.01,
                  epsilon=1e-6, random_seed=42, optimizer='adam',
                  transfer_fn=None, margin=0.0, callbacks=None,
@@ -152,7 +160,7 @@ class RiemannianDKSTNG(RiemannianSTNG):
         super().__init__(
             manifold=manifold, subspace_dim=subspace_dim, beta=beta,
             gamma_init=gamma_init, gamma_final=gamma_final,
-            gamma_decay=gamma_decay, tau=tau, update_rule=update_rule,
+            gamma_decay=gamma_decay, tau=tau, update_rule=update_rule, log_map=log_map,
             n_prototypes_per_class=n_prototypes_per_class,
             max_iter=max_iter, lr=lr, epsilon=epsilon,
             random_seed=random_seed, optimizer=optimizer,

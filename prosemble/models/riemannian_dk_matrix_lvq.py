@@ -28,11 +28,7 @@ from prosemble.models.prototype_base import SupervisedState
 from prosemble.core.activations import sigmoid_beta
 from prosemble.core.initializers import identity_omega_init
 from prosemble.core.competitions import wtac
-from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
-from prosemble.models.riemannian_srng import (
-    _so_log_map_diff, _spd_log_map_diff, _grassmannian_log_map_diff,
-    _hyperbolic_log_map_diff,
-)
+from prosemble.models.riemannian_srng import _check_log_map, _tangent_vector
 
 
 class RiemannianDKGMLVQ(RiemannianSRNG):
@@ -85,6 +81,14 @@ class RiemannianDKGMLVQ(RiemannianSRNG):
         gradient, and follows the geodesic with the exponential map.
         ``'projected'`` takes a Euclidean step and projects the result
         back onto the manifold.
+    log_map : {'exact', 'first_order'}, optional
+        Tangent vector used on SO(n) and on the Grassmannian. ``'exact'``
+        is the Riemannian log map, whose length is the geodesic distance.
+        ``'first_order'`` is its approximation for nearby points; its
+        length saturates with distance and, on SO(n), falls back to zero
+        for rotations approaching 180 degrees. Default: ``'exact'`` on
+        SO(n) and ``'first_order'`` on the Grassmannian. The log map on
+        SPD and hyperbolic manifolds is exact in either case.
     n_prototypes_per_class : int
         Number of prototypes per class.
     max_iter : int
@@ -142,9 +146,13 @@ class RiemannianDKGMLVQ(RiemannianSRNG):
     RiemannianDKGRLVQ : Relevance-weighted kernel variant.
     """
 
+    #: Tangent vectors come from a log map, selected by ``log_map``.
+    _uses_log_map = True
+
     def __init__(self, manifold, latent_dim=None, omega_hat_scale=0.1,
                  beta=10.0, gamma_init=None, gamma_final=0.01,
-                 gamma_decay=None, tau=0.95, update_rule='riemannian', lr_ratio=0.5,
+                 gamma_decay=None, tau=0.95, update_rule='riemannian',
+                 log_map=None, lr_ratio=0.5,
                  n_prototypes_per_class=1,
                  max_iter=100, lr=0.01, epsilon=1e-6, random_seed=42,
                  optimizer='adam', transfer_fn=None, margin=0.0,
@@ -176,19 +184,11 @@ class RiemannianDKGMLVQ(RiemannianSRNG):
         self.latent_dim = latent_dim
         self.omega_hat_scale = omega_hat_scale
         self.omega_hat_ = None
+        self.log_map = _check_log_map(log_map, manifold)
 
     def _diff_log_map(self, w, x):
-        """Differentiable log map for a single (base, target) pair."""
-        if isinstance(self.manifold, SO):
-            return _so_log_map_diff(w, x)
-        elif isinstance(self.manifold, SPD):
-            return _spd_log_map_diff(w, x)
-        elif isinstance(self.manifold, Grassmannian):
-            return _grassmannian_log_map_diff(w, x)
-        elif isinstance(self.manifold, HyperbolicPoincare):
-            return _hyperbolic_log_map_diff(w, x, eps=self.manifold.eps)
-        else:
-            return self.manifold.log_map(w, x)
+        """Differentiable tangent vector at prototype ``w`` pointing to ``x``."""
+        return _tangent_vector(self.manifold, w, x, self.log_map)
 
     def _compute_tangent_vectors(self, X_manifold, W_manifold):
         """Compute tangent vectors from prototypes to data via log map.
@@ -352,6 +352,7 @@ class RiemannianDKGMLVQ(RiemannianSRNG):
 
     def _get_hyperparams(self):
         hp = super()._get_hyperparams()
+        hp['log_map'] = self.log_map
         hp['omega_hat_scale'] = self.omega_hat_scale
         if self.latent_dim is not None:
             hp['latent_dim'] = self.latent_dim

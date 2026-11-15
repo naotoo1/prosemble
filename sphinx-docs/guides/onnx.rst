@@ -240,12 +240,15 @@ Distance Functions in ONNX
    * - SO(n) Chordal
      - Broadcast subtract + Frobenius norm
      - RiemannianSRNG
-   * - SO(n) Tangent
+   * - SO(2), SO(3) Tangent (exact)
+     - Skew-symmetric part scaled by angle / sin(angle), from the trace + metric adaptation
+     - RiemannianSMNG/SLNG/STNG (SO), default ``log_map='exact'``
+   * - SO(n) Tangent (first order)
      - Skew-symmetric log map + metric adaptation
-     - RiemannianSMNG/SLNG/STNG (SO)
+     - RiemannianSMNG/SLNG/STNG (SO) with ``log_map='first_order'``
    * - Grassmannian Tangent
      - Projection log map + metric adaptation
-     - RiemannianSMNG/SLNG/STNG (Gr)
+     - RiemannianSMNG/SLNG/STNG (Gr), default ``log_map='first_order'``
 
 Not Supported
 -------------
@@ -269,6 +272,9 @@ Not Supported
    * - RiemannianSRNG + Grassmannian manifold
      - (config)
      - SVD-based geodesic distance has no ONNX operator
+   * - RiemannianSMNG/SLNG/STNG with ``log_map='exact'`` on the Grassmannian or on SO(n), n > 3
+     - (config)
+     - The exact log map needs an eigendecomposition (eigh), which has no ONNX operator; train with ``log_map='first_order'`` to export
    * - KNN
      - 1
      - k-nearest-neighbor logic, not prototype-based

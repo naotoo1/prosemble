@@ -137,3 +137,6 @@ generate_supervised_doc.py
 
 # Nix build output
 result
+
+# Autosummary stubs, generated when the docs are built
+sphinx-docs/api/generated/

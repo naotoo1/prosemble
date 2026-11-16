@@ -698,7 +698,7 @@ def gaussian_kernel_matrix(
     Y: chex.Array,
     sigma: float
 ) -> chex.Array:
-    """
+    r"""
     Compute Gaussian (RBF) kernel matrix.
 
     Formula: :math:`K_{ij} = \exp(-\|X_i - Y_j\|^2 / (2\sigma^2))`
@@ -891,7 +891,7 @@ def lpnorm_distance(x: chex.Array, y: chex.Array, p: float = 2) -> chex.Array:
 
 @jit
 def omega_distance(x: chex.Array, y: chex.Array, omega: chex.Array) -> chex.Array:
-    """
+    r"""
     Omega (projection-based) distance between two vectors.
 
     Computes :math:`\|\text{diff} \cdot \Omega\|^2` where :math:`\text{diff} = x - y`.
@@ -939,7 +939,7 @@ def lomega_distance(X: chex.Array, Y: chex.Array, omegas: chex.Array) -> chex.Ar
 
 
 def estimate_sigma(X: chex.Array, percentile: float = 50.0) -> float:
-    """
+    r"""
     Estimate sigma for Gaussian kernel using pairwise distances.
 
     Strategy: Use median (or other percentile) of pairwise distances.

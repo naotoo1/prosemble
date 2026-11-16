@@ -91,7 +91,7 @@ def inv_sqrt_spd(A):
 # ---------------------------------------------------------------------------
 
 class SO:
-    """Special orthogonal group SO(n): rotation matrices.
+    r"""Special orthogonal group SO(n): rotation matrices.
 
     Points are :math:`n \times n` orthogonal matrices with det = +1.
     Geodesic distance uses the bi-invariant metric.

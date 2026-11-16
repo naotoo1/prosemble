@@ -140,3 +140,7 @@ result
 
 # Autosummary stubs, generated when the docs are built
 sphinx-docs/api/generated/
+
+# The documentation figures are committed; they are drawn by
+# sphinx-docs/_scripts/make_figures.py.
+!sphinx-docs/_static/figures/*.png

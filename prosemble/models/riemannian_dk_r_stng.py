@@ -134,6 +134,15 @@ class RiemannianDKRSTNG(RiemannianSTNG):
         Lookahead config.
     mixed_precision : str or None, optional
         Mixed precision dtype.
+    gradient_checkpointing : bool, optional
+        If True, applies ``jax.checkpoint`` (remat) to the loss function.
+        Trades compute for memory by re-computing forward activations during
+        the backward pass. Default: False.
+    devices : list of jax.Device or None, optional
+        Devices for data-parallel training. Data is sharded across devices
+        along the batch dimension; params and optimizer state are replicated.
+        When using mini-batch training, ``batch_size`` must be divisible by
+        the number of devices. Default: None (single-device).
 
     References
     ----------
@@ -158,7 +167,8 @@ class RiemannianDKRSTNG(RiemannianSTNG):
                  patience=None, restore_best=False, class_weight=None,
                  gradient_accumulation_steps=None, ema_decay=None,
                  freeze_params=None, lookahead=None,
-                 mixed_precision=None):
+                 mixed_precision=None,
+                 gradient_checkpointing=False, devices=None):
         super().__init__(
             manifold=manifold, subspace_dim=subspace_dim, beta=beta,
             gamma_init=gamma_init, gamma_final=gamma_final,
@@ -176,6 +186,7 @@ class RiemannianDKRSTNG(RiemannianSTNG):
             gradient_accumulation_steps=gradient_accumulation_steps,
             ema_decay=ema_decay, freeze_params=freeze_params,
             lookahead=lookahead, mixed_precision=mixed_precision,
+            gradient_checkpointing=gradient_checkpointing, devices=devices,
         )
         self.sigma_init = sigma_init
         self.sigma_min = sigma_min

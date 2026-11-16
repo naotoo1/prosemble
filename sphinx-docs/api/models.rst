@@ -338,6 +338,24 @@ Kernel Clustering
    :members: fit, predict, predict_proba
    :undoc-members:
 
+One-Class Contrastive Soft Models
+---------------------------------
+
+.. autoclass:: prosemble.models.oc_soft_mixin.OneClassSoftMixin
+   :members: fit, predict, decision_function, score_samples, predict_proba, predict_with_reject
+
+.. autoclass:: prosemble.models.OCDKRSLVQ
+   :members: fit, predict, decision_function, score_samples, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCWRSLVQ
+   :members: fit, predict, decision_function, score_samples, predict_with_reject
+   :undoc-members:
+
+.. autoclass:: prosemble.models.OCRiemannianRSLVQ
+   :members: fit, predict, decision_function, score_samples, predict_with_reject
+   :undoc-members:
+
 One-Class Differentiating Kernel
 ---------------------------------
 

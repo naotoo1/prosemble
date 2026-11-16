@@ -68,6 +68,54 @@ all sample–prototype pairs in memory. For long series or many samples
 set ``batch_size``. ``band`` restricts alignments to a Sakoe–Chiba band
 (a fraction of the series length) and excludes implausible warps.
 
+Benchmark
+---------
+
+On 24 datasets of the UCR time series archive, with the archive's own
+train/test splits and nothing tuned:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Method
+     - Mean accuracy
+     - Better / equal / worse than 1NN-DTW
+   * - 1-nearest neighbour, Euclidean
+     - 0.786
+     - 9 / 3 / 12
+   * - 1-nearest neighbour, DTW (1NN-DTW)
+     - 0.824
+     - —
+   * - 1-nearest neighbour, DTW with a 10 % band
+     - 0.831
+     - 8 / 13 / 3
+   * - RBF SVM
+     - 0.709
+     - 5 / 0 / 19
+   * - Random forest
+     - 0.827
+     - 12 / 2 / 10
+   * - ``WRSLVQ``
+     - 0.815
+     - 11 / 1 / 12
+   * - ``SoftDTWRSLVQ``, :math:`\gamma = 0.1` (default)
+     - 0.862
+     - 11 / 5 / 8
+   * - ``SoftDTWRSLVQ``, :math:`\gamma = 1`
+     - 0.880
+     - 16 / 3 / 5
+   * - ``SoftDTWRSLVQ``, :math:`\gamma = 0.1`, 2 prototypes per class
+     - 0.846
+     - 13 / 4 / 7
+
+With :math:`\gamma = 1`, ``SoftDTWRSLVQ`` is more accurate than each of
+the six baselines (Wilcoxon signed-rank tests, Holm-adjusted,
+:math:`p < 0.05`). With the default :math:`\gamma = 0.1` it has the best
+mean rank, but its advantage is significant only over the SVM. The
+nearest-neighbour baselines reproduce the error rates published with the
+archive. The protocol, the statistics and the accuracy on every dataset
+are in ``benchmarks/time_series``.
+
 Functions
 ---------
 

@@ -16,6 +16,7 @@ A model only has to say what its component scores are.
 """
 
 import jax.numpy as jnp
+import numpy as np
 import optax
 
 from prosemble.core.initializers import identity_omega_init
@@ -38,7 +39,7 @@ class SoftAssignmentMixin:
     """
 
     _hyperparams = ('sigma', 'adapt_sigma', 'rejection_confidence')
-    _fitted_array_names = ('sigma_',)
+    _fitted_array_names = ('sigma_', 'temperature_')
 
     def _setup_soft(self, sigma, adapt_sigma, rejection_confidence):
         if not (sigma == 'auto' or (isinstance(sigma, (int, float)) and sigma > 0)):
@@ -47,6 +48,7 @@ class SoftAssignmentMixin:
         self.adapt_sigma = adapt_sigma
         self.rejection_confidence = rejection_confidence
         self.sigma_ = None
+        self.temperature_ = None
         if not adapt_sigma:
             frozen = list(self.freeze_params or [])
             if 'log_sigma' not in frozen:
@@ -108,17 +110,98 @@ class SoftAssignmentMixin:
     # Prediction
     # ------------------------------------------------------------------
 
-    def _class_log_posterior(self, X):
+    def _class_log_posterior(self, X, calibrated=True):
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
         logits = self._logits(self._fitted_params(), X)
+        if calibrated and self.temperature_ is not None:
+            logits = logits / self.temperature_
         return class_log_posterior(logits, self.prototype_labels_, self.n_classes_)
+
+    # ------------------------------------------------------------------
+    # Calibration
+    # ------------------------------------------------------------------
+
+    def fit(self, *args, **kwargs):
+        """Fit the model; a temperature from an earlier :meth:`calibrate` is dropped."""
+        self.temperature_ = None
+        return super().fit(*args, **kwargs)
+
+    def calibrate(self, X, y, cv=None):
+        """Fit a temperature that makes the class posteriors calibrated.
+
+        The width :math:`\\sigma` is learned on the training data, which
+        the model fits closely, so the posteriors come out too confident.
+        Calibration divides the component scores by a temperature
+        :math:`T` chosen to minimise the negative log-likelihood of
+        labelled data the model has not been fitted to:
+
+        .. math::
+
+            P_T(c \\mid x) \\propto \\sum_{k: c(k) = c} e^{f_k(x) / T}.
+
+        This is the same as rescaling :math:`\\sigma` by
+        :math:`\\sqrt{T}` after training. The temperature applies to
+        :meth:`predict_proba` and :meth:`predict_with_rejection`;
+        :meth:`predict` keeps the labels of the trained model. (With
+        several prototypes per class a temperature can reorder the class
+        posteriors of a sample, and on a benchmark of 13 datasets that
+        cost accuracy.)
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+        y : array-like of shape (n_samples,)
+        cv : int, optional
+            If None (default), ``X, y`` are held-out data and the
+            temperature is fitted to the scores of this model. If an
+            integer, ``X, y`` are the training data: ``cv`` copies of the
+            model are fitted on stratified folds, and the temperature is
+            fitted to their scores on the left-out folds. The fitted
+            model itself is kept.
+
+        Returns
+        -------
+        self
+        """
+        self._check_fitted()
+        X = jnp.asarray(X, dtype=jnp.float32)
+        y = self._encode_y(y)
+        if cv is None:
+            logits = np.asarray(self._logits(self._fitted_params(), X))
+            labels = np.asarray(y)
+        else:
+            if not (isinstance(cv, int) and cv >= 2):
+                raise ValueError(f"cv must be None or an integer >= 2, got {cv!r}")
+            from sklearn.model_selection import StratifiedKFold
+            from prosemble.core.model_selection import clone
+            parts, label_parts = [], []
+            folds = StratifiedKFold(cv, shuffle=True, random_state=self.random_seed)
+            y_original = np.asarray(self._decode_y(y))
+            for train, held_out in folds.split(np.zeros(len(y_original)), y_original):
+                copy = clone(self)
+                copy.fit(X[train], y_original[train])
+                # Order the component scores like those of this model.
+                parts.append(np.asarray(copy._logits(copy._fitted_params(), X[held_out])))
+                label_parts.append(np.asarray(copy._encode_y(y_original[held_out])))
+                if not np.array_equal(np.asarray(copy.prototype_labels_),
+                                      np.asarray(self.prototype_labels_)):
+                    raise ValueError(
+                        "A fold lacks a class, so its model has different "
+                        "prototypes; use fewer folds.")
+            logits, labels = np.concatenate(parts), np.concatenate(label_parts)
+        self.temperature_ = jnp.asarray(_fit_temperature(
+            logits, labels, np.asarray(self.prototype_labels_), self.n_classes_),
+            dtype=jnp.float32)
+        return self
 
     def predict(self, X):
         """Predict the class with the largest posterior :math:`P(c | x)`.
 
         With several prototypes per class this sums over the prototypes
         of a class and can differ from the label of the closest prototype.
+        The posterior of the trained model is used, so :meth:`calibrate`
+        does not change the predicted labels.
 
         Parameters
         ----------
@@ -128,7 +211,7 @@ class SoftAssignmentMixin:
         -------
         labels : array of shape (n_samples,)
         """
-        return jnp.argmax(self._class_log_posterior(X), axis=1)
+        return jnp.argmax(self._class_log_posterior(X, calibrated=False), axis=1)
 
     def predict_proba(self, X):
         """Class posteriors :math:`P(c | x)`.
@@ -157,9 +240,10 @@ class SoftAssignmentMixin:
         threshold = confidence if confidence is not None else self.rejection_confidence
         if threshold is None:
             return self.predict(X)
+        preds = jnp.argmax(self._class_log_posterior(X, calibrated=False), axis=1)
         proba = self.predict_proba(X)
-        preds = jnp.argmax(proba, axis=1)
-        return jnp.where(jnp.max(proba, axis=1) >= threshold, self._decode_y(preds), -1)
+        confidence_of_label = jnp.take_along_axis(proba, preds[:, None], axis=1)[:, 0]
+        return jnp.where(confidence_of_label >= threshold, self._decode_y(preds), -1)
 
     # ------------------------------------------------------------------
     # Persistence
@@ -287,3 +371,34 @@ class SoftMetricMixin:
         if omega.ndim == 3:
             return jnp.einsum('pdl,pel->pde', omega, omega)
         return omega @ omega.T
+
+
+def _fit_temperature(logits, labels, prototype_labels, n_classes):
+    """Temperature that minimises the negative log-likelihood of ``labels``.
+
+    One-dimensional: a log-spaced grid, then golden-section search in
+    the best bracket.
+    """
+    logits = np.asarray(logits, dtype=np.float64)
+    member = prototype_labels[None, :] == np.arange(n_classes)[:, None]   # (classes, prototypes)
+
+    def nll(log_t):
+        z = logits / np.exp(log_t)
+        z = z - z.max(axis=1, keepdims=True)
+        mass = np.exp(z)
+        per_class = mass @ member.T                                     # (n, classes)
+        own = per_class[np.arange(len(labels)), labels]
+        return float(np.mean(np.log(per_class.sum(axis=1)) - np.log(np.maximum(own, 1e-300))))
+
+    grid = np.linspace(np.log(1e-2), np.log(1e2), 81)
+    values = [nll(t) for t in grid]
+    i = int(np.argmin(values))
+    lo, hi = grid[max(i - 1, 0)], grid[min(i + 1, len(grid) - 1)]
+    ratio = (np.sqrt(5.0) - 1.0) / 2.0
+    for _ in range(40):
+        a, b = hi - ratio * (hi - lo), lo + ratio * (hi - lo)
+        if nll(a) < nll(b):
+            hi = b
+        else:
+            lo = a
+    return float(np.exp((lo + hi) / 2.0))

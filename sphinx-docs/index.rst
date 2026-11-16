@@ -16,6 +16,7 @@ JIT-compiled and run on CPU, GPU, and TPU.
    guides/topology
    guides/differentiating_kernels
    guides/riemannian
+   guides/time_series
    guides/onnx
    guides/advanced
    api/models

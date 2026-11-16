@@ -6,6 +6,9 @@ Prototypes live directly on the manifold and distances are computed via
 the intrinsic geodesic metric, preserving the geometric structure of the
 data.
 
+:doc:`/tutorials/covariance_matrices` works through an example on SPD
+matrices and compares it with treating the matrices as vectors.
+
 Supported Manifolds
 -------------------
 

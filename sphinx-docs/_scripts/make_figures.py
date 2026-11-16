@@ -385,6 +385,143 @@ def timeseries():
         _save(fig, 'tutorial-timeseries', theme)
 
 
+# ------------------------------------------------ tutorial: covariance matrices
+def covariance_trials(n_per_class, seed, channels=6, length=200):
+    """Covariance matrices of simulated multichannel recordings, 3 classes.
+
+    Six hidden sources are mixed into six channels by a fixed matrix. In
+    class k, source k has about e^1.2 = 3.3 times more power. Every
+    recording also has a random overall gain, as real recordings do.
+    """
+    mixing = np.random.default_rng(0).normal(size=(channels, channels))
+    log_power = np.zeros((3, channels))
+    log_power[[0, 1, 2], [0, 1, 2]] = 1.2
+    rng = np.random.default_rng(seed)
+    covs, labels = [], []
+    for k in range(3):
+        for _ in range(n_per_class):
+            power = np.exp(log_power[k] + rng.normal(0, 0.4, channels) + rng.normal(0, 0.8))
+            sources = rng.normal(size=(channels, length)) * np.sqrt(power)[:, None]
+            x = mixing @ sources + 0.1 * rng.normal(size=(channels, length))
+            covs.append(x @ x.T / length)
+            labels.append(k)
+    return np.array(covs, dtype=np.float32), np.array(labels, dtype=np.int32)
+
+
+def _logm(P):
+    w, V = np.linalg.eigh(P)
+    return (V * np.log(w)[..., None, :]) @ np.swapaxes(V, -1, -2)
+
+
+def _plain_log_ticks(ax):
+    """Log axes labelled with plain numbers (1, 10, 100 or 30, 40, 60)."""
+    for axis in (ax.xaxis, ax.yaxis):
+        lo, hi = (ax.get_xlim() if axis is ax.xaxis else ax.get_ylim())
+        if hi / lo < 20:
+            ticks = [v for v in (20, 30, 40, 60, 80, 100, 150) if lo <= v <= hi]
+        else:
+            ticks = [10.0 ** e for e in range(int(np.floor(np.log10(lo))), int(np.ceil(np.log10(hi))) + 1)
+                     if lo <= 10.0 ** e <= hi]
+        axis.set_major_locator(matplotlib.ticker.FixedLocator(ticks))
+        axis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f'{v:g}'))
+        axis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+
+
+def covariance():
+    import jax
+    from prosemble.core.manifolds import SPD
+    from prosemble.models import GLVQ, RiemannianRSLVQ
+
+    def standardise(a, b):
+        mu, sd = a.mean(0), a.std(0) + 1e-8
+        return (a - mu) / sd, (b - mu) / sd
+
+    def fit_glvq(train, test, y, seed):
+        a, b = standardise(train.reshape(len(train), -1), test.reshape(len(test), -1))
+        m = GLVQ(n_prototypes_per_class=1, max_iter=300, lr=0.05, random_seed=seed)
+        return m.fit(jnp.asarray(a), jnp.asarray(y)), b
+
+    def fit_riemannian(train, y, seed):
+        m = RiemannianRSLVQ(manifold=SPD(6), n_prototypes_per_class=1, sigma='auto',
+                            adapt_sigma=True, max_iter=300, lr=0.01, random_seed=seed)
+        return m.fit(jnp.asarray(train.reshape(len(train), -1)), jnp.asarray(y))
+
+    P_test, y_test = covariance_trials(200, seed=99)
+    P_train, y_train = covariance_trials(40, seed=40000)
+    glvq, b = fit_glvq(P_train, P_test, y_train, 0)
+    riem = fit_riemannian(P_train, y_train, 0)
+    acc_g = float(np.mean(np.asarray(glvq.predict(jnp.asarray(b))) == y_test))
+    acc_r = float(np.mean(np.asarray(riem.predict(jnp.asarray(P_test.reshape(len(P_test), -1)))) == y_test))
+    print(f'  40 recordings per class: GLVQ on raw matrices {acc_g:.3f}, RiemannianRSLVQ {acc_r:.3f}')
+
+    D_glvq = ((b[:, None, :] - np.asarray(glvq.prototypes_)[None]) ** 2).sum(-1)
+    W = jnp.asarray(np.asarray(riem.prototypes_).reshape(-1, 6, 6))
+    pairwise = jax.jit(jax.vmap(jax.vmap(SPD(6).distance, in_axes=(None, 0)), in_axes=(0, None)))
+    D_riem = np.asarray(pairwise(jnp.asarray(P_test), W)) ** 2
+
+    sizes, seeds = [5, 10, 20, 40, 80], range(5)
+    curve = {'raw': [], 'logm': [], 'riem': []}
+    for n in sizes:
+        rows = {k: [] for k in curve}
+        for seed in seeds:
+            P, y = covariance_trials(n, seed=1000 * n + seed)
+            m, bt = fit_glvq(P, P_test, y, seed)
+            rows['raw'].append(np.mean(np.asarray(m.predict(jnp.asarray(bt))) == y_test))
+            m, bt = fit_glvq(_logm(P), _logm(P_test), y, seed)
+            rows['logm'].append(np.mean(np.asarray(m.predict(jnp.asarray(bt))) == y_test))
+            m = fit_riemannian(P, y, seed)
+            assert np.isfinite(np.asarray(m.loss_history_)).all()
+            rows['riem'].append(np.mean(np.asarray(m.predict(jnp.asarray(P_test.reshape(len(P_test), -1)))) == y_test))
+        for k in curve:
+            curve[k].append((np.mean(rows[k]), np.std(rows[k])))
+        print(f'  n={n:2d}: ' + ', '.join(f'{k} {np.mean(v):.3f}±{np.std(v):.3f}' for k, v in rows.items()))
+
+    def own_other(D, labels, proto_labels):
+        own = D[np.arange(len(D)), np.searchsorted(proto_labels, labels)]
+        other = np.where(proto_labels[None, :] == labels[:, None], np.inf, D).min(1)
+        return own, other
+
+    names = {'raw': 'GLVQ on the raw matrices', 'logm': 'GLVQ on the matrix logarithms',
+             'riem': 'RiemannianRSLVQ on SPD(6)'}
+    for theme in THEMES:
+        t = _style(theme)
+        fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.4))
+        for ax, D, model, title in [(axes[0], D_glvq, glvq, 'Euclidean distance, raw matrices'),
+                                    (axes[1], D_riem, riem, 'Riemannian distance')]:
+            own, other = own_other(D, y_test, np.asarray(model.prototype_labels_))
+            for k in range(3):
+                ax.scatter(other[y_test == k], own[y_test == k], s=9, alpha=0.7, linewidths=0,
+                           color=t['classes'][k], label=f'class {k + 1}')
+            lo, hi = min(own.min(), other.min()) * 0.8, max(own.max(), other.max()) * 1.25
+            ax.plot([lo, hi], [lo, hi], color=t['muted'], ls='--', lw=1)
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+            ax.set_xlim(lo, hi)
+            ax.set_ylim(lo, hi)
+            _plain_log_ticks(ax)
+            ax.set_xlabel('squared distance to the nearest other prototype')
+            ax.set_ylabel('squared distance to own prototype')
+            ax.set_title(title)
+        axes[0].legend(loc='upper left', fontsize=9, markerscale=1.5)
+        fig.tight_layout(w_pad=3)
+        _save(fig, 'tutorial-spd-distances', theme)
+
+        fig, ax = plt.subplots(figsize=(6.4, 4.2))
+        for k, colour in [('raw', t['classes'][3]), ('logm', t['classes'][1]), ('riem', t['classes'][0])]:
+            mean = np.array([m for m, _ in curve[k]])
+            sd = np.array([s for _, s in curve[k]])
+            ax.plot(sizes, mean, marker='o', lw=2, color=colour, label=names[k])
+            ax.fill_between(sizes, mean - sd, mean + sd, color=colour, alpha=0.15, linewidth=0)
+        ax.set_xscale('log')
+        ax.set_xticks(sizes, [str(s) for s in sizes])
+        ax.xaxis.set_minor_locator(matplotlib.ticker.NullLocator())
+        ax.set_xlabel('training recordings per class')
+        ax.set_ylabel('test accuracy')
+        ax.set_title('Accuracy against training-set size')
+        ax.legend(loc='lower right', fontsize=9)
+        _save(fig, 'tutorial-spd-curve', theme)
+
+
 # ------------------------------------------------- gallery thumbnails (crops)
 def thumbnails():
     """One panel of each multi-panel tutorial figure, for the gallery."""
@@ -402,7 +539,7 @@ def thumbnails():
 
 FIGURES = {'hero': hero, 'wine': wine, 'calibration': calibration, 'anomaly': anomaly,
            'clustering': clustering, 'topology': topology, 'timeseries': timeseries,
-           'thumbnails': thumbnails}
+           'covariance': covariance, 'thumbnails': thumbnails}
 
 if __name__ == '__main__':
     for name in sys.argv[1:] or FIGURES:

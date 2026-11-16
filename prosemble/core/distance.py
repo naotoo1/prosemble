@@ -621,6 +621,72 @@ def wasserstein2_relevance_distance_matrix(
     return eucl + spread[None, :]
 
 
+
+@jit
+def wasserstein2_pushforward_distance_matrix(
+    X: chex.Array,
+    means: chex.Array,
+    log_variances: chex.Array,
+    omega: chex.Array
+) -> chex.Array:
+    """
+    Squared 2-Wasserstein distance after a linear map of both measures.
+
+    The map :math:`z \\mapsto \\Omega^T z` sends the Dirac measure at
+    :math:`x` to the Dirac measure at :math:`\\Omega^T x` and the Gaussian
+    :math:`\\mathcal{N}(\\mu_k, \\Sigma_k)` to
+    :math:`\\mathcal{N}(\\Omega^T \\mu_k, \\Omega^T \\Sigma_k \\Omega)`.
+    Their squared 2-Wasserstein distance is
+
+    .. math::
+
+        W_2^2(x, k) = (x - \\mu_k)^T \\Lambda (x - \\mu_k)
+                      + \\operatorname{tr}(\\Lambda \\Sigma_k),
+        \\qquad \\Lambda = \\Omega \\Omega^T,
+
+    which is also the expected adaptive distance
+    :math:`\\mathbb{E}_{z \\sim \\mathcal{N}(\\mu_k, \\Sigma_k)}
+    (x - z)^T \\Lambda (x - z)`. For diagonal
+    :math:`\\Sigma_k = \\operatorname{diag}(s_k^2)` the trace is
+    :math:`\\sum_j s_{kj}^2 \\Lambda_{jj}`.
+
+    Unlike :func:`wasserstein2_omega_distance_matrix`, the variance term
+    is measured in the same metric as the mean term.
+
+    Parameters
+    ----------
+    X : array of shape (n, d)
+        Data points.
+    means : array of shape (p, d)
+        Prototype mean vectors.
+    log_variances : array of shape (p, d)
+        Log of prototype variances.
+    omega : array of shape (d, l) or (p, d, l)
+        Linear map shared by all prototypes, or one map per prototype.
+
+    Returns
+    -------
+    D : array of shape (n, p)
+        Squared 2-Wasserstein distances of the mapped measures.
+    """
+    chex.assert_rank(X, 2)
+    chex.assert_rank(means, 2)
+    chex.assert_equal(X.shape[1], means.shape[1])
+    chex.assert_equal(means.shape, log_variances.shape)
+
+    diff = X[:, None, :] - means[None, :, :]  # (n, p, d)
+    lambda_diag = jnp.sum(omega ** 2, axis=-1)  # (d,) or (p, d)
+    if omega.ndim == 3:
+        projected = jnp.einsum('npd,pdl->npl', diff, omega)
+    else:
+        projected = jnp.einsum('npd,dl->npl', diff, omega)
+        lambda_diag = lambda_diag[None, :]
+    eucl = jnp.sum(projected ** 2, axis=2)  # (n, p)
+    spread = jnp.sum(jnp.exp(log_variances) * lambda_diag, axis=1)  # (p,)
+
+    return eucl + spread[None, :]
+
+
 # ============================================================================
 # Kernel Functions
 # ============================================================================

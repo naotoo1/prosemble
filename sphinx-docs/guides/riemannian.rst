@@ -145,6 +145,102 @@ geodesic distances.
    model.fit(X, y)
    labels = model.predict(X)
 
+RiemannianRSLVQ
+---------------
+
+Riemannian Robust Soft LVQ.  A labelled mixture on the manifold with
+components :math:`p(x | k) \propto \exp(-d^2(x, w_k) / 2\sigma^2)`,
+trained by maximising the likelihood ratio
+
+.. math::
+
+   \sum_i \log
+   \frac{\sum_{k: c(k) = y_i} \exp(-d^2(x_i, w_k) / 2\sigma^2)}
+        {\sum_k \exp(-d^2(x_i, w_k) / 2\sigma^2)}
+
+On SPD matrices with the affine-invariant metric this is the model of
+Tang et al. (2021).  Here it is available on all four manifolds, the
+width :math:`\sigma` can be learned, and prototypes move along geodesics
+as described under *Prototype Updates* below.  On SO(n) the distance is
+the chordal one, which makes each component a matrix Fisher
+distribution centred at its prototype.
+
+.. code-block:: python
+
+   from prosemble.models import RiemannianRSLVQ
+   from prosemble.core.manifolds import SPD
+
+   model = RiemannianRSLVQ(
+       manifold=SPD(4),
+       n_prototypes_per_class=2,
+       sigma='auto',          # initial width from the data
+       adapt_sigma=True,      # learn it during training
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X, y)
+
+   proba = model.predict_proba(X)          # class posteriors
+   labels = model.predict_with_rejection(X, confidence=0.8)
+
+RiemannianMRSLVQ
+----------------
+
+RiemannianRSLVQ with a learned metric in the tangent space.  A sample
+is seen from prototype :math:`w_k` through its tangent vector
+:math:`\operatorname{Log}_{w_k}(x)`, written in orthonormal coordinates
+:math:`u_k(x)` of the tangent space, and each component is a Gaussian in
+these coordinates:
+
+.. math::
+
+   p(x | k) \propto \exp\left(
+       -\frac{u_k(x)^T \Lambda\, u_k(x)}{2\sigma^2}\right),
+   \qquad \Lambda = \Omega \Omega^T
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Manifold
+     - Coordinates :math:`u_k(x)`
+   * - SO(n)
+     - :math:`w_k^T \operatorname{Log}_{w_k}(x) / \sqrt2`
+   * - SPD(n)
+     - :math:`\log(w_k^{-1/2}\, x\, w_k^{-1/2})`
+   * - Grassmannian
+     - :math:`\operatorname{Log}_{w_k}(x)`
+   * - Poincaré ball
+     - :math:`\lambda_{w_k} \operatorname{Log}_{w_k}(x)`
+
+With the exact log map :math:`\|u_k(x)\|` is the geodesic distance, so
+:math:`\Lambda = I`, where training starts, is the isotropic component of
+RiemannianRSLVQ.  One matrix is learned for all prototypes, more slowly
+than the prototypes (``matrix_lr_ratio``).
+
+.. code-block:: python
+
+   from prosemble.models import RiemannianMRSLVQ
+   from prosemble.core.manifolds import SPD
+
+   model = RiemannianMRSLVQ(
+       manifold=SPD(4),
+       n_prototypes_per_class=2,
+       latent_dim=None,       # columns of Omega; default: 16 for SPD(4)
+       matrix_lr_ratio=0.3,   # the matrix learns at 0.3 * lr
+       max_iter=100,
+       lr=0.01,
+   )
+   model.fit(X, y)
+   print(model.lambda_matrix.shape)        # (16, 16)
+
+The matrix acts on the flattened coordinates and adds parameters.  When
+the classes are isotropic around their centres it has nothing to learn,
+and RiemannianRSLVQ is the better choice.  On synthetic data whose
+classes differ along a few tangent directions the matrix models were
+more accurate than RiemannianRSLVQ in the Poincaré ball and on the
+Grassmannian, and not on SPD(n) or SO(n), so compare both on your data.
+
 Prototype Updates
 -----------------
 

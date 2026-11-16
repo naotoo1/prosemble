@@ -2578,6 +2578,14 @@ def _check_model_exportable(model):
 
     Raises NotImplementedError for models that cannot be converted.
     """
+    # Soft models classify by the class posterior, summed over the
+    # prototypes of a class; the exported graphs use the closest prototype.
+    from prosemble.models.soft_mixin import SoftAssignmentMixin
+    if isinstance(model, SoftAssignmentMixin):
+        raise NotImplementedError(
+            f"ONNX export is not yet supported for {type(model).__name__}."
+        )
+
     # Riemannian models: check manifold-specific exportability
     from prosemble.models.riemannian_srng import RiemannianSRNG
     if isinstance(model, RiemannianSRNG):

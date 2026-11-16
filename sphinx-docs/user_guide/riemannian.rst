@@ -6,8 +6,11 @@ Prototypes live directly on the manifold and distances are computed via
 the intrinsic geodesic metric, preserving the geometric structure of the
 data.
 
-:doc:`/tutorials/covariance_matrices` works through an example on SPD
-matrices and compares it with treating the matrices as vectors.
+Four tutorials work through an example on each manifold and compare it
+with a Euclidean representation of the same data:
+:doc:`/tutorials/covariance_matrices` (SPD), :doc:`/tutorials/rotations`
+(SO(3)), :doc:`/tutorials/subspaces` (Grassmannian) and
+:doc:`/tutorials/hyperbolic` (Poincaré disk).
 
 Supported Manifolds
 -------------------

@@ -522,13 +522,313 @@ def covariance():
         _save(fig, 'tutorial-spd-curve', theme)
 
 
+# ------------------------------------------------------ tutorial: subspaces
+def subspace_sets(n_per_class, seed, dim=10, k=2, size=8, noise=0.8, spread=0.6):
+    """Bases of sets of vectors drawn near class-specific k-dim subspaces of R^dim.
+
+    The three class subspaces are perturbations of a common one. Each sample
+    is a set of `size` noisy vectors from its class subspace; its basis is
+    the leading left singular vectors of the set, so it comes in an
+    arbitrary rotation and sign, as in practice.
+    """
+    rng0 = np.random.default_rng(0)
+    common = np.linalg.qr(rng0.normal(size=(dim, k)))[0]
+    classes = [np.linalg.qr(common + spread * rng0.normal(size=(dim, k)))[0] for _ in range(3)]
+    rng = np.random.default_rng(seed)
+    bases, labels = [], []
+    for c, U in enumerate(classes):
+        for _ in range(n_per_class):
+            V = U @ rng.normal(size=(k, size)) + noise * rng.normal(size=(dim, size))
+            bases.append(np.linalg.svd(V, full_matrices=False)[0][:, :k])
+            labels.append(c)
+    return np.array(bases, dtype=np.float32), np.array(labels, dtype=np.int32)
+
+
+def _style_3d(ax, t):
+    for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+        axis.set_pane_color((0, 0, 0, 0))
+        axis.line.set_color(t['grid'])
+        axis.set_ticklabels([])
+        axis._axinfo['grid']['color'] = t['grid']
+    ax.set_box_aspect((1, 1, 1))
+
+
+def subspaces():
+    from prosemble.core.manifolds import Grassmannian
+    from prosemble.models import GLVQ, RiemannianSRNG
+
+    def standardise(a, b):
+        mu, sd = a.mean(0), a.std(0) + 1e-8
+        return (a - mu) / sd, (b - mu) / sd
+
+    def glvq(a, b, y, seed):
+        a, b = standardise(a, b)
+        m = GLVQ(n_prototypes_per_class=1, max_iter=300, lr=0.05, random_seed=seed)
+        return np.asarray(m.fit(jnp.asarray(a), jnp.asarray(y)).predict(jnp.asarray(b)))
+
+    def proj(B):
+        return np.einsum('nik,njk->nij', B, B).reshape(len(B), -1)
+
+    B_test, y_test = subspace_sets(200, seed=99)
+    sizes, seeds = [5, 10, 20, 40, 80], range(5)
+    curve = {'basis': [], 'proj': [], 'riem': []}
+    for n in sizes:
+        rows = {k: [] for k in curve}
+        for seed in seeds:
+            B, y = subspace_sets(n, seed=1000 * n + seed)
+            rows['basis'].append(np.mean(glvq(B.reshape(len(B), -1), B_test.reshape(len(B_test), -1), y, seed) == y_test))
+            rows['proj'].append(np.mean(glvq(proj(B), proj(B_test), y, seed) == y_test))
+            m = RiemannianSRNG(manifold=Grassmannian(10, 2), n_prototypes_per_class=1, max_iter=300,
+                               lr=0.05, random_seed=seed).fit(jnp.asarray(B.reshape(len(B), -1)), jnp.asarray(y))
+            assert np.isfinite(np.asarray(m.loss_history_)).all()
+            rows['riem'].append(np.mean(np.asarray(m.predict(jnp.asarray(B_test.reshape(len(B_test), -1)))) == y_test))
+        for k in curve:
+            curve[k].append((np.mean(rows[k]), np.std(rows[k])))
+        print(f'  n={n:2d}: ' + ', '.join(f'{k} {np.mean(v):.3f}±{np.std(v):.3f}' for k, v in rows.items()))
+
+    names = {'basis': 'GLVQ on the bases', 'proj': 'GLVQ on the projections UUᵀ',
+             'riem': 'RiemannianSRNG on Gr(10, 2)'}
+    rng = np.random.default_rng(3)
+    U = np.linalg.qr(rng.normal(size=(3, 2)))[0]
+    angle = np.deg2rad(55)
+    U2 = U @ np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
+    U2[:, 1] *= -1
+    for theme in THEMES:
+        t = _style(theme)
+        fig = plt.figure(figsize=(11, 4.6))
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
+        s_, t_ = np.meshgrid(np.linspace(-1.2, 1.2, 2), np.linspace(-1.2, 1.2, 2))
+        plane = U[:, :1, None] * s_[None] + U[:, 1:, None] * t_[None]
+        ax.plot_surface(plane[0], plane[1], plane[2], color=t['muted'], alpha=0.18, linewidth=0)
+        for basis, colour, label in [(U, t['classes'][0], 'one basis'), (U2, t['classes'][2], 'another basis')]:
+            for j in range(2):
+                ax.quiver(0, 0, 0, *basis[:, j], color=colour, linewidth=2.4, arrow_length_ratio=0.12,
+                          label=label if j == 0 else None)
+        _style_3d(ax, t)
+        ax.grid(False)
+        ax.view_init(elev=22, azim=-58)
+        ax.set_title('One plane, two bases')
+        ax.legend(loc='upper left', fontsize=9)
+        b = fig.add_subplot(1, 2, 2)
+        for k, colour in [('basis', t['classes'][3]), ('proj', t['classes'][1]), ('riem', t['classes'][0])]:
+            mean = np.array([m for m, _ in curve[k]])
+            sd = np.array([s for _, s in curve[k]])
+            b.plot(sizes, mean, marker='o', lw=2, color=colour, label=names[k])
+            b.fill_between(sizes, mean - sd, mean + sd, color=colour, alpha=0.15, linewidth=0)
+        b.axhline(1 / 3, color=t['muted'], lw=1, ls=':')
+        b.text(80, 1 / 3, 'chance ', color=t['muted'], ha='right', va='bottom', fontsize=9)
+        b.set_xscale('log')
+        b.set_xticks(sizes, [str(v) for v in sizes])
+        b.xaxis.set_minor_locator(matplotlib.ticker.NullLocator())
+        b.set_xlabel('training sets per class')
+        b.set_ylabel('test accuracy')
+        b.set_title('Accuracy against training-set size')
+        b.legend(loc='center right', fontsize=9)
+        fig.tight_layout(w_pad=3)
+        _save(fig, 'tutorial-subspaces', theme)
+
+
+# ------------------------------------------------------ tutorial: rotations
+def _rotation(w):
+    """Rotation matrix exp([w]x) for an axis-angle vector w (Rodrigues)."""
+    theta = np.linalg.norm(w)
+    K = np.array([[0, -w[2], w[1]], [w[2], 0, -w[0]], [-w[1], w[0], 0]])
+    if theta < 1e-12:
+        return np.eye(3) + K
+    return np.eye(3) + np.sin(theta) / theta * K + (1 - np.cos(theta)) / theta ** 2 * K @ K
+
+
+def _quaternion(R):
+    """Unit quaternion (w, x, y, z) of a rotation, with the usual convention w >= 0."""
+    w = np.sqrt(max(0.0, 1 + np.trace(R))) / 2
+    x = np.copysign(np.sqrt(max(0.0, 1 + R[0, 0] - R[1, 1] - R[2, 2])) / 2, R[2, 1] - R[1, 2])
+    y = np.copysign(np.sqrt(max(0.0, 1 - R[0, 0] + R[1, 1] - R[2, 2])) / 2, R[0, 2] - R[2, 0])
+    z = np.copysign(np.sqrt(max(0.0, 1 - R[0, 0] - R[1, 1] + R[2, 2])) / 2, R[1, 0] - R[0, 1])
+    return np.array([w, x, y, z])
+
+
+def orientation_samples(n_per_class, seed, spread=0.5, angle=170):
+    """Rotations scattered around three orientations: 170 degrees about x, y and z."""
+    means = [_rotation(np.deg2rad(angle) * axis) for axis in np.eye(3)]
+    rng = np.random.default_rng(seed)
+    R, y = [], []
+    for c, M in enumerate(means):
+        for _ in range(n_per_class):
+            R.append(M @ _rotation(spread * rng.normal(size=3)))
+            y.append(c)
+    return np.array(R, dtype=np.float32), np.array(y, dtype=np.int32)
+
+
+def rotations():
+    from prosemble.core.manifolds import SO
+    from prosemble.models import GLVQ, RiemannianSRNG
+
+    def standardise(a, b):
+        mu, sd = a.mean(0), a.std(0) + 1e-8
+        return (a - mu) / sd, (b - mu) / sd, mu, sd
+
+    R_test, y_test = orientation_samples(200, seed=99)
+    flat = lambda A: A.reshape(len(A), -1)
+    quats = lambda A: np.array([_quaternion(r) for r in A])
+    model = None
+    for n in [10, 40]:
+        acc = {'quaternions': [], 'matrices': [], 'SO(3)': []}
+        orth_e, orth_r = [], []
+        for seed in range(5):
+            R, y = orientation_samples(n, seed=1000 * n + seed)
+            for key, f in [('quaternions', quats), ('matrices', flat)]:
+                a, b, mu, sd = standardise(f(R), f(R_test))
+                m = GLVQ(n_prototypes_per_class=1, max_iter=300, lr=0.05, random_seed=seed)
+                m.fit(jnp.asarray(a), jnp.asarray(y))
+                acc[key].append(np.mean(np.asarray(m.predict(jnp.asarray(b))) == y_test))
+                if key == 'matrices':
+                    W = (np.asarray(m.prototypes_) * sd + mu).reshape(-1, 3, 3)
+                    orth_e += [np.linalg.norm(w.T @ w - np.eye(3)) for w in W]
+            m = RiemannianSRNG(manifold=SO(3), n_prototypes_per_class=1, max_iter=300, lr=0.05,
+                               random_seed=seed).fit(jnp.asarray(flat(R)), jnp.asarray(y))
+            acc['SO(3)'].append(np.mean(np.asarray(m.predict(jnp.asarray(flat(R_test)))) == y_test))
+            orth_r += [np.linalg.norm(w.T @ w - np.eye(3)) for w in np.asarray(m.prototypes_).reshape(-1, 3, 3)]
+            if n == 40 and seed == 0:
+                model = m
+        print(f'  n={n}: ' + ', '.join(f'{k} {np.mean(v):.3f}±{np.std(v):.3f}' for k, v in acc.items())
+              + f'; |W^T W - I|: Euclidean {np.mean(orth_e):.2f} (max {np.max(orth_e):.2f}), Riemannian {np.max(orth_r):.1e}')
+
+    v = np.ones(3) / np.sqrt(3)
+    points = R_test @ v
+    W = np.asarray(model.prototypes_).reshape(-1, 3, 3)
+    q = quats(R_test)
+    for theme in THEMES:
+        t = _style(theme)
+        fig = plt.figure(figsize=(11, 4.8))
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
+        u, w_ = np.mgrid[0:2 * np.pi:40j, 0:np.pi:20j]
+        ax.plot_wireframe(np.cos(u) * np.sin(w_), np.sin(u) * np.sin(w_), np.cos(w_), color=t['grid'],
+                          linewidth=0.4, alpha=0.6)
+        for k in range(3):
+            pts = points[y_test == k]
+            ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], s=6, color=t['classes'][k], alpha=0.75, depthshade=False)
+        for k, Wk in enumerate(W):
+            p = Wk @ v
+            for j in range(3):
+                ax.quiver(*p, *(0.35 * Wk[:, j]), color=t['fg'], linewidth=1.6, arrow_length_ratio=0.25)
+            ax.scatter(*p, s=60, color=t['classes'][k], edgecolors=t['fg'], linewidths=1.2, depthshade=False)
+        _style_3d(ax, t)
+        ax.grid(False)
+        ax.view_init(elev=18, azim=35)
+        ax.set_title('Orientations and the learned prototypes')
+        b = fig.add_subplot(1, 2, 2)
+        for k in range(3):
+            sel = y_test == k
+            b.scatter(q[sel, 0], q[sel, k + 1], s=9, color=t['classes'][k], alpha=0.75, linewidths=0,
+                      label=f'class {k + 1}: 170° about {"xyz"[k]}')
+        b.axhline(0, color=t['grid'], lw=1)
+        b.set_xlabel('scalar part w (kept ≥ 0)')
+        b.set_ylabel('component along the rotation axis')
+        b.set_title('Quaternions split each class in two')
+        b.legend(loc='center right', fontsize=8.5)
+        fig.tight_layout(w_pad=3)
+        _save(fig, 'tutorial-rotations', theme)
+
+
+# ---------------------------------------------------- tutorial: hyperbolic space
+def tree_samples(per_node, seed, step=1.2, noise=1.0, branch=3, depth=4):
+    """Points around the nodes of a tree embedded in the Poincare disk.
+
+    Node of depth d sits at hyperbolic radius d * step, in the middle of its
+    parent's angular sector. The class of a node is its subtree at depth 2
+    (9 classes); nodes of depth 2 to 4 carry samples, drawn with hyperbolic
+    spread `noise` around the node by the exponential map.
+    """
+    import jax
+    from prosemble.core.manifolds import HyperbolicPoincare
+    nodes = []
+
+    def add(d, lo, hi, cls):
+        theta, r = (lo + hi) / 2, np.tanh(d * step / 2)
+        if d >= 2:
+            nodes.append((np.array([r * np.cos(theta), r * np.sin(theta)]), cls))
+        if d < depth:
+            w = (hi - lo) / branch
+            for i in range(branch):
+                add(d + 1, lo + i * w, lo + (i + 1) * w, cls if d >= 2 else cls * branch + i)
+
+    for c in range(branch):
+        add(1, c * 2 * np.pi / branch, (c + 1) * 2 * np.pi / branch, c)
+    exp = jax.jit(HyperbolicPoincare(2).exp_map)
+    rng = np.random.default_rng(seed)
+    X, y = [], []
+    for point, cls in nodes:
+        lam = 2 / (1 - point @ point)
+        for _ in range(per_node):
+            v = noise * rng.normal(size=2) / lam
+            X.append(np.asarray(exp(jnp.asarray(point, dtype=jnp.float32), jnp.asarray(v, dtype=jnp.float32))))
+            y.append(cls)
+    return np.array(X, dtype=np.float32), np.array(y, dtype=np.int32)
+
+
+def hyperbolic():
+    from prosemble.core.manifolds import HyperbolicPoincare
+    from prosemble.models import GLVQ, RiemannianSRNG
+
+    X_test, y_test = tree_samples(20, seed=99)
+    acc = {'GLVQ': [], 'RiemannianSRNG': []}
+    for seed in range(5):
+        X, y = tree_samples(6, seed=6000 + seed)
+        g = GLVQ(n_prototypes_per_class=1, max_iter=300, lr=0.05, random_seed=seed).fit(jnp.asarray(X), jnp.asarray(y))
+        h = RiemannianSRNG(manifold=HyperbolicPoincare(2), n_prototypes_per_class=1, max_iter=300, lr=0.05,
+                           random_seed=seed).fit(jnp.asarray(X), jnp.asarray(y))
+        acc['GLVQ'].append(np.mean(np.asarray(g.predict(jnp.asarray(X_test))) == y_test))
+        acc['RiemannianSRNG'].append(np.mean(np.asarray(h.predict(jnp.asarray(X_test))) == y_test))
+        if seed == 0:
+            models = {'GLVQ': g, 'RiemannianSRNG': h}
+    print('  ' + ', '.join(f'{k} {np.mean(v):.3f}±{np.std(v):.3f}' for k, v in acc.items()))
+
+    n = 400
+    g1 = np.linspace(-1, 1, n)
+    gx, gy = np.meshgrid(g1, g1)
+    inside = gx ** 2 + gy ** 2 < 0.995 ** 2
+    grid = jnp.asarray(np.c_[gx[inside], gy[inside]], dtype=jnp.float32)
+    palette_light = ['#4f46e5', '#0d9488', '#d97706', '#e11d48', '#7c3aed', '#0891b2', '#65a30d', '#db2777', '#ea580c']
+    palette_dark = ['#818cf8', '#2dd4bf', '#fbbf24', '#fb7185', '#a78bfa', '#22d3ee', '#a3e635', '#f472b6', '#fb923c']
+    for theme in THEMES:
+        t = _style(theme)
+        pal = palette_light if theme == 'light' else palette_dark
+        fig, axes = plt.subplots(1, 2, figsize=(10.5, 5.0))
+        for ax, (name, model) in zip(axes, models.items()):
+            labels = np.full(gx.shape, -1)
+            labels[inside] = np.asarray(model.predict(grid))
+            bg = np.array(to_rgb(t['bg']))
+            img = np.zeros(gx.shape + (4,))
+            for k in range(9):
+                img[labels == k, :3] = 0.8 * bg + 0.2 * np.array(to_rgb(pal[k]))
+                img[labels == k, 3] = 1.0
+            ax.imshow(img, extent=(-1, 1, -1, 1), origin='lower')
+            ax.contour(gx, gy, np.where(inside, labels, np.nan), levels=np.arange(9) + 0.5,
+                       colors=[t['muted']], linewidths=0.7)
+            for k in range(9):
+                pts = X_test[y_test == k][::3]
+                ax.scatter(pts[:, 0], pts[:, 1], s=4, color=pal[k], alpha=0.8, linewidths=0)
+            P, L = np.asarray(model.prototypes_), np.asarray(model.prototype_labels_)
+            ax.scatter(P[:, 0], P[:, 1], s=90, c=[pal[k] for k in L], edgecolors=t['fg'], linewidths=1.4, zorder=5)
+            ax.add_patch(plt.Circle((0, 0), 1, fill=False, color=t['muted'], lw=1.2))
+            ax.set_xlim(-1.03, 1.03)
+            ax.set_ylim(-1.03, 1.03)
+            ax.set_aspect('equal')
+            _bare(ax)
+            ax.set_title(f'{name}, test accuracy {np.mean(acc[name]):.3f}')
+        fig.tight_layout(w_pad=2)
+        _save(fig, 'tutorial-hyperbolic', theme)
+
+
 # ------------------------------------------------- gallery thumbnails (crops)
 def thumbnails():
     """One panel of each multi-panel tutorial figure, for the gallery."""
     from PIL import Image
 
     crops = {'tutorial-wine': (0.545, 1.0), 'tutorial-calibration': (0.0, 0.5),
-             'tutorial-topology': (0.0, 0.5), 'tutorial-timeseries': (0.0, 0.265)}
+             'tutorial-topology': (0.0, 0.5), 'tutorial-timeseries': (0.0, 0.265),
+             'tutorial-rotations': (0.03, 0.42), 'tutorial-subspaces': (0.0, 0.42),
+             'tutorial-hyperbolic': (0.5, 1.0)}
     for name, (a, b) in crops.items():
         for theme in THEMES:
             img = Image.open(OUT / f'{name}-{theme}.png')
@@ -539,7 +839,8 @@ def thumbnails():
 
 FIGURES = {'hero': hero, 'wine': wine, 'calibration': calibration, 'anomaly': anomaly,
            'clustering': clustering, 'topology': topology, 'timeseries': timeseries,
-           'covariance': covariance, 'thumbnails': thumbnails}
+           'covariance': covariance, 'subspaces': subspaces, 'rotations': rotations,
+           'hyperbolic': hyperbolic, 'thumbnails': thumbnails}
 
 if __name__ == '__main__':
     for name in sys.argv[1:] or FIGURES:

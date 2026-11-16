@@ -87,6 +87,19 @@ code.
 
       Prototypes that are series: classify patterns that occur at different times.
 
+   .. grid-item-card:: Classifying covariance matrices
+      :link: covariance_matrices
+      :link-type: doc
+      :class-card: pr-gallery-card
+
+      .. image:: /_static/figures/tutorial-spd-curve-light.png
+         :class: only-light
+
+      .. image:: /_static/figures/tutorial-spd-curve-dark.png
+         :class: only-dark
+
+      Prototypes on the manifold of SPD matrices, against treating the matrices as vectors.
+
 .. toctree::
    :hidden:
 
@@ -96,6 +109,7 @@ code.
    clustering
    topology
    time_series
+   covariance_matrices
 
 More examples
 -------------

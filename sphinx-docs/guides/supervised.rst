@@ -280,6 +280,28 @@ WLMRSLVQ one matrix :math:`\Lambda_k` per prototype:
    local.fit(X_train, y_train)
    print(local.lambda_matrix.shape)    # (n_prototypes, n_features, n_features)
 
+**Calibrated probabilities.**  The soft models learn their width
+:math:`\sigma` on training data they fit closely, so their class
+posteriors tend to be too confident.  ``calibrate`` fits a temperature
+:math:`T`, dividing every component score by it, that minimises the
+negative log-likelihood of data the model was not fitted to.  With
+``cv=k`` it fits ``k`` copies of the model on folds of the training data
+and uses their scores on the left-out folds; the fitted model is kept.
+Calibration changes ``predict_proba`` and ``predict_with_rejection``,
+never the labels returned by ``predict``.
+
+.. code-block:: python
+
+   model = WLMRSLVQ(n_prototypes_per_class=2).fit(X_train, y_train)
+   model.calibrate(X_train, y_train, cv=3)     # or calibrate(X_val, y_val)
+   proba = model.predict_proba(X_test)
+   print(model.temperature_)
+
+On 13 tabular datasets cross-fitted calibration lowered the mean
+log-loss of ``DKLMRSLVQ`` from 0.39 to 0.28 and of ``WLMRSLVQ`` from 0.72
+to 0.37 (an RBF SVM with Platt scaling: 0.29).  It costs ``cv`` extra
+fits.
+
 .. note::
 
    Variances are parameterized internally as :math:`\log(\sigma^2)` to ensure

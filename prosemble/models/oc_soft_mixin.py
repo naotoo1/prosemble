@@ -428,6 +428,12 @@ class OneClassSoftMixin:
         """Target-likeness of each sample; same as :meth:`decision_function`."""
         return self.decision_function(X)
 
+    def calibrate(self, X, y, cv=None):
+        """Not available: the one-class score is set by ``nu``, not a temperature."""
+        raise NotImplementedError(
+            f"{type(self).__name__} has no class posteriors to calibrate; "
+            "set nu to choose the decision boundary.")
+
     def predict_with_reject(self, X, upper=0.5, lower=None, reject_label=-1):
         """Predict with a reject option for uncertain samples.
 

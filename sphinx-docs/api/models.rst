@@ -405,15 +405,15 @@ Supervised
    :undoc-members:
 
 .. autoclass:: prosemble.models.DKRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, kernel_bandwidths
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, kernel_bandwidths
    :undoc-members:
 
 .. autoclass:: prosemble.models.DKMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, kernel_bandwidths, omega_matrix, lambda_matrix
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, kernel_bandwidths, omega_matrix, lambda_matrix
    :undoc-members:
 
 .. autoclass:: prosemble.models.DKLMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, kernel_bandwidths, omega_matrix, lambda_matrix
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, kernel_bandwidths, omega_matrix, lambda_matrix
    :undoc-members:
 
 Supervised (Neural Gas)
@@ -481,15 +481,15 @@ Wasserstein LVQ
    :undoc-members:
 
 .. autoclass:: prosemble.models.WRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate
    :undoc-members:
 
 .. autoclass:: prosemble.models.WMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, omega_matrix, lambda_matrix
    :undoc-members:
 
 .. autoclass:: prosemble.models.WLMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, omega_matrix, lambda_matrix
    :undoc-members:
 
 Riemannian Models
@@ -500,11 +500,11 @@ Riemannian Models
    :undoc-members:
 
 .. autoclass:: prosemble.models.RiemannianRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate
    :undoc-members:
 
 .. autoclass:: prosemble.models.RiemannianMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, omega_matrix, lambda_matrix
    :undoc-members:
 
 .. autoclass:: prosemble.models.RiemannianSMNG

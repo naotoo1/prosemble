@@ -1,609 +1,334 @@
-Models API Reference
-====================
+Models
+======
 
-All models are importable from ``prosemble.models``.
+.. currentmodule:: prosemble.models
 
-Supervised LVQ
+All models are importable from :mod:`prosemble.models`. Each section links
+to the user guide page that explains the family.
+
+Classification
 --------------
 
-.. autoclass:: prosemble.models.GLVQ
-   :members: fit, predict, predict_proba, save, load
-   :undoc-members:
+Prototype classifiers
+~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.GRLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/classification/lvq`
 
-.. autoclass:: prosemble.models.GMLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.LGMLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+   GLVQ
+   GLVQ1
+   GLVQ21
+   CELVQ
+   LVQ1
+   LVQ21
+   MedianLVQ
 
-.. autoclass:: prosemble.models.GTLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+Metric learning
+~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.CELVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/classification/metric_learning`
 
-.. autoclass:: prosemble.models.LVQ1
-   :members: fit, predict
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.LVQ21
-   :members: fit, predict
-   :undoc-members:
+   GRLVQ
+   GMLVQ
+   LGMLVQ
+   GTLVQ
 
-.. autoclass:: prosemble.models.MedianLVQ
-   :members: fit, predict
-   :undoc-members:
+Probabilistic classifiers
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.SLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/classification/probabilistic`
 
-.. autoclass:: prosemble.models.RSLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.MRSLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+   SLVQ
+   RSLVQ
+   MRSLVQ
+   LMRSLVQ
 
-.. autoclass:: prosemble.models.LMRSLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+Neural Gas classifiers
+~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.RSLVQ_NG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/classification/neural_gas`
 
-.. autoclass:: prosemble.models.MRSLVQ_NG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.LMRSLVQ_NG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+   SNG
+   SRNG
+   SMNG
+   SCMNG
+   SLNG
+   STNG
+   CELVQ_NG
+   MCELVQ_NG
+   LCELVQ_NG
+   TCELVQ_NG
+   RSLVQ_NG
+   MRSLVQ_NG
+   LMRSLVQ_NG
 
-.. autoclass:: prosemble.models.GLVQ1
-   :members: fit, predict
-   :undoc-members:
+Distributional prototypes
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.GLVQ21
-   :members: fit, predict
-   :undoc-members:
+User guide: :doc:`/user_guide/classification/wasserstein`
 
-Deep and Siamese Variants
---------------------------
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.LVQMLN
-   :members: fit, predict, predict_proba
-   :undoc-members:
+   WGLVQ
+   WGRLVQ
+   WGMLVQ
+   WRSLVQ
+   WMRSLVQ
+   WLMRSLVQ
 
-.. autoclass:: prosemble.models.PLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+Deep, Siamese and image models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.SiameseGLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/classification/deep`
 
-.. autoclass:: prosemble.models.SiameseGMLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.SiameseGTLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+   LVQMLN
+   PLVQ
+   SiameseGLVQ
+   SiameseGMLVQ
+   SiameseGTLVQ
+   ImageGLVQ
+   ImageGMLVQ
+   ImageGTLVQ
+   CBC
+   ImageCBC
 
-Image LVQ
----------
+Differentiating kernels
+~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.ImageGLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/kernels`
 
-.. autoclass:: prosemble.models.ImageGMLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.ImageGTLVQ
-   :members: fit, predict, predict_proba
-   :undoc-members:
+   DKGLVQ
+   DKGRLVQ
+   DKGMLVQ
+   DKRSLVQ
+   DKMRSLVQ
+   DKLMRSLVQ
+   DKGLVQ_NG
+   DKGRLVQ_NG
+   DKGMLVQ_NG
 
-Classification-By-Components
------------------------------
+Riemannian manifolds
+~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.CBC
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/riemannian`
 
-.. autoclass:: prosemble.models.ImageCBC
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-Supervised Neural Gas
----------------------
+   RiemannianSRNG
+   RiemannianSMNG
+   RiemannianSLNG
+   RiemannianSTNG
+   RiemannianRSLVQ
+   RiemannianMRSLVQ
+   RiemannianDKGLVQ
+   RiemannianDKGRLVQ
+   RiemannianDKGMLVQ
+   RiemannianDKSMNG
+   RiemannianDKSLNG
+   RiemannianDKSTNG
+   RiemannianDKRSMNG
+   RiemannianDKMSMNG
+   RiemannianDKRSLNG
+   RiemannianDKMSLNG
+   RiemannianDKRSTNG
+   RiemannianDKMSTNG
 
-.. autoclass:: prosemble.models.SNG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+Time series
+~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.SRNG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/time_series`
 
-.. autoclass:: prosemble.models.SMNG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.SCMNG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+   SoftDTWRSLVQ
 
-.. autoclass:: prosemble.models.SLNG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+Nearest neighbours
+~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.STNG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-Cross-Entropy Neural Gas
-^^^^^^^^^^^^^^^^^^^^^^^^
+   KNN
 
-.. autoclass:: prosemble.models.CELVQ_NG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+One-class classification
+------------------------
 
-.. autoclass:: prosemble.models.MCELVQ_NG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+User guide: :doc:`/user_guide/one_class`
 
-.. autoclass:: prosemble.models.LCELVQ_NG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+One-class GLVQ
+~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.TCELVQ_NG
-   :members: fit, predict, predict_proba
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-One-Class GLVQ
---------------
+   OCGLVQ
+   OCGRLVQ
+   OCGMLVQ
+   OCLGMLVQ
+   OCGTLVQ
+   OCGLVQ_NG
+   OCGRLVQ_NG
+   OCGMLVQ_NG
+   OCLGMLVQ_NG
+   OCGTLVQ_NG
 
-.. autoclass:: prosemble.models.OCGLVQ
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
+One-class RSLVQ
+~~~~~~~~~~~~~~~
 
-.. autoclass:: prosemble.models.OCGRLVQ
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
 
-.. autoclass:: prosemble.models.OCGMLVQ
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCLGMLVQ
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCGTLVQ
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-One-Class GLVQ with Neural Gas
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: prosemble.models.OCGLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCGRLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCGMLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCLGMLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCGTLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-One-Class RSLVQ
----------------
-
-.. autoclass:: prosemble.models.OCRSLVQ
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCMRSLVQ
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCLMRSLVQ
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-One-Class RSLVQ with Neural Gas
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: prosemble.models.OCRSLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCMRSLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCLMRSLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
+   OCRSLVQ
+   OCMRSLVQ
+   OCLMRSLVQ
+   OCRSLVQ_NG
+   OCMRSLVQ_NG
+   OCLMRSLVQ_NG
 
 SVQ-OCC
--------
-
-.. autoclass:: prosemble.models.SVQOCC
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.SVQOCC_R
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.SVQOCC_M
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.SVQOCC_LM
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.SVQOCC_T
-   :members: fit, predict, decision_function, predict_with_reject
-   :undoc-members:
-
-Fuzzy Clustering
-----------------
-
-.. autoclass:: prosemble.models.FCM
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-.. autoclass:: prosemble.models.PCM
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-.. autoclass:: prosemble.models.FPCM
-   :members: fit, predict, predict_proba, get_typicality
-   :undoc-members:
-
-.. autoclass:: prosemble.models.PFCM
-   :members: fit, predict, predict_proba, predict_typicality
-   :undoc-members:
-
-.. autoclass:: prosemble.models.AFCM
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-.. autoclass:: prosemble.models.HCM
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.IPCM
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-.. autoclass:: prosemble.models.IPCM2
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-Kernel Clustering
-^^^^^^^^^^^^^^^^^
-
-.. autoclass:: prosemble.models.KFCM
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-.. autoclass:: prosemble.models.KPCM
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-.. autoclass:: prosemble.models.KFPCM
-   :members: fit, predict, predict_proba, get_typicality
-   :undoc-members:
-
-.. autoclass:: prosemble.models.KPFCM
-   :members: fit, predict, predict_proba, get_typicality
-   :undoc-members:
-
-.. autoclass:: prosemble.models.KAFCM
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-.. autoclass:: prosemble.models.KIPCM
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-.. autoclass:: prosemble.models.KIPCM2
-   :members: fit, predict, predict_proba
-   :undoc-members:
-
-One-Class Contrastive Soft Models
----------------------------------
-
-.. autoclass:: prosemble.models.oc_soft_mixin.OneClassSoftMixin
-   :members: fit, predict, decision_function, score_samples, predict_proba, predict_with_reject
-
-.. autoclass:: prosemble.models.OCDKRSLVQ
-   :members: fit, predict, decision_function, score_samples, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCWRSLVQ
-   :members: fit, predict, decision_function, score_samples, predict_with_reject
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCRiemannianRSLVQ
-   :members: fit, predict, decision_function, score_samples, predict_with_reject
-   :undoc-members:
-
-One-Class Differentiating Kernel
----------------------------------
-
-.. autoclass:: prosemble.models.OCDKGLVQ
-   :members: fit, predict, decision_function, predict_with_reject, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCDKGRLVQ
-   :members: fit, predict, decision_function, predict_with_reject, relevance_profile, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCDKGMLVQ
-   :members: fit, predict, decision_function, predict_with_reject, omega_hat_matrix, lambda_hat_matrix
-   :undoc-members:
-
-One-Class Differentiating Kernel (Neural Gas)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: prosemble.models.OCDKGLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCDKGRLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject, relevance_profile, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.OCDKGMLVQ_NG
-   :members: fit, predict, decision_function, predict_with_reject, omega_hat_matrix, lambda_hat_matrix
-   :undoc-members:
-
-Differentiating Kernel Models
-------------------------------
-
-Supervised
-^^^^^^^^^^
-
-.. autoclass:: prosemble.models.DKGLVQ
-   :members: fit, predict, predict_proba, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKGRLVQ
-   :members: fit, predict, predict_proba, relevance_profile, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKGMLVQ
-   :members: fit, predict, predict_proba, omega_hat_matrix, lambda_hat_matrix
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, kernel_bandwidths, omega_matrix, lambda_matrix
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKLMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, kernel_bandwidths, omega_matrix, lambda_matrix
-   :undoc-members:
-
-Supervised (Neural Gas)
-^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: prosemble.models.DKGLVQ_NG
-   :members: fit, predict, predict_proba, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKGRLVQ_NG
-   :members: fit, predict, predict_proba, relevance_profile, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKGMLVQ_NG
-   :members: fit, predict, predict_proba, omega_hat_matrix, lambda_hat_matrix
-   :undoc-members:
-
-Unsupervised
-^^^^^^^^^^^^
-
-.. autoclass:: prosemble.models.DKNeuralGas
-   :members: fit, predict, transform
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKKohonenSOM
-   :members: fit, predict, bmu_map
-   :undoc-members:
-
-.. autoclass:: prosemble.models.DKHeskesSOM
-   :members: fit, predict, bmu_map
-   :undoc-members:
-
-Topology-Preserving Models
---------------------------
-
-.. autoclass:: prosemble.models.NeuralGas
-   :members: fit, predict, transform
-   :undoc-members:
-
-.. autoclass:: prosemble.models.GrowingNeuralGas
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.KohonenSOM
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.HeskesSOM
-   :members: fit, predict
-   :undoc-members:
-
-Wasserstein LVQ
----------------
-
-.. autoclass:: prosemble.models.WGLVQ
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.WGMLVQ
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.WGRLVQ
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.WRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate
-   :undoc-members:
-
-.. autoclass:: prosemble.models.WMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, omega_matrix, lambda_matrix
-   :undoc-members:
-
-.. autoclass:: prosemble.models.WLMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, omega_matrix, lambda_matrix
-   :undoc-members:
-
-Time Series
------------
-
-.. autoclass:: prosemble.models.SoftDTWRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, divergences
-   :undoc-members:
-
-Riemannian Models
------------------
-
-.. autoclass:: prosemble.models.RiemannianSRNG
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, omega_matrix, lambda_matrix
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianSMNG
-   :members: fit, predict, relevance_matrix
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianSLNG
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianSTNG
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianNeuralGas
-   :members: fit, predict, transform
-   :undoc-members:
-
-Riemannian Differentiating Kernel
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: prosemble.models.RiemannianDKGLVQ
-   :members: fit, predict, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKGRLVQ
-   :members: fit, predict, kernel_bandwidths, relevance_profile
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKGMLVQ
-   :members: fit, predict, omega_hat_matrix, lambda_hat_matrix
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKSMNG
-   :members: fit, predict, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKSLNG
-   :members: fit, predict, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKSTNG
-   :members: fit, predict, kernel_bandwidths
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKRSMNG
-   :members: fit, predict, kernel_bandwidths, relevance_profile
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKMSMNG
-   :members: fit, predict, omega_hat_matrix, lambda_hat_matrix
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKRSLNG
-   :members: fit, predict, kernel_bandwidths, relevance_profile
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKMSLNG
-   :members: fit, predict, omega_hat_matrix, lambda_hat_matrix
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKRSTNG
-   :members: fit, predict, kernel_bandwidths, relevance_profile
-   :undoc-members:
-
-.. autoclass:: prosemble.models.RiemannianDKMSTNG
-   :members: fit, predict, omega_hat_matrix, lambda_hat_matrix
-   :undoc-members:
-
-Utility Models
---------------
-
-.. autoclass:: prosemble.models.KMeansPlusPlus
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.KNN
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.NPC
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.Kmeans
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.SOM
-   :members: fit, predict
-   :undoc-members:
-
-.. autoclass:: prosemble.models.BGPC
-   :members: fit, predict
-   :undoc-members:
+~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
+
+   SVQOCC
+   SVQOCC_R
+   SVQOCC_M
+   SVQOCC_LM
+   SVQOCC_T
+
+Contrastive soft models
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
+
+   OCDKRSLVQ
+   OCWRSLVQ
+   OCRiemannianRSLVQ
+
+Differentiating kernels
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
+
+   OCDKGLVQ
+   OCDKGRLVQ
+   OCDKGMLVQ
+   OCDKGLVQ_NG
+   OCDKGRLVQ_NG
+   OCDKGMLVQ_NG
+
+Clustering
+----------
+
+User guide: :doc:`/user_guide/clustering`
+
+Fuzzy and possibilistic c-means
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
+
+   FCM
+   PCM
+   FPCM
+   PFCM
+   AFCM
+   IPCM
+   IPCM2
+   NPC
+   BGPC
+
+Kernel c-means
+~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
+
+   KFCM
+   KPCM
+   KFPCM
+   KPFCM
+   KAFCM
+   KIPCM
+   KIPCM2
+
+Hard clustering
+~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
+
+   HCM
+   Kmeans
+   KMeansPlusPlus
+
+Topology-preserving maps
+------------------------
+
+User guide: :doc:`/user_guide/topology`
+
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
+
+   NeuralGas
+   GrowingNeuralGas
+   KohonenSOM
+   HeskesSOM
+   SOM
+   RiemannianNeuralGas
+   DKNeuralGas
+   DKKohonenSOM
+   DKHeskesSOM
+
+Base classes
+------------
+
+.. autosummary::
+   :toctree: generated/
+   :template: class.rst
+
+   SupervisedPrototypeModel
+   UnsupervisedPrototypeModel
+   FuzzyClusteringBase

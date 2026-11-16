@@ -1,0 +1,188 @@
+/* Prosemble documentation theme adjustments (pydata-sphinx-theme). */
+
+html[data-theme="light"] {
+  --pst-color-primary: #4338ca;
+  --pst-color-primary-highlight: #3730a3;
+  --pst-color-secondary: #0d9488;
+  --pst-color-secondary-highlight: #0f766e;
+  --pst-color-accent: #d97706;
+  --pr-hero-from: #4338ca;
+  --pr-hero-to: #0d9488;
+  --pr-card-border: #e2e8f0;
+  --pr-muted: #475569;
+}
+
+html[data-theme="dark"] {
+  --pst-color-primary: #a5b4fc;
+  --pst-color-primary-highlight: #c7d2fe;
+  --pst-color-secondary: #5eead4;
+  --pst-color-secondary-highlight: #99f6e4;
+  --pst-color-accent: #fbbf24;
+  --pr-hero-from: #a5b4fc;
+  --pr-hero-to: #5eead4;
+  --pr-card-border: #334155;
+  --pr-muted: #cbd5e1;
+}
+
+/* ---- Landing page ---------------------------------------------------------- */
+
+.pr-hero {
+  padding: 2.5rem 0 1.5rem;
+  text-align: center;
+}
+
+.pr-hero h1 {
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.4rem;
+  background: linear-gradient(90deg, var(--pr-hero-from), var(--pr-hero-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.pr-hero .pr-tagline {
+  font-size: 1.45rem;
+  font-weight: 600;
+  margin: 0 auto 0.8rem;
+  max-width: 40rem;
+}
+
+.pr-hero .pr-lead {
+  font-size: 1.05rem;
+  color: var(--pr-muted);
+  margin: 0 auto 1.6rem;
+  max-width: 44rem;
+  line-height: 1.6;
+}
+
+.pr-hero .pr-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.pr-hero .pr-buttons a {
+  border-radius: 0.5rem;
+  font-weight: 600;
+  padding: 0.6rem 1.3rem;
+  text-decoration: none;
+  border: 1px solid var(--pst-color-primary);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.pr-hero .pr-buttons a:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(67, 56, 202, 0.25);
+}
+
+.pr-hero .pr-buttons a.pr-primary {
+  background: var(--pst-color-primary);
+  color: var(--pst-color-background);
+}
+
+.pr-hero .pr-buttons a.pr-secondary {
+  color: var(--pst-color-primary);
+}
+
+.pr-install {
+  margin: 1.4rem auto 0;
+  max-width: 22rem;
+}
+
+/* The landing page uses the full width of the content area. */
+.bd-main .bd-content .bd-article-container:has(.pr-hero) {
+  max-width: 78rem;
+}
+
+.pr-hero .pr-tagline {
+  max-width: 48rem;
+}
+
+section.pr-section-title {
+  margin-top: 3rem;
+}
+
+section.pr-section-title > h1,
+section.pr-section-title > h2 {
+  text-align: center;
+  font-size: 1.9rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.4rem;
+}
+
+.pr-showcase {
+  margin-top: 1.5rem;
+  align-items: center;
+}
+
+.pr-showcase div.highlight pre {
+  font-size: 0.86rem;
+}
+
+/* A figure shown in only one colour mode. */
+html[data-theme="light"] .only-dark,
+html[data-theme="dark"] .only-light {
+  display: none !important;
+}
+
+/* ---- Cards ------------------------------------------------------------------ */
+
+.sd-card {
+  border-color: var(--pr-card-border) !important;
+  border-radius: 0.75rem !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sd-card.sd-card-hover:hover,
+a.sd-card:hover,
+.sd-card:has(a.sd-stretched-link):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12) !important;
+}
+
+.sd-card .sd-card-title {
+  font-weight: 700;
+}
+
+.sd-card .sd-card-title .sd-octicon {
+  color: var(--pst-color-primary);
+  margin-right: 0.35rem;
+}
+
+.pr-feature .sd-card-body p {
+  color: var(--pr-muted);
+  margin-bottom: 0;
+}
+
+/* ---- Content ----------------------------------------------------------------- */
+
+.bd-article h1 {
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+figure.pr-figure img {
+  border-radius: 0.5rem;
+}
+
+/* Summary tables in the API reference. */
+table.autosummary td:first-child {
+  white-space: nowrap;
+}
+
+/* Keep long tables readable. */
+.bd-article table.docutils {
+  font-size: 0.93rem;
+}
+
+/* Tutorial gallery: thumbnails of equal height. */
+.pr-gallery-card .sd-card-body img {
+  width: 100%;
+  height: 160px;
+  object-fit: contain;
+  margin-bottom: 0.6rem;
+}

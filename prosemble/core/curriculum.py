@@ -5,8 +5,8 @@ for LVQ models. Samples are presented in order of difficulty — easy
 samples first, hard samples later.
 
 For LVQ, sample difficulty is measured by the absolute value of the
-mu-ratio: |mu(x)| close to 0 means the sample is on the decision
-boundary (hard), while |mu(x)| >> 0 means it's far from the boundary
+mu-ratio: ``|mu(x)|`` close to 0 means the sample is on the decision
+boundary (hard), while ``|mu(x)| >> 0`` means it is far from the boundary
 (easy).
 
 Usage
@@ -37,14 +37,14 @@ def curriculum_weights(per_sample_loss, threshold, mode='hard'):
     threshold : float
         Difficulty threshold lambda_t. Samples with loss below this
         threshold are included. Increases over training.
-    mode : str, {'hard', 'soft', 'linear'}
+    mode : {'hard', 'soft', 'linear'}, default='hard'
         Weight assignment mode:
-        - 'hard': binary weights (0 or 1). Sample is either in or out.
-        - 'soft': smooth exponential weighting.
-          w_i = exp(-loss_i / threshold) if loss_i > threshold, else 1.
-        - 'linear': linear ramp-down.
-          w_i = max(0, 1 - (loss_i - threshold) / threshold).
-        Default: 'hard'.
+
+        - ``'hard'``: binary weights (0 or 1); a sample is either in or out.
+        - ``'soft'``: smooth exponential weighting,
+          ``w_i = exp(-loss_i / threshold)`` if ``loss_i > threshold``, else 1.
+        - ``'linear'``: linear ramp-down,
+          ``w_i = max(0, 1 - (loss_i - threshold) / threshold)``.
 
     Returns
     -------

@@ -47,18 +47,8 @@ Multi-Device Data Parallelism
 For large datasets, prosemble supports data-parallel training across
 several GPUs or TPUs with JAX's sharding API.
 
-.. note::
-
-   ``devices`` and ``gradient_checkpointing`` are currently accepted by
-   :class:`~prosemble.models.GLVQ`, :class:`~prosemble.models.GLVQ1`,
-   :class:`~prosemble.models.GLVQ21`, :class:`~prosemble.models.CELVQ`,
-   :class:`~prosemble.models.LVQ1`, :class:`~prosemble.models.LVQ21`,
-   :class:`~prosemble.models.MedianLVQ`, :class:`~prosemble.models.SLVQ`,
-   :class:`~prosemble.models.RSLVQ`, the differentiating-kernel models
-   :class:`~prosemble.models.DKGLVQ`, :class:`~prosemble.models.DKGRLVQ` and
-   :class:`~prosemble.models.DKGMLVQ`, the one-class Neural Gas models and
-   the one-class contrastive soft models. The other models, including the
-   image and Siamese models, do not accept them yet.
+All supervised models accept ``devices``, including the image and Siamese
+models, whose convolutional or MLP backbones gain the most from it.
 
 
 .. code-block:: python
@@ -161,5 +151,5 @@ When ``gradient_checkpointing=True``:
 - Results are numerically identical to standard training
 
 For a shallow loss, such as GLVQ with the Euclidean distance, it saves
-little. See the note under :ref:`multi-device` for the models that accept
-this option.
+little; it pays off for the image and Siamese models with deep
+backbones. All supervised models accept it.

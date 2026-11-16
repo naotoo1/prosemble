@@ -918,6 +918,23 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         # If current loss hasn't improved over the best in the patience window
         return loss_history[-1] >= best_recent - self.epsilon
 
+    def _store_results(self, params, proto_labels, loss_history, n_iter, **kwargs):
+        """Gather the parameters onto one device, then store the fitted attributes.
+
+        After multi-device training the parameters are replicated across the
+        mesh. ``_extract_results`` and its overrides in subclasses read learned
+        quantities (metric matrices, widths, thresholds) from ``params``, so
+        they must receive single-device arrays; otherwise prediction fails with
+        incompatible devices.
+        """
+        if self._mesh is not None:
+            from prosemble.core.distributed import unshard_params
+            params = unshard_params(params)
+            proto_labels = jax.device_put(proto_labels, jax.devices()[0])
+            if kwargs.get('best_params') is not None:
+                kwargs['best_params'] = unshard_params(kwargs['best_params'])
+        self._extract_results(params, proto_labels, loss_history, n_iter, **kwargs)
+
     def _extract_results(self, params, proto_labels, loss_history, n_iter,
                          opt_state=None, **kwargs):
         """Store final results as fitted attributes."""
@@ -1109,7 +1126,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         params = self._post_update(params)
 
         # Store updated params
-        self._extract_results(
+        self._store_results(
             params, proto_labels, [float(loss)], self.n_iter_ + 1,
             opt_state=self._opt_state,
         )
@@ -1270,7 +1287,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         has_any_converged = jnp.any(converged_mask)
         n_iter = jnp.where(has_any_converged, first_converged + 2, self.max_iter)
 
-        self._extract_results(
+        self._store_results(
             final_state.params, proto_labels,
             loss_history.tolist(), int(n_iter),
             opt_state=final_state.opt_state,
@@ -1334,7 +1351,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         if ema_params is not None and not (self.restore_best and best_params is not None):
             final_params = ema_params
 
-        self._extract_results(
+        self._store_results(
             final_params, proto_labels, loss_history, i + 1,
             opt_state=opt_state,
             val_loss_history=val_loss_history or None,
@@ -1437,7 +1454,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         has_any = jnp.any(converged_mask)
         n_iter = jnp.where(has_any, first_converged + 2, self.max_iter)
 
-        self._extract_results(
+        self._store_results(
             final_state.params, proto_labels,
             loss_history.tolist(), int(n_iter),
             opt_state=final_state.opt_state,
@@ -1517,7 +1534,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         if ema_params is not None and not (self.restore_best and best_params is not None):
             final_params = ema_params
 
-        self._extract_results(
+        self._store_results(
             final_params, proto_labels, loss_history, epoch + 1,
             opt_state=opt_state,
             val_loss_history=val_loss_history or None,
@@ -1589,7 +1606,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         if ema_params is not None and not (self.restore_best and best_params is not None):
             final_params = ema_params
 
-        self._extract_results(
+        self._store_results(
             final_params, proto_labels, loss_history, i + 1,
             opt_state=opt_state,
             val_loss_history=val_loss_history or None,

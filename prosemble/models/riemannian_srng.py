@@ -549,6 +549,15 @@ class RiemannianSRNG(SupervisedPrototypeModel):
         Enable lookahead optimizer wrapper. Default: None.
     mixed_precision : str or None, optional
         Compute dtype for mixed precision training. Default: None.
+    gradient_checkpointing : bool, optional
+        If True, applies ``jax.checkpoint`` (remat) to the loss function.
+        Trades compute for memory by re-computing forward activations during
+        the backward pass. Default: False.
+    devices : list of jax.Device or None, optional
+        Devices for data-parallel training. Data is sharded across devices
+        along the batch dimension; params and optimizer state are replicated.
+        When using mini-batch training, ``batch_size`` must be divisible by
+        the number of devices. Default: None (single-device).
     """
 
     def __init__(self, manifold: Manifold, beta=10.0, gamma_init=None, gamma_final=0.01,
@@ -562,7 +571,8 @@ class RiemannianSRNG(SupervisedPrototypeModel):
                  restore_best=False, class_weight=None,
                  gradient_accumulation_steps=None, ema_decay=None,
                  freeze_params=None, lookahead=None,
-                 mixed_precision=None):
+                 mixed_precision=None,
+                 gradient_checkpointing=False, devices=None):
         super().__init__(
             n_prototypes_per_class=n_prototypes_per_class,
             max_iter=max_iter, lr=lr, epsilon=epsilon,
@@ -577,6 +587,7 @@ class RiemannianSRNG(SupervisedPrototypeModel):
             gradient_accumulation_steps=gradient_accumulation_steps,
             ema_decay=ema_decay, freeze_params=freeze_params,
             lookahead=lookahead, mixed_precision=mixed_precision,
+            gradient_checkpointing=gradient_checkpointing, devices=devices,
         )
         self.manifold = manifold
         self.beta = beta

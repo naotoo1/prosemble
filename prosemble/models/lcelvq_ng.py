@@ -157,6 +157,15 @@ class LCELVQ_NG(CELVQNGMixin, CELVQ):
         Master weights stay in float32; forward/backward pass runs in lower
         precision for ~2x speed and ~half memory on GPU. Float16 uses static
         loss scaling to prevent gradient underflow. Default: None (disabled).
+    gradient_checkpointing : bool, optional
+        If True, applies ``jax.checkpoint`` (remat) to the loss function.
+        Trades compute for memory by re-computing forward activations during
+        the backward pass. Default: False.
+    devices : list of jax.Device or None, optional
+        Devices for data-parallel training. Data is sharded across devices
+        along the batch dimension; params and optimizer state are replicated.
+        When using mini-batch training, ``batch_size`` must be divisible by
+        the number of devices. Default: None (single-device).
     """
 
     def __init__(self, latent_dim=None, gamma_init=None,
@@ -170,7 +179,8 @@ class LCELVQ_NG(CELVQNGMixin, CELVQ):
                  restore_best=False, class_weight=None,
                  gradient_accumulation_steps=None, ema_decay=None,
                  freeze_params=None, lookahead=None,
-                 mixed_precision=None):
+                 mixed_precision=None,
+                 gradient_checkpointing=False, devices=None):
         super().__init__(
             gamma_init=gamma_init, gamma_final=gamma_final,
             gamma_decay=gamma_decay,
@@ -187,6 +197,7 @@ class LCELVQ_NG(CELVQNGMixin, CELVQ):
             gradient_accumulation_steps=gradient_accumulation_steps,
             ema_decay=ema_decay, freeze_params=freeze_params,
             lookahead=lookahead, mixed_precision=mixed_precision,
+            gradient_checkpointing=gradient_checkpointing, devices=devices,
         )
         self.latent_dim = latent_dim
         self.omegas_ = None

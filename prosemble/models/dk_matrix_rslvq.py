@@ -104,7 +104,8 @@ class DKMRSLVQ(SoftMetricMixin, DKRSLVQ):
                  restore_best=False, class_weight=None,
                  gradient_accumulation_steps=None, ema_decay=None,
                  freeze_params=None, lookahead=None,
-                 mixed_precision=None):
+                 mixed_precision=None,
+                 gradient_checkpointing=False, devices=None):
         super().__init__(
             sigma=sigma, adapt_sigma=adapt_sigma,
             rejection_confidence=rejection_confidence,
@@ -121,6 +122,7 @@ class DKMRSLVQ(SoftMetricMixin, DKRSLVQ):
             gradient_accumulation_steps=gradient_accumulation_steps,
             ema_decay=ema_decay, freeze_params=freeze_params,
             lookahead=lookahead, mixed_precision=mixed_precision,
+            gradient_checkpointing=gradient_checkpointing, devices=devices,
         )
         self._setup_metric(latent_dim, matrix_lr_ratio)
 

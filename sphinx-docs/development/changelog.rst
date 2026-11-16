@@ -37,6 +37,10 @@ Unreleased
 
 **Fixes**
 
+* ``devices`` (multi-device training) and ``gradient_checkpointing`` are
+  accepted by all supervised models; 76 did not accept them. Models that
+  learn more than prototypes failed to predict after multi-device
+  training (`#118 <https://github.com/naotoo1/prosemble/pull/118>`_).
 * Four cases of silently wrong training results
   (`#104 <https://github.com/naotoo1/prosemble/pull/104>`_).
 * Frozen parameters were updated by their raw gradient

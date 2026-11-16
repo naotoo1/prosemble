@@ -112,6 +112,16 @@ Model Selection
    :members: fit, predict, predict_proba
    :undoc-members:
 
+Evaluation
+----------
+
+.. automodule:: prosemble.core.evaluation
+   :members: rank_methods, friedman_test, nemenyi_critical_difference, holm_correction, compare_to_reference, expected_calibration_error, selective_accuracy
+
+.. autoclass:: prosemble.core.evaluation.FriedmanResult
+
+.. autoclass:: prosemble.core.evaluation.PairwiseResult
+
 Datasets
 --------
 

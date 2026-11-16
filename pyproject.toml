@@ -63,7 +63,8 @@ dev = [
     "tox",
     "coverage",
     "Sphinx",
-    "furo",
+    "pydata-sphinx-theme>=0.16",
+    "sphinx-design>=0.6",
     "sphinx-copybutton",
     "twine",
     "autopep8",
@@ -83,8 +84,9 @@ jax-cuda12 = [
     "optax>=0.2.0",
 ]
 docs = [
-    "Sphinx",
-    "furo",
+    "Sphinx>=7.3",
+    "pydata-sphinx-theme>=0.16",
+    "sphinx-design>=0.6",
     "sphinx-copybutton",
 ]
 all = [
@@ -101,7 +103,8 @@ all = [
     "tox",
     "coverage",
     "Sphinx",
-    "furo",
+    "pydata-sphinx-theme>=0.16",
+    "sphinx-design>=0.6",
     "sphinx-copybutton",
     "twine",
     "autopep8",

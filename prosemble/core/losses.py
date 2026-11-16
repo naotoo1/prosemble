@@ -73,7 +73,7 @@ def _get_dp_dm_with_indices(distances, target_labels, prototype_labels):
 @jit
 def glvq_loss(distances, target_labels, prototype_labels,
               margin=0.0):
-    """Generalized LVQ loss.
+    r"""Generalized LVQ loss.
 
     :math:`\mu_i = \frac{d^+_i - d^-_i}{d^+_i + d^-_i}`
 
@@ -97,7 +97,7 @@ def glvq_loss(distances, target_labels, prototype_labels,
 
 def glvq_loss_with_transfer(distances, target_labels, prototype_labels,
                             transfer_fn=identity, margin=0.0, beta=10.0):
-    """GLVQ loss with configurable transfer function.
+    r"""GLVQ loss with configurable transfer function.
 
     :math:`\text{loss} = \text{mean}(f(\mu + \text{margin}, \beta))`
 
@@ -166,7 +166,7 @@ def lvq21_loss(distances, target_labels, prototype_labels):
 
 @jit
 def _class_probabilities(distances, target_labels, prototype_labels, sigma):
-    """Compute Gaussian mixture class probabilities.
+    r"""Compute Gaussian mixture class probabilities.
 
     .. math::
 
@@ -197,7 +197,7 @@ def _class_probabilities(distances, target_labels, prototype_labels, sigma):
 
 @jit
 def nllr_loss(distances, target_labels, prototype_labels, sigma=1.0):
-    """Negative Log-Likelihood Ratio loss (for SLVQ).
+    r"""Negative Log-Likelihood Ratio loss (for SLVQ).
 
     :math:`\text{loss} = -\log(P(\text{correct}) / P(\text{wrong}))`
 
@@ -222,7 +222,7 @@ def nllr_loss(distances, target_labels, prototype_labels, sigma=1.0):
 
 @jit
 def rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0):
-    """Robust Soft LVQ loss (for RSLVQ).
+    r"""Robust Soft LVQ loss (for RSLVQ).
 
     :math:`\text{loss} = -\log(P(\text{correct}) / P(\text{all}))`
 
@@ -246,7 +246,7 @@ def rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0):
 
 @jit
 def ng_rslvq_loss(distances, target_labels, prototype_labels, sigma=1.0, gamma=1.0):
-    """RSLVQ loss with Neural Gas rank-based neighborhood cooperation.
+    r"""RSLVQ loss with Neural Gas rank-based neighborhood cooperation.
 
     Combines Gaussian mixture prototype probabilities with NG rank weights
     to create a neighborhood-cooperative probabilistic assignment.
@@ -391,7 +391,7 @@ def cross_entropy_lvq_loss(distances, target_labels, prototype_labels, n_classes
 
 @jit
 def margin_loss(y_pred, y_true_one_hot, margin=0.3):
-    """Margin loss for CBC.
+    r"""Margin loss for CBC.
 
     :math:`\text{loss} = \text{ReLU}(\max(\text{wrong}) - \text{correct} + \text{margin})`
 
@@ -416,7 +416,7 @@ def margin_loss(y_pred, y_true_one_hot, margin=0.3):
 
 @jit
 def neural_gas_energy(distances, lam):
-    """Neural Gas energy function.
+    r"""Neural Gas energy function.
 
     .. math::
 

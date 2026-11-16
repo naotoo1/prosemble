@@ -1,14 +1,16 @@
 One-Class Classification
 ========================
 
-Prosemble provides 21 one-class classification models across three families,
+Prosemble provides one-class classification models in four families,
 all implemented in JAX with JIT compilation and ``lax.scan`` training loops.
 Every model follows the same ``fit`` / ``predict`` / ``decision_function`` /
 ``predict_with_reject`` API.
 
-All one-class models learn per-prototype **visibility thresholds**
-:math:`\theta_k` that define the boundary between target (normal) and
-non-target (outlier) samples.
+The OC-GLVQ, OC-RSLVQ and SVQ-OCC families learn per-prototype
+**visibility thresholds** :math:`\theta_k` that define the boundary
+between target (normal) and non-target (outlier) samples.  The
+contrastive soft models at the end of this guide instead learn a density
+of the target class.
 
 OC-GLVQ — Baseline
 -------------------
@@ -413,6 +415,97 @@ Like the OC-GLVQ family, SVQ-OCC has metric-adapted variants:
                      max_iter=100, lr=0.01)
    model.fit(X, y)
    print(model.omega_matrix.shape)
+
+Contrastive Soft Models — One-Class Density by Contrast
+--------------------------------------------------------
+
+One-class versions of the soft models of the differentiable-kernel,
+Wasserstein and Riemannian families.  The target class is described by
+an unnormalised mixture density over its prototypes,
+
+.. math::
+
+   p_T(x) = \sum_{k \in T} \exp\left(b_k - \frac{d_k(x)}{2\sigma^2}\right),
+
+where :math:`d_k` is the distance of the family and the offsets
+:math:`b_k` are learned.  The model is trained to tell target samples
+from samples of a known **reference distribution** :math:`q`, drawn
+:math:`\nu` times as often (noise-contrastive estimation):
+
+.. math::
+
+   P(\text{target} \mid x) = \frac{p_T(x)}{p_T(x) + p_O(x) + \nu\, q(x)}
+
+At the optimum :math:`p_T` is proportional to the density of the target
+class, whatever the reference is.  The offsets take the place of the
+normalising constants, which these distances do not have in closed form.
+
+Two consequences set these models apart from the threshold models above:
+
+- **They can be fitted to target samples alone.**  The cost has a finite
+  optimum without outliers; nothing is gained by accepting everything.
+- **Labelled outliers get prototypes of their own** (:math:`p_O` above).
+  Near known outliers the score is a likelihood ratio between the two
+  groups; elsewhere it is the density of the target class, so outliers of
+  a kind never seen in training are still rejected.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Distance
+     - Model
+   * - Gaussian kernel, one bandwidth per prototype
+     - ``OCDKRSLVQ``
+   * - 2-Wasserstein to Gaussian prototypes
+     - ``OCWRSLVQ``
+   * - Riemannian (SO(n), SPD(n), Grassmannian, Poincaré ball)
+     - ``OCRiemannianRSLVQ``
+
+.. code-block:: python
+
+   from prosemble.models import OCDKRSLVQ
+
+   # Targets only
+   model = OCDKRSLVQ(
+       n_prototypes=3,
+       noise_ratio=5,       # reference samples per target sample
+       noise_scale=2.5,     # width of the reference relative to the targets
+       nu=0.05,             # fraction of training targets that predict rejects
+       max_iter=300,
+       lr=0.02,
+   )
+   model.fit(X_target)
+
+   log_density = model.score_samples(X_test)     # up to a constant
+   scores = model.decision_function(X_test)      # in (0, 1), boundary at 0.5
+   labels = model.predict(X_test)
+
+   # With a few labelled outliers
+   model = OCDKRSLVQ(n_prototypes=3, n_outlier_prototypes=3, target_label=0,
+                     max_iter=300, lr=0.02)
+   model.fit(X_train, y_train)      # y: 0 for targets, anything else for outliers
+
+The reference distribution is a Gaussian with independent features around
+the target samples for the kernel and Wasserstein models.  On manifolds
+it is the uniform distribution on SO(n) and the Grassmannian, and a
+Gaussian in the tangent space at a centre of the targets, mapped by the
+exponential map, on SPD(n) and in the Poincaré ball:
+
+.. code-block:: python
+
+   from prosemble.models import OCRiemannianRSLVQ
+   from prosemble.core.manifolds import SPD
+
+   model = OCRiemannianRSLVQ(manifold=SPD(4), n_prototypes=3,
+                             max_iter=150, lr=0.02)
+   model.fit(X_target)
+   scores = model.decision_function(X_test)
+
+**Choosing a model.**  ``OCDKRSLVQ`` has one kernel bandwidth per
+prototype, which lets a group of labelled outliers be narrower than the
+target class around it.  ``OCWRSLVQ`` uses one width for all prototypes
+and gives each a learned weight through its variance.
 
 Common Patterns
 ---------------

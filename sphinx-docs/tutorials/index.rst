@@ -100,6 +100,45 @@ code.
 
       Prototypes on the manifold of SPD matrices, against treating the matrices as vectors.
 
+   .. grid-item-card:: Classifying orientations
+      :link: rotations
+      :link-type: doc
+      :class-card: pr-gallery-card
+
+      .. image:: /_static/figures/thumb-rotations-light.png
+         :class: only-light
+
+      .. image:: /_static/figures/thumb-rotations-dark.png
+         :class: only-dark
+
+      Rotations on SO(3), against quaternions and rotation matrices.
+
+   .. grid-item-card:: Classifying subspaces
+      :link: subspaces
+      :link-type: doc
+      :class-card: pr-gallery-card
+
+      .. image:: /_static/figures/thumb-subspaces-light.png
+         :class: only-light
+
+      .. image:: /_static/figures/thumb-subspaces-dark.png
+         :class: only-dark
+
+      Sets of vectors as points of the Grassmannian, whatever their basis.
+
+   .. grid-item-card:: Hierarchies in hyperbolic space
+      :link: hyperbolic
+      :link-type: doc
+      :class-card: pr-gallery-card
+
+      .. image:: /_static/figures/thumb-hyperbolic-light.png
+         :class: only-light
+
+      .. image:: /_static/figures/thumb-hyperbolic-dark.png
+         :class: only-dark
+
+      A tree in the Poincaré disk, where prototypes find the common ancestors.
+
 .. toctree::
    :hidden:
 
@@ -110,6 +149,9 @@ code.
    topology
    time_series
    covariance_matrices
+   rotations
+   subspaces
+   hyperbolic
 
 More examples
 -------------

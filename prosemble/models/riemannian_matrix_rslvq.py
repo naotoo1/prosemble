@@ -1,5 +1,5 @@
 """
-Riemannian Matrix Robust Soft LVQ (RiemannianMRSLVQ, RiemannianLMRSLVQ).
+Riemannian Matrix Robust Soft LVQ (RiemannianMRSLVQ).
 
 Robust soft LVQ on a Riemannian manifold with an adaptive matrix in the
 tangent space. A sample :math:`x` is seen from prototype :math:`w_k`
@@ -12,8 +12,7 @@ in orthonormal coordinates :math:`u_k(x)` of the tangent space, and
     \\Lambda = \\Omega \\Omega^T, \\qquad
     f_k(x) = -\\frac{d_\\Lambda^2(x, w_k)}{2\\sigma^2}.
 
-:class:`RiemannianMRSLVQ` learns one matrix for all prototypes,
-:class:`RiemannianLMRSLVQ` one matrix :math:`\\Lambda_k` per prototype.
+One matrix is learned for all prototypes.
 
 References
 ----------
@@ -97,6 +96,8 @@ class RiemannianMRSLVQ(SoftMetricMixin, RiemannianRSLVQ):
     latent_dim : int, optional
         Number of columns of :math:`\\Omega`. Default: the number of
         entries of a point of the manifold.
+    matrix_lr_ratio : float
+        Learning rate of the matrix relative to ``lr``. Default: 0.3.
     log_map : {'exact', 'first_order'}, optional
         Log map on SO(n) and the Grassmannian. Default: ``'exact'`` on
         SO(n), ``'first_order'`` on the Grassmannian. The SPD and
@@ -128,12 +129,12 @@ class RiemannianMRSLVQ(SoftMetricMixin, RiemannianRSLVQ):
     See Also
     --------
     RiemannianRSLVQ : The model without a matrix, with the remaining parameters.
-    RiemannianLMRSLVQ : One matrix per prototype.
     RiemannianSMNG : Margin-based matrix model on the ambient tangent vector.
     """
 
     _hyperparams = ('log_map',)
-    def __init__(self, manifold: Manifold, latent_dim=None, log_map=None,
+    def __init__(self, manifold: Manifold, latent_dim=None, matrix_lr_ratio=0.3,
+                 log_map=None,
                  sigma='auto', adapt_sigma=True,
                  rejection_confidence=None, tau=0.95,
                  update_rule='riemannian',
@@ -164,7 +165,7 @@ class RiemannianMRSLVQ(SoftMetricMixin, RiemannianRSLVQ):
             lookahead=lookahead, mixed_precision=mixed_precision,
         )
         self.log_map = _check_log_map(log_map, manifold)
-        self._setup_metric(latent_dim)
+        self._setup_metric(latent_dim, matrix_lr_ratio)
 
     def _tangent_coordinates(self, X, prototypes):
         """Flattened tangent coordinates, shape (n, p, n_features_flat)."""
@@ -183,49 +184,3 @@ class RiemannianMRSLVQ(SoftMetricMixin, RiemannianRSLVQ):
         coords = self._tangent_coordinates(X, params['prototypes'])
         projected = self._apply_metric(coords, params[self._metric_key])
         return jnp.sum(projected ** 2, axis=2)
-
-
-class RiemannianLMRSLVQ(RiemannianMRSLVQ):
-    """Riemannian Local Matrix Robust Soft LVQ.
-
-    :class:`RiemannianMRSLVQ` with one map :math:`\\Omega_k` per
-    prototype, a separate metric on each tangent space:
-
-    .. math::
-
-        d_{\\Lambda_k}^2(x, w_k) = u_k(x)^T \\Lambda_k\\, u_k(x),
-        \\qquad \\Lambda_k = \\Omega_k \\Omega_k^T.
-
-    Each component is then a Gaussian in normal coordinates with its own
-    covariance :math:`\\sigma^2 \\Lambda_k^{-1}`. The matrices are not
-    normalised, and the normalising constants of the components differ,
-    so the size of :math:`\\Lambda_k` also sets the weight of prototype
-    :math:`k` in the mixture.
-
-    The model has :math:`p \\cdot D \\cdot l` matrix parameters for
-    :math:`p` prototypes, points with :math:`D` entries and
-    ``latent_dim`` :math:`l`, so it needs more data than
-    :class:`RiemannianMRSLVQ`.
-
-    Parameters
-    ----------
-    manifold : SO, SPD, Grassmannian or HyperbolicPoincare
-        Riemannian manifold instance defining the geometry.
-    latent_dim : int, optional
-        Number of columns of each :math:`\\Omega_k`. Default: the number
-        of entries of a point of the manifold.
-
-    Attributes
-    ----------
-    omegas_ : array of shape (n_prototypes, n_features_flat, latent_dim)
-        Learned maps :math:`\\Omega_k`.
-    sigma_ : float
-        Learned width :math:`\\sigma` of the mixture.
-
-    See Also
-    --------
-    RiemannianMRSLVQ : One matrix for all prototypes, with the remaining parameters.
-    RiemannianSLNG : Margin-based local matrix model on the ambient tangent vector.
-    """
-
-    _local_metric = True

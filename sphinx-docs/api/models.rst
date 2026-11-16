@@ -489,10 +489,6 @@ Riemannian Models
    :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
    :undoc-members:
 
-.. autoclass:: prosemble.models.RiemannianLMRSLVQ
-   :members: fit, predict, predict_proba, predict_with_rejection, omega_matrix, lambda_matrix
-   :undoc-members:
-
 .. autoclass:: prosemble.models.RiemannianSMNG
    :members: fit, predict, relevance_matrix
    :undoc-members:

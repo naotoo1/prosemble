@@ -222,6 +222,7 @@ identity, so training starts from DKRSLVQ.
    model = DKMRSLVQ(
        n_prototypes_per_class=2,
        latent_dim=None,       # columns of Omega; default: n_features
+       matrix_lr_ratio=0.3,   # the matrix learns at 0.3 * lr
        max_iter=200,
        lr=0.01,
    )

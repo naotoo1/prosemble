@@ -16,6 +16,7 @@ A model only has to say what its component scores are.
 """
 
 import jax.numpy as jnp
+import optax
 
 from prosemble.core.initializers import identity_omega_init
 from prosemble.core.losses import likelihood_ratio_loss, class_log_posterior
@@ -173,6 +174,27 @@ class SoftAssignmentMixin:
         return hp
 
 
+def _scale_updates(names, factor):
+    """Optax transformation that multiplies the updates of the named parameters."""
+
+    def scale(tree):
+        if isinstance(tree, dict):
+            # A frozen parameter arrives as an empty placeholder, not an array.
+            return {k: (v * factor if k in names and hasattr(v, 'dtype') else v)
+                    for k, v in tree.items()}
+        if isinstance(tree, tuple) and hasattr(tree, '_fields'):
+            return type(tree)(*(scale(t) for t in tree))
+        return tree
+
+    def init(params):
+        return optax.EmptyState()
+
+    def update(updates, state, params=None):
+        return scale(updates), state
+
+    return optax.GradientTransformation(init, update)
+
+
 class SoftMetricMixin:
     """An adaptive linear map inside the distance of a soft model.
 
@@ -184,21 +206,35 @@ class SoftMetricMixin:
     sets ``_local_metric = True``. It is initialised to the identity, so
     training starts from the model without a metric.
 
+    The map is trained more slowly than the other parameters: its update
+    is multiplied by ``matrix_lr_ratio``, which amounts to a learning
+    rate of ``matrix_lr_ratio * lr`` for the map. A metric that adapts
+    as fast as the prototypes fits the training set before the
+    prototypes have settled.
+
     Place it before the soft model in the bases. The soft model calls
     :meth:`_add_metric_params` when it initialises, and its distance
     reads the map from ``params``.
     """
 
-    _hyperparams = ('latent_dim',)
+    _hyperparams = ('latent_dim', 'matrix_lr_ratio')
     _fitted_array_names = ('omega_', 'omegas_')
     _local_metric = False
 
-    def _setup_metric(self, latent_dim):
+    def _setup_metric(self, latent_dim, matrix_lr_ratio=0.3):
         if latent_dim is not None and not (
                 isinstance(latent_dim, int) and latent_dim > 0):
             raise ValueError(
                 f"latent_dim must be a positive integer or None, got {latent_dim!r}")
+        if not (isinstance(matrix_lr_ratio, (int, float)) and matrix_lr_ratio > 0):
+            raise ValueError(
+                f"matrix_lr_ratio must be a positive number, got {matrix_lr_ratio!r}")
         self.latent_dim = latent_dim
+        self.matrix_lr_ratio = matrix_lr_ratio
+        if matrix_lr_ratio != 1:
+            self._optimizer = optax.chain(
+                self._optimizer,
+                _scale_updates(('omega', 'omegas'), float(matrix_lr_ratio)))
         setattr(self, self._metric_attr, None)
 
     @property

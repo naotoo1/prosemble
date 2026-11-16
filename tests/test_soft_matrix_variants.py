@@ -1,7 +1,6 @@
 """Matrix and local matrix soft variants.
 
-DKMRSLVQ, DKLMRSLVQ, WMRSLVQ, WLMRSLVQ, RiemannianMRSLVQ and
-RiemannianLMRSLVQ.
+DKMRSLVQ, DKLMRSLVQ, WMRSLVQ, WLMRSLVQ and RiemannianMRSLVQ.
 """
 
 import os
@@ -23,7 +22,7 @@ from prosemble.core.kernel import (
 from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
 from prosemble.models import (
     _MODEL_REGISTRY, DKRSLVQ, DKMRSLVQ, DKLMRSLVQ, WRSLVQ, WMRSLVQ, WLMRSLVQ,
-    RiemannianRSLVQ, RiemannianMRSLVQ, RiemannianLMRSLVQ,
+    RiemannianRSLVQ, RiemannianMRSLVQ,
 )
 from prosemble.models.riemannian_srng import _tangent_coordinates
 from prosemble.models.soft_mixin import SoftAssignmentMixin, SoftMetricMixin
@@ -56,7 +55,6 @@ EUCLIDEAN = [
 ]
 RIEMANNIAN = [
     pytest.param(RiemannianMRSLVQ, False, id='RiemannianMRSLVQ'),
-    pytest.param(RiemannianLMRSLVQ, True, id='RiemannianLMRSLVQ'),
 ]
 MANIFOLDS = [
     pytest.param(SO(3), id='SO3'),
@@ -316,6 +314,51 @@ class TestEuclideanMatrixModels:
             model.export_onnx()
 
 
+class TestMatrixLearningRate:
+
+    @pytest.mark.parametrize('cls, plain, local', EUCLIDEAN)
+    def test_matrix_update_is_scaled_and_the_others_are_not(self, cls, plain, local):
+        key = 'omegas' if local else 'omega'
+        params = {'prototypes': jnp.ones((2, 3)), key: jnp.ones((3, 3)),
+                  'log_sigma': jnp.asarray(0.0)}
+        grads = {k: jnp.ones_like(v) for k, v in params.items()}
+        updates = {}
+        for ratio in (1.0, 0.25):
+            optimizer = cls(matrix_lr_ratio=ratio, optimizer='sgd', lr=0.1)._optimizer
+            updates[ratio], _ = optimizer.update(grads, optimizer.init(params), params)
+        np.testing.assert_allclose(updates[0.25][key], 0.25 * updates[1.0][key])
+        np.testing.assert_allclose(updates[1.0][key], -0.1)
+        for name in ('prototypes', 'log_sigma'):
+            np.testing.assert_allclose(updates[0.25][name], updates[1.0][name])
+
+    @pytest.mark.parametrize('cls, plain, local', EUCLIDEAN)
+    def test_default_and_persistence(self, iris, cls, plain, local):
+        X, y = iris
+        assert cls().matrix_lr_ratio == 0.3
+        model = cls(matrix_lr_ratio=0.5, max_iter=5)
+        model.fit(X, y)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'model.npz')
+            model.save(path)
+            assert cls.load(path).matrix_lr_ratio == 0.5
+
+    @pytest.mark.parametrize('ratio', [0, -0.1, 'slow'])
+    def test_invalid_ratio(self, ratio):
+        with pytest.raises(ValueError, match='matrix_lr_ratio'):
+            DKMRSLVQ(matrix_lr_ratio=ratio)
+        with pytest.raises(ValueError, match='matrix_lr_ratio'):
+            RiemannianMRSLVQ(manifold=SPD(3), matrix_lr_ratio=ratio)
+
+    def test_slower_matrix_moves_less(self, iris):
+        X, y = iris
+        moved = {}
+        for ratio in (1.0, 0.1):
+            model = WMRSLVQ(matrix_lr_ratio=ratio, max_iter=20)
+            model.fit(X, y)
+            moved[ratio] = float(jnp.max(jnp.abs(model.omega_matrix - jnp.eye(4))))
+        assert moved[0.1] < 0.5 * moved[1.0]
+
+
 class TestWhatTheMatrixLearns:
 
     @pytest.mark.parametrize('cls', [DKMRSLVQ, WMRSLVQ])
@@ -333,7 +376,7 @@ class TestWhatTheMatrixLearns:
         model.fit(X, y)
         eigenvalues, eigenvectors = np.linalg.eigh(np.asarray(model.lambda_matrix))
         assert abs(eigenvectors[:, -1] @ rotation[:, 1]) >= 0.98
-        assert eigenvalues[-1] >= 10.0 * eigenvalues[0]
+        assert eigenvalues[-1] >= 5.0 * eigenvalues[0]
         assert float(jnp.mean(model.predict(X) == y)) >= 0.9
 
     @pytest.fixture(scope='class')

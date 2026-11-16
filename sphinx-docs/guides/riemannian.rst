@@ -183,8 +183,8 @@ distribution centred at its prototype.
    proba = model.predict_proba(X)          # class posteriors
    labels = model.predict_with_rejection(X, confidence=0.8)
 
-RiemannianMRSLVQ and RiemannianLMRSLVQ
---------------------------------------
+RiemannianMRSLVQ
+----------------
 
 RiemannianRSLVQ with a learned metric in the tangent space.  A sample
 is seen from prototype :math:`w_k` through its tangent vector
@@ -215,19 +215,19 @@ these coordinates:
 
 With the exact log map :math:`\|u_k(x)\|` is the geodesic distance, so
 :math:`\Lambda = I`, where training starts, is the isotropic component of
-RiemannianRSLVQ.  **RiemannianMRSLVQ** learns one matrix for all
-prototypes, **RiemannianLMRSLVQ** one matrix :math:`\Lambda_k` per
-prototype.
+RiemannianRSLVQ.  One matrix is learned for all prototypes, more slowly
+than the prototypes (``matrix_lr_ratio``).
 
 .. code-block:: python
 
-   from prosemble.models import RiemannianMRSLVQ, RiemannianLMRSLVQ
+   from prosemble.models import RiemannianMRSLVQ
    from prosemble.core.manifolds import SPD
 
    model = RiemannianMRSLVQ(
        manifold=SPD(4),
        n_prototypes_per_class=2,
        latent_dim=None,       # columns of Omega; default: 16 for SPD(4)
+       matrix_lr_ratio=0.3,   # the matrix learns at 0.3 * lr
        max_iter=100,
        lr=0.01,
    )

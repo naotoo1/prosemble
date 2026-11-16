@@ -57,6 +57,8 @@ class DKMRSLVQ(SoftMetricMixin, DKRSLVQ):
         Number of columns of :math:`\\Omega`. A value below the number of
         features restricts :math:`\\Lambda` to that rank. Default: the
         number of features.
+    matrix_lr_ratio : float
+        Learning rate of the matrix relative to ``lr``. Default: 0.3.
     sigma : float or 'auto'
         Initial width :math:`\\sigma` of the mixture components.
         ``'auto'`` (default) sets :math:`\\sigma^2` to the mean squared
@@ -90,7 +92,8 @@ class DKMRSLVQ(SoftMetricMixin, DKRSLVQ):
     MRSLVQ : Matrix robust soft LVQ with the squared Euclidean distance.
     """
 
-    def __init__(self, latent_dim=None, sigma='auto', adapt_sigma=True,
+    def __init__(self, latent_dim=None, matrix_lr_ratio=0.3, sigma='auto',
+                 adapt_sigma=True,
                  rejection_confidence=None,
                  sigma_init='median', sigma_min=1e-3,
                  n_prototypes_per_class=1, max_iter=100, lr=0.01,
@@ -119,7 +122,7 @@ class DKMRSLVQ(SoftMetricMixin, DKRSLVQ):
             ema_decay=ema_decay, freeze_params=freeze_params,
             lookahead=lookahead, mixed_precision=mixed_precision,
         )
-        self._setup_metric(latent_dim)
+        self._setup_metric(latent_dim, matrix_lr_ratio)
 
     def _kernel_distances(self, params, X):
         bandwidths = jnp.maximum(params['sigmas'], self.sigma_min)

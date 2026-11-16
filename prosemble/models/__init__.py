@@ -128,7 +128,7 @@ try:
     from .riemannian_rslvq import RiemannianRSLVQ
     from .wasserstein_matrix_rslvq import WMRSLVQ, WLMRSLVQ
     from .dk_matrix_rslvq import DKMRSLVQ, DKLMRSLVQ
-    from .riemannian_matrix_rslvq import RiemannianMRSLVQ, RiemannianLMRSLVQ
+    from .riemannian_matrix_rslvq import RiemannianMRSLVQ
 
 
     # One-Class Differentiating Kernel models
@@ -201,7 +201,6 @@ try:
         'DKMRSLVQ': DKMRSLVQ, 'DKLMRSLVQ': DKLMRSLVQ,
         'WMRSLVQ': WMRSLVQ, 'WLMRSLVQ': WLMRSLVQ,
         'RiemannianMRSLVQ': RiemannianMRSLVQ,
-        'RiemannianLMRSLVQ': RiemannianLMRSLVQ,
         'DKGLVQ_NG': DKGLVQ_NG, 'DKGRLVQ_NG': DKGRLVQ_NG,
         'DKGMLVQ_NG': DKGMLVQ_NG,
         'DKNeuralGas': DKNeuralGas, 'DKKohonenSOM': DKKohonenSOM,
@@ -277,7 +276,7 @@ __all__ = [
     # Soft variants
     'DKRSLVQ', 'WRSLVQ', 'RiemannianRSLVQ',
     'DKMRSLVQ', 'DKLMRSLVQ', 'WMRSLVQ', 'WLMRSLVQ',
-    'RiemannianMRSLVQ', 'RiemannianLMRSLVQ',
+    'RiemannianMRSLVQ',
     # Status
     'JAX_AVAILABLE',
 ]

@@ -127,6 +127,12 @@ ONNX Export
    :members: export_onnx
    :undoc-members:
 
+Soft Dynamic Time Warping
+-------------------------
+
+.. automodule:: prosemble.core.soft_dtw
+   :members: soft_dtw, dtw, soft_dtw_divergence, soft_dtw_matrix, dtw_matrix, soft_dtw_divergence_matrix
+
 Manifolds
 ---------
 

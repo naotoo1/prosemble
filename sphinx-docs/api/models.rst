@@ -492,6 +492,13 @@ Wasserstein LVQ
    :members: fit, predict, predict_proba, predict_with_rejection, calibrate, omega_matrix, lambda_matrix
    :undoc-members:
 
+Time Series
+-----------
+
+.. autoclass:: prosemble.models.SoftDTWRSLVQ
+   :members: fit, predict, predict_proba, predict_with_rejection, calibrate, divergences
+   :undoc-members:
+
 Riemannian Models
 -----------------
 

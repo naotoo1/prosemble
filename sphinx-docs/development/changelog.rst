@@ -44,6 +44,12 @@ Unreleased
 
 **Fixes**
 
+* The contrastive one-class models (:class:`OCDKRSLVQ`, :class:`OCWRSLVQ`)
+  scale the steps of their prototypes and kernel bandwidths by the spread
+  of the target features, so that ``lr`` is relative to the data. On data
+  with a small spread in many dimensions the first steps used to throw the
+  prototypes beyond the targets, and :class:`OCDKRSLVQ` then gave every
+  sample the same score.
 * ``devices`` (multi-device training) and ``gradient_checkpointing`` are
   accepted by all supervised models; 76 did not accept them. Models that
   learn more than prototypes failed to predict after multi-device

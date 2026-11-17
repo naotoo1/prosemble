@@ -42,9 +42,11 @@ References
 import jax
 import jax.numpy as jnp
 import numpy as np
+import optax
 from jax.scipy.special import logsumexp
 
 from prosemble.core.manifolds import SO, SPD, Grassmannian, HyperbolicPoincare
+from prosemble.models.soft_mixin import _scale_updates
 
 #: Internal label codes of the training rows.
 TARGET, OUTLIER, REFERENCE = 0, 1, 2
@@ -112,6 +114,17 @@ class OneClassSoftMixin:
     with independent features, centred at the mean of the target samples
     and ``noise_scale`` times as wide as they are.
     :class:`RiemannianReferenceMixin` replaces it for manifold data.
+
+    The prototypes (and the kernel bandwidths of :class:`OCDKRSLVQ`) are in
+    the units of the data, and the optimiser moves each of their coordinates
+    by about ``lr`` per step. Their updates are therefore multiplied by the
+    typical spread of a feature over the targets, which makes ``lr``
+    relative to the data. Without it, data with a small spread in many
+    dimensions (spectra, for example) move the prototypes by about
+    :math:`\\mathrm{lr}\\,\\sqrt{d}` per step, beyond the targets in one
+    step; a bounded kernel distance then saturates at its maximum for every
+    sample, and every score is the same. For standardised data the spread
+    is about 1 and nothing changes.
 
     Parameters
     ----------
@@ -259,12 +272,27 @@ class OneClassSoftMixin:
             kwargs['validation_data'] = (X_val, jnp.where(
                 jnp.asarray(y_val) == self._target_label, TARGET, OUTLIER))
 
-        super().fit(
-            jnp.concatenate([X, X_reference]),
-            jnp.concatenate([codes, jnp.full(n_reference, REFERENCE, dtype=jnp.int32)]),
-            **kwargs)
+        optimizer = self._optimizer
+        scale = self._step_scale(X_target)
+        if scale is not None:
+            self._optimizer = optax.chain(optimizer, _scale_updates(self._data_unit_params, scale))
+        try:
+            super().fit(
+                jnp.concatenate([X, X_reference]),
+                jnp.concatenate([codes, jnp.full(n_reference, REFERENCE, dtype=jnp.int32)]),
+                **kwargs)
+        finally:
+            self._optimizer = optimizer
         self.threshold_ = jnp.quantile(self.score_samples(X_target), self.nu)
         return self
+
+    #: Parameters measured in the units of the data.
+    _data_unit_params = ('prototypes', 'sigmas')
+
+    def _step_scale(self, X_target):
+        """Typical spread of a feature over the targets: the unit of the prototype steps."""
+        typical = float(jnp.mean(jnp.std(X_target, axis=0)))
+        return typical if typical > 0 else None
 
     def _label_codes(self, X, y):
         """Record the target label and return target / outlier codes."""
@@ -498,6 +526,10 @@ class RiemannianReferenceMixin:
       :math:`\\operatorname{sinhc}(t) = \\sinh(t) / t`, and
       :math:`\\operatorname{sinhc}(\\|u\\|)^{d - 1}` in the ball.
     """
+
+    def _step_scale(self, X_target):
+        """Manifold points are not rescaled: their steps stay as they are."""
+        return None
 
     def _points(self, X):
         return X.reshape(X.shape[0], *self.manifold.point_shape)

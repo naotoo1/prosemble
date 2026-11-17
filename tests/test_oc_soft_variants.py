@@ -540,3 +540,37 @@ class TestRiemannianOneClassModels:
         model.fit(_manifold_one_class_data(so)[0])
         with pytest.raises(NotImplementedError, match='OCRiemannianRSLVQ'):
             model.export_onnx()
+
+
+class TestStepScale:
+    """Prototype steps are relative to the spread of the data."""
+
+    @staticmethod
+    def _spectra(n, scale, seed, shift=0.0):
+        """Smooth curves in 300 dimensions whose spread is ``scale``."""
+        rng = np.random.default_rng(seed)
+        t = np.linspace(0, 1, 300)
+        out = [np.sin(2 * np.pi * (t + shift + 0.02 * rng.normal())) + 0.3 * rng.normal() * t
+               for _ in range(n)]
+        return jnp.asarray(scale * np.array(out), dtype=jnp.float32)
+
+    def test_small_spread_in_many_dimensions_does_not_collapse(self):
+        from sklearn.metrics import roc_auc_score
+        train = self._spectra(20, 0.01, seed=0)
+        test = jnp.concatenate([self._spectra(20, 0.01, seed=1),
+                                self._spectra(20, 0.01, seed=2, shift=0.15)])
+        model = OCDKRSLVQ(n_prototypes=3, max_iter=60, lr=0.05, random_seed=0).fit(train)
+        scores = np.asarray(model.score_samples(test))
+        # Before, the first steps moved the prototypes far beyond the targets,
+        # every kernel distance saturated at 2 and every score was the same.
+        assert len(np.unique(scores)) > 30
+        assert roc_auc_score(np.r_[np.ones(20), np.zeros(20)], scores) > 0.9
+
+    def test_unit_spread_is_unchanged(self):
+        model = OCDKRSLVQ(n_prototypes=2, max_iter=5)
+        X = jnp.asarray(np.random.default_rng(0).normal(size=(50, 4)), dtype=jnp.float32)
+        assert abs(model._step_scale(X) - 1.0) < 0.2
+
+    def test_manifold_steps_are_not_rescaled(self):
+        model = OCRiemannianRSLVQ(manifold=SO(3), max_iter=5)
+        assert model._step_scale(jnp.ones((4, 9))) is None

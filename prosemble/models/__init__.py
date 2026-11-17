@@ -133,7 +133,7 @@ try:
     from .oc_wasserstein_rslvq import OCWRSLVQ
     from .oc_riemannian_rslvq import OCRiemannianRSLVQ
     from .soft_dtw_rslvq import SoftDTWRSLVQ
-    from .soft_dtw_matrix_rslvq import SoftDTWMRSLVQ, SoftDTWLMRSLVQ
+    from .soft_dtw_matrix_rslvq import SoftDTWMRSLVQ
 
 
     # One-Class Differentiating Kernel models
@@ -211,7 +211,7 @@ try:
         'OCRiemannianRSLVQ': OCRiemannianRSLVQ,
         # Time series
         'SoftDTWRSLVQ': SoftDTWRSLVQ,
-        'SoftDTWMRSLVQ': SoftDTWMRSLVQ, 'SoftDTWLMRSLVQ': SoftDTWLMRSLVQ,
+        'SoftDTWMRSLVQ': SoftDTWMRSLVQ,
         'DKGLVQ_NG': DKGLVQ_NG, 'DKGRLVQ_NG': DKGRLVQ_NG,
         'DKGMLVQ_NG': DKGMLVQ_NG,
         'DKNeuralGas': DKNeuralGas, 'DKKohonenSOM': DKKohonenSOM,
@@ -293,7 +293,6 @@ __all__ = [
     # Time series
     'SoftDTWRSLVQ',
     'SoftDTWMRSLVQ',
-    'SoftDTWLMRSLVQ',
     # Status
     'JAX_AVAILABLE',
 ]

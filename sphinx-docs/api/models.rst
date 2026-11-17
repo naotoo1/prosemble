@@ -171,7 +171,6 @@ User guide: :doc:`/user_guide/time_series`
 
    SoftDTWRSLVQ
    SoftDTWMRSLVQ
-   SoftDTWLMRSLVQ
 
 Nearest neighbours
 ~~~~~~~~~~~~~~~~~~

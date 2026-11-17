@@ -55,7 +55,7 @@ datasets of the UEA multivariate archive (2018 release).
 | Datasets | `DATASETS` in `run_multivariate.py`: the equal-length UEA datasets with fewer than 61 channels, except Cricket (one soft fit takes about twelve hours on a CPU thread) |
 | Split | The archive's own train/test split; series as distributed |
 | Baselines | 1-nearest neighbour under the Euclidean distance, under independent DTW (summed over channels) and dependent DTW (multichannel ground cost); a random forest (500 trees) |
-| Soft-DTW models | `SoftDTWRSLVQ`, `SoftDTWMRSLVQ`, `SoftDTWLMRSLVQ`: `gamma` equal to the number of channels, one prototype per class, `max_iter=150`, `lr=0.05`, each channel standardised with training-set statistics; the same on every dataset |
+| Soft-DTW models | `SoftDTWRSLVQ`, `SoftDTWMRSLVQ`: `gamma` equal to the number of channels, one prototype per class, `max_iter=150`, `lr=0.05`, each channel standardised with training-set statistics; the same on every dataset |
 | Metric | Test accuracy |
 
 ```bash

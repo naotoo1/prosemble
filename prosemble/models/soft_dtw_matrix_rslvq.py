@@ -1,5 +1,5 @@
 """
-Soft-DTW Matrix Robust Soft LVQ (SoftDTWMRSLVQ, SoftDTWLMRSLVQ).
+Soft-DTW Matrix Robust Soft LVQ (SoftDTWMRSLVQ).
 
 SoftDTWRSLVQ for multivariate time series with a metric over the
 channels that is learned together with the prototypes. Two time points
@@ -94,7 +94,6 @@ class SoftDTWMRSLVQ(SoftMetricMixin, SoftDTWRSLVQ):
     See Also
     --------
     SoftDTWRSLVQ : The model without a metric over the channels.
-    SoftDTWLMRSLVQ : One metric per prototype.
     """
 
     def __init__(self, latent_dim=None, matrix_lr_ratio=0.3, gamma=0.1, band=None,
@@ -159,65 +158,7 @@ class SoftDTWMRSLVQ(SoftMetricMixin, SoftDTWRSLVQ):
     def channel_relevances(self):
         """Relevance of each channel: the diagonal of :math:`\\Lambda` divided by C.
 
-        Non-negative and summing to one; shape (n_channels,), or
-        (n_prototypes, n_channels) for one metric per prototype.
+        Non-negative and summing to one; shape (n_channels,).
         """
         lam = self.lambda_matrix
         return jnp.diagonal(lam, axis1=-2, axis2=-1) / self.n_channels
-
-
-class SoftDTWLMRSLVQ(SoftDTWMRSLVQ):
-    """Soft-DTW Local Matrix Robust Soft LVQ.
-
-    :class:`SoftDTWMRSLVQ` with one map :math:`\\Omega_k` per prototype,
-    so that each prototype weighs the channels in its own way. The
-    divergence from a sample to prototype :math:`k` is the soft-DTW
-    divergence of the two series mapped by :math:`\\Omega_k^T`. The term
-    :math:`\\tfrac12 \\operatorname{sdtw}(x, x)` now differs between
-    prototypes and is computed in full, which roughly doubles the cost
-    of training compared with SoftDTWMRSLVQ.
-
-    Parameters
-    ----------
-    latent_dim : int, optional
-        Number of columns of each :math:`\\Omega_k`. Default: the number
-        of channels.
-    matrix_lr_ratio : float
-        Learning rate of the matrices relative to ``lr``. Default: 0.3.
-    **kwargs
-        Other parameters of :class:`SoftDTWMRSLVQ`.
-
-    Attributes
-    ----------
-    omegas_ : array of shape (n_prototypes, n_channels, latent_dim)
-        Learned maps :math:`\\Omega_k`, each normalised to
-        :math:`\\operatorname{tr} \\Lambda_k = C`.
-
-    See Also
-    --------
-    SoftDTWMRSLVQ : One metric shared by all prototypes.
-    """
-
-    _local_metric = True
-
-    def _local_divergences(self, params, X):
-        """Divergence from each sample to each prototype under that prototype's map."""
-        omegas = self._normalised_map(params['omegas'])                 # (p, C, l)
-        series = self._series(X)                                        # (n, T, C)
-        prototypes = self._series(params['prototypes'])                 # (p, T, C)
-        sdtw = lambda a, b: soft_dtw(a, b, self.gamma, self.band)
-
-        def column(prototype, omega):
-            w = prototype @ omega
-            mapped = series @ omega                                     # (n, T, l)
-            cross = jax.vmap(lambda x: sdtw(x, w))(mapped)
-            own_x = jax.vmap(lambda x: sdtw(x, x))(mapped)
-            return cross - 0.5 * own_x - 0.5 * sdtw(w, w)
-
-        return jax.vmap(column, out_axes=1)(prototypes, omegas)        # (n, p)
-
-    def _logits(self, params, X):
-        return self._scale_by_sigma(self._local_divergences(params, X), params['log_sigma'])
-
-    def _divergence_matrix(self, params, X):
-        return self._local_divergences(params, X)

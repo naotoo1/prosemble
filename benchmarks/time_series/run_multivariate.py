@@ -1,9 +1,9 @@
 """Multivariate time-series benchmark on the UEA archive.
 
-Compares the soft-DTW prototype models (SoftDTWRSLVQ, SoftDTWMRSLVQ,
-SoftDTWLMRSLVQ) with 1-nearest-neighbour classifiers under the Euclidean
-distance and dimension-independent and dimension-dependent DTW, and with a
-random forest, on 18 equal-length datasets of the UEA multivariate archive
+Compares the soft-DTW prototype models (SoftDTWRSLVQ, SoftDTWMRSLVQ)
+with 1-nearest-neighbour classifiers under the Euclidean distance and
+dimension-independent and dimension-dependent DTW, and with a random
+forest, on 17 equal-length datasets of the UEA multivariate archive
 (2018 release), using the archive's train/test splits.
 
     python benchmarks/time_series/run_multivariate.py --out results.jsonl
@@ -167,7 +167,6 @@ def _methods():
         'RandomForest': _forest,
         'SoftDTWRSLVQ': _soft_dtw('SoftDTWRSLVQ'),
         'SoftDTWMRSLVQ': _soft_dtw('SoftDTWMRSLVQ'),
-        'SoftDTWLMRSLVQ': _soft_dtw('SoftDTWLMRSLVQ'),
     }
 
 

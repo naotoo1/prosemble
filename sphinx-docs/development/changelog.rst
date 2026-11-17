@@ -11,10 +11,9 @@ Unreleased
 
 **New models and features**
 
-* :class:`SoftDTWMRSLVQ` and :class:`SoftDTWLMRSLVQ`: soft-DTW prototype
-  classifiers for multivariate time series that learn a metric over the
-  channels (one shared, or one per prototype), with a benchmark on the UEA
-  multivariate archive.
+* :class:`SoftDTWMRSLVQ`: a soft-DTW prototype classifier for multivariate
+  time series that learns a metric over the channels, with a benchmark on
+  the UEA multivariate archive.
 * Soft (probabilistic) variants of the kernel, Wasserstein and Riemannian
   families: :class:`DKRSLVQ`, :class:`DKMRSLVQ`, :class:`DKLMRSLVQ`,
   :class:`WRSLVQ`, :class:`WMRSLVQ`, :class:`WLMRSLVQ`,

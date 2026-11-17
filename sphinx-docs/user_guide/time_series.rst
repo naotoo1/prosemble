@@ -88,7 +88,6 @@ which is the squared Euclidean distance between the mapped points
 :math:`\Omega^\top x_t` and :math:`\Omega^\top w_s`. The diagonal of
 :math:`\Lambda` is the relevance of each channel, and its off-diagonal
 entries show channels that act together, as in :class:`GMLVQ`.
-:class:`SoftDTWLMRSLVQ` learns one :math:`\Lambda_k` per prototype.
 
 .. code-block:: python
 
@@ -120,11 +119,11 @@ that the channels start on an equal footing.
 On 17 equal-length datasets of the UEA multivariate archive
 (``benchmarks/time_series/run_multivariate.py``: one prototype per class,
 ``gamma`` equal to the number of channels, the same settings on every
-dataset), the three soft-DTW models reach mean test accuracies of 0.710
-(:class:`SoftDTWRSLVQ`), 0.709 (:class:`SoftDTWMRSLVQ`) and 0.708
-(:class:`SoftDTWLMRSLVQ`), against 0.711 and 0.698 for the 1-nearest
-neighbour under independent and dependent DTW. None of the differences
-is significant (Friedman test, :math:`p = 0.53`). On these datasets the
+dataset), the two soft-DTW models reach mean test accuracies of 0.710
+(:class:`SoftDTWRSLVQ`) and 0.709 (:class:`SoftDTWMRSLVQ`), against
+0.711 and 0.698 for the 1-nearest neighbour under independent and
+dependent DTW. None of the differences is significant (Friedman test,
+:math:`p = 0.50`). On these datasets the
 learned metric does not raise accuracy; what it adds is the channel
 relevances, which show the channels the classes differ in.
 

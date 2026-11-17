@@ -13,7 +13,7 @@ from prosemble.core.soft_dtw import (
     soft_dtw_matrix,
 )
 from prosemble.models import (
-    _MODEL_REGISTRY, SoftDTWLMRSLVQ, SoftDTWMRSLVQ, SoftDTWRSLVQ,
+    _MODEL_REGISTRY, SoftDTWMRSLVQ, SoftDTWRSLVQ,
 )
 from prosemble.models.soft_mixin import SoftAssignmentMixin
 
@@ -231,9 +231,8 @@ def _channels(n_per_class=10, length=30, n_channels=4, seed=0):
 
 class TestSoftDTWMatrix:
 
-    @pytest.mark.parametrize('cls', [SoftDTWMRSLVQ, SoftDTWLMRSLVQ])
-    def test_registered(self, cls):
-        assert _MODEL_REGISTRY[cls.__name__] is cls
+    def test_registered(self):
+        assert _MODEL_REGISTRY['SoftDTWMRSLVQ'] is SoftDTWMRSLVQ
 
     def test_metric_is_soft_dtw_of_the_projected_series(self):
         X, _ = _channels(n_per_class=2)
@@ -267,25 +266,12 @@ class TestSoftDTWMatrix:
         np.testing.assert_allclose(relevances.sum(), 1.0, rtol=1e-5)
         np.testing.assert_allclose(float(jnp.trace(metric.lambda_matrix)), 4.0, rtol=1e-5)
 
-    def test_local_metric(self):
-        X, y = _channels(n_per_class=6)
-        model = SoftDTWLMRSLVQ(gamma=1.0, n_channels=4, latent_dim=2, max_iter=20,
-                               lr=0.05).fit(X, y)
-        assert model.omegas_.shape == (3, 4, 2)
-        assert model.channel_relevances.shape == (3, 4)
-        np.testing.assert_allclose(np.asarray(model.channel_relevances).sum(axis=1), 1.0, rtol=1e-5)
-        D = np.asarray(model.divergences(X))
-        assert D.shape == (len(X), 3) and np.all(np.isfinite(D))
-        # Each prototype has divergence zero to itself under its own map.
-        own = np.asarray(model.divergences(model.prototypes_))
-        np.testing.assert_allclose(np.diag(own), 0.0, atol=1e-2)
-
     def test_invalid_latent_dim(self):
         with pytest.raises(ValueError, match='latent_dim'):
             SoftDTWMRSLVQ(latent_dim=0)
 
-    @pytest.mark.parametrize('cls', [SoftDTWMRSLVQ, SoftDTWLMRSLVQ])
-    def test_save_load_and_calibration(self, cls):
+    def test_save_load_and_calibration(self):
+        cls = SoftDTWMRSLVQ
         X, y = _channels(n_per_class=5)
         model = cls(gamma=1.0, n_channels=4, latent_dim=3, max_iter=10, lr=0.05).fit(X, y)
         model.calibrate(X, y, cv=2)

@@ -70,6 +70,63 @@ all sample–prototype pairs in memory. For long series or many samples
 set ``batch_size``. ``band`` restricts alignments to a Sakoe–Chiba band
 (a fraction of the series length) and excludes implausible warps.
 
+Multivariate series with a learned metric
+-----------------------------------------
+
+With several channels, :class:`SoftDTWRSLVQ` weighs every channel alike:
+two time points are compared by the squared Euclidean distance of their
+channel values. :class:`SoftDTWMRSLVQ` learns a metric over the channels
+together with the prototypes. Inside the alignment, time points are
+compared by
+
+.. math::
+
+   c(x_t, w_s) = (x_t - w_s)^\top \Lambda\, (x_t - w_s),
+   \qquad \Lambda = \Omega \Omega^\top,
+
+which is the squared Euclidean distance between the mapped points
+:math:`\Omega^\top x_t` and :math:`\Omega^\top w_s`. The diagonal of
+:math:`\Lambda` is the relevance of each channel, and its off-diagonal
+entries show channels that act together, as in :class:`GMLVQ`.
+
+.. code-block:: python
+
+   from prosemble.models import SoftDTWMRSLVQ
+
+   # X: one series per row, T time points x C channels, time-major
+   model = SoftDTWMRSLVQ(
+       n_channels=C,
+       gamma=float(C),                # one unit of smoothing per channel
+       n_prototypes_per_class=1,
+       max_iter=150,
+       lr=0.05,
+   )
+   model.fit(X_train, y_train)
+
+   model.channel_relevances          # (C,), non-negative, sums to 1
+   model.lambda_matrix               # (C, C)
+
+The scale of :math:`\Omega` would also scale the ground cost, and with it
+the meaning of ``gamma``. The map is therefore normalised to
+:math:`\operatorname{tr}\Lambda = C`: training starts from
+:math:`\Lambda = I`, which is :class:`SoftDTWRSLVQ`, and only redistributes
+weight between the channels. As in the other matrix models, the matrix
+learns more slowly than the prototypes (``matrix_lr_ratio=0.3``), and
+``latent_dim`` below :math:`C` restricts :math:`\Lambda` to that rank.
+Standardise each channel, for example with training-set statistics, so
+that the channels start on an equal footing.
+
+On 17 equal-length datasets of the UEA multivariate archive
+(``benchmarks/time_series/run_multivariate.py``: one prototype per class,
+``gamma`` equal to the number of channels, the same settings on every
+dataset), the two soft-DTW models reach mean test accuracies of 0.710
+(:class:`SoftDTWRSLVQ`) and 0.709 (:class:`SoftDTWMRSLVQ`), against
+0.711 and 0.698 for the 1-nearest neighbour under independent and
+dependent DTW. None of the differences is significant (Friedman test,
+:math:`p = 0.50`). On these datasets the
+learned metric does not raise accuracy; what it adds is the channel
+relevances, which show the channels the classes differ in.
+
 Benchmark
 ---------
 

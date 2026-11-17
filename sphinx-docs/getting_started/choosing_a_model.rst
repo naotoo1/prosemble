@@ -40,6 +40,9 @@ Classification
    * - Time series
      - :class:`SoftDTWRSLVQ` with ``gamma=1``
      - Two prototypes per class
+   * - Multivariate time series, and which channels matter
+     - :class:`SoftDTWMRSLVQ`
+     - :class:`SoftDTWRSLVQ` (all channels weighted alike)
    * - Images
      - :class:`ImageGLVQ`
      - :class:`ImageGMLVQ`, :class:`ImageCBC`

@@ -170,6 +170,7 @@ User guide: :doc:`/user_guide/time_series`
    :template: class.rst
 
    SoftDTWRSLVQ
+   SoftDTWMRSLVQ
 
 Nearest neighbours
 ~~~~~~~~~~~~~~~~~~

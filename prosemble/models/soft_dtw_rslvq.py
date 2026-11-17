@@ -170,13 +170,11 @@ class SoftDTWRSLVQ(SoftAssignmentMixin, SupervisedPrototypeModel):
     def _init_state(self, X, y, key):
         prototypes, proto_labels = self._init_prototypes(
             X, y, self.n_prototypes_per_class, key)
-        divergences = soft_dtw_divergence_matrix(
-            self._series(X), self._series(prototypes), self.gamma, self.band)
-        params = {
-            'prototypes': prototypes,
-            'log_sigma': self._initial_log_sigma(
-                jnp.maximum(divergences, 0.0), y, proto_labels),
-        }
+        # A model with a metric over the channels adds its map here, so
+        # that the initial width is derived from the distance it trains with.
+        params = self._add_metric_params({'prototypes': prototypes}, self.n_channels)
+        params['log_sigma'] = self._initial_log_sigma(
+            jnp.maximum(self._divergence_matrix(params, X), 0.0), y, proto_labels)
         state = SupervisedState(
             prototypes=prototypes,
             opt_state=self._optimizer.init(params),
@@ -208,8 +206,12 @@ class SoftDTWRSLVQ(SoftAssignmentMixin, SupervisedPrototypeModel):
         """
         self._check_fitted()
         X = jnp.asarray(X, dtype=jnp.float32)
+        return self._divergence_matrix(self._fitted_params(), X)
+
+    def _divergence_matrix(self, params, X):
+        """Soft-DTW divergence between the rows of ``X`` and the prototypes."""
         return soft_dtw_divergence_matrix(
-            self._series(X), self._series(self.prototypes_), self.gamma, self.band)
+            self._series(X), self._series(params['prototypes']), self.gamma, self.band)
 
     def _get_resume_params(self, params):
         params['log_sigma'] = jnp.log(self.sigma_)

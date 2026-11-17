@@ -12,7 +12,9 @@ from prosemble.core.soft_dtw import (
     dtw, dtw_matrix, soft_dtw, soft_dtw_divergence, soft_dtw_divergence_matrix,
     soft_dtw_matrix,
 )
-from prosemble.models import _MODEL_REGISTRY, SoftDTWRSLVQ
+from prosemble.models import (
+    _MODEL_REGISTRY, SoftDTWLMRSLVQ, SoftDTWMRSLVQ, SoftDTWRSLVQ,
+)
 from prosemble.models.soft_mixin import SoftAssignmentMixin
 
 
@@ -204,3 +206,95 @@ class TestSoftDTWRSLVQ:
         model = SoftDTWRSLVQ(max_iter=2).fit(X, y)
         with pytest.raises(NotImplementedError, match='SoftDTWRSLVQ'):
             model.export_onnx()
+
+
+def _channels(n_per_class=10, length=30, n_channels=4, seed=0):
+    """Three classes told apart by channel 0 only; the other channels are noise."""
+    rng = np.random.default_rng(seed)
+    t = np.linspace(0, 1, length)
+    X, y = [], []
+    for c, width in enumerate((0.04, 0.12, None)):
+        for _ in range(n_per_class):
+            centre = rng.uniform(0.3, 0.7)
+            if width is None:
+                signal = np.where(np.abs(t - centre) < 0.1, 1.0, 0.0)
+            else:
+                signal = np.exp(-((t - centre) / width) ** 2)
+            series = rng.normal(size=(length, n_channels))
+            series[:, 0] = signal + 0.05 * rng.normal(size=length)
+            X.append(series)
+            y.append(c)
+    X = np.array(X, dtype=np.float32)
+    X = (X - X.mean(1, keepdims=True)) / X.std(1, keepdims=True)
+    return jnp.asarray(X.reshape(len(X), -1)), jnp.asarray(np.array(y))
+
+
+class TestSoftDTWMatrix:
+
+    @pytest.mark.parametrize('cls', [SoftDTWMRSLVQ, SoftDTWLMRSLVQ])
+    def test_registered(self, cls):
+        assert _MODEL_REGISTRY[cls.__name__] is cls
+
+    def test_metric_is_soft_dtw_of_the_projected_series(self):
+        X, _ = _channels(n_per_class=2)
+        model = SoftDTWMRSLVQ(gamma=0.5, n_channels=4)
+        series = X.reshape(len(X), -1, 4)
+        W = X[:2]
+        # Identity: the model without a metric.
+        params = {'prototypes': W, 'omega': jnp.eye(4)}
+        np.testing.assert_allclose(
+            np.asarray(model._divergence_matrix(params, X)),
+            np.asarray(soft_dtw_divergence_matrix(series, series[:2], 0.5)), rtol=1e-5)
+        # All weight on channel 0: the univariate divergence of that channel,
+        # with the map normalised to trace 4.
+        omega = jnp.zeros((4, 4)).at[0, 0].set(1.0)
+        params = {'prototypes': W, 'omega': omega}
+        expected = soft_dtw_divergence_matrix(2.0 * series[..., :1], 2.0 * series[:2, :, :1], 0.5)
+        np.testing.assert_allclose(np.asarray(model._divergence_matrix(params, X)),
+                                   np.asarray(expected), rtol=1e-5, atol=1e-4)
+
+    def test_learns_the_informative_channel(self):
+        X, y = _channels()
+        X_test, y_test = _channels(n_per_class=20, seed=1)
+        kw = dict(gamma=1.0, n_channels=4, max_iter=120, lr=0.05, random_seed=0)
+        plain = SoftDTWRSLVQ(**kw).fit(X, y)
+        metric = SoftDTWMRSLVQ(**kw).fit(X, y)
+        acc = lambda m: float(jnp.mean(m.predict(X_test) == y_test))
+        assert acc(metric) > acc(plain)
+        relevances = np.asarray(metric.channel_relevances)
+        assert relevances.shape == (4,)
+        assert np.argmax(relevances) == 0 and relevances[0] > 0.5
+        np.testing.assert_allclose(relevances.sum(), 1.0, rtol=1e-5)
+        np.testing.assert_allclose(float(jnp.trace(metric.lambda_matrix)), 4.0, rtol=1e-5)
+
+    def test_local_metric(self):
+        X, y = _channels(n_per_class=6)
+        model = SoftDTWLMRSLVQ(gamma=1.0, n_channels=4, latent_dim=2, max_iter=20,
+                               lr=0.05).fit(X, y)
+        assert model.omegas_.shape == (3, 4, 2)
+        assert model.channel_relevances.shape == (3, 4)
+        np.testing.assert_allclose(np.asarray(model.channel_relevances).sum(axis=1), 1.0, rtol=1e-5)
+        D = np.asarray(model.divergences(X))
+        assert D.shape == (len(X), 3) and np.all(np.isfinite(D))
+        # Each prototype has divergence zero to itself under its own map.
+        own = np.asarray(model.divergences(model.prototypes_))
+        np.testing.assert_allclose(np.diag(own), 0.0, atol=1e-2)
+
+    def test_invalid_latent_dim(self):
+        with pytest.raises(ValueError, match='latent_dim'):
+            SoftDTWMRSLVQ(latent_dim=0)
+
+    @pytest.mark.parametrize('cls', [SoftDTWMRSLVQ, SoftDTWLMRSLVQ])
+    def test_save_load_and_calibration(self, cls):
+        X, y = _channels(n_per_class=5)
+        model = cls(gamma=1.0, n_channels=4, latent_dim=3, max_iter=10, lr=0.05).fit(X, y)
+        model.calibrate(X, y, cv=2)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'model.npz')
+            model.save(path)
+            loaded = cls.load(path)
+        np.testing.assert_allclose(np.asarray(loaded.predict_proba(X)),
+                                   np.asarray(model.predict_proba(X)), rtol=1e-5)
+        np.testing.assert_allclose(np.asarray(loaded.lambda_matrix),
+                                   np.asarray(model.lambda_matrix), rtol=1e-6)
+        assert (loaded.latent_dim, loaded.n_channels) == (3, 4)

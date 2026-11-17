@@ -44,3 +44,28 @@ Herring, OliveOil and Meat. Choose the number of parallel processes by
 the memory available, not by the number of cores.
 
 `RESULTS.md` is the report of a full run.
+
+## Multivariate benchmark
+
+`run_multivariate.py` compares the soft-DTW models on 17 equal-length
+datasets of the UEA multivariate archive (2018 release).
+
+| Step | Choice |
+|---|---|
+| Datasets | `DATASETS` in `run_multivariate.py`: the equal-length UEA datasets with fewer than 61 channels, except Cricket (one soft fit takes about twelve hours on a CPU thread) |
+| Split | The archive's own train/test split; series as distributed |
+| Baselines | 1-nearest neighbour under the Euclidean distance, under independent DTW (summed over channels) and dependent DTW (multichannel ground cost); a random forest (500 trees) |
+| Soft-DTW models | `SoftDTWRSLVQ`, `SoftDTWMRSLVQ`, `SoftDTWLMRSLVQ`: `gamma` equal to the number of channels, one prototype per class, `max_iter=150`, `lr=0.05`, each channel standardised with training-set statistics; the same on every dataset |
+| Metric | Test accuracy |
+
+```bash
+# Data are downloaded once into ~/.cache/prosemble-uea
+# (override with PROSEMBLE_UEA_DATA).
+python benchmarks/time_series/run_multivariate.py --out multivariate.jsonl
+python benchmarks/time_series/run_multivariate.py --summary multivariate.jsonl
+```
+
+`--datasets`, `--methods`, `--shard` and `--shards` split the run into
+jobs. The long series need the most memory and time: StandWalkJump
+(length 2500), SelfRegulationSCP2 (1152) and SelfRegulationSCP1 (896).
+`RESULTS_multivariate.md` is the report of a full run.

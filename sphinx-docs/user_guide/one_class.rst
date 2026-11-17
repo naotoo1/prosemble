@@ -564,3 +564,10 @@ outlier=1):
 - ``model.omega_matrix`` — learned :math:`\Omega` projection
 - ``model.lambda_matrix`` — :math:`\Omega^T \Omega` (feature importance)
 - ``model.omegas_`` — per-prototype :math:`\Omega_k` (local variants)
+
+Time series
+-----------
+
+For one class of time series, :class:`OCAlignmentDensity` gives each
+series its log density under a model of monotone alignments to prototype
+series; see :doc:`time_series`.

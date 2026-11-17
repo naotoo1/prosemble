@@ -127,6 +127,90 @@ dependent DTW. None of the differences is significant (Friedman test,
 learned metric does not raise accuracy; what it adds is the channel
 relevances, which show the channels the classes differ in.
 
+One class of series
+-------------------
+
+:class:`OCAlignmentDensity` models the series of one class, for telling
+normal series from anomalous ones. It is fitted to normal series only and
+gives each series its log density under the model.
+
+A series :math:`x \in \mathbb{R}^{T \times C}` is generated from a
+prototype series :math:`w_k` by a monotone alignment and Gaussian noise:
+
+.. math::
+
+   p(x) = \sum_k \pi_k \sum_a \frac{\tau(a)}{Z_\tau}
+          \prod_{t=1}^{T} \mathcal{N}\big(x_t;\, w_{k, a_t},\, \Sigma_{k, a_t}\big).
+
+The alignment starts at the first prototype position, ends at the last,
+and advances by 0, 1 or 2 positions per time step with probabilities
+:math:`\tau`; :math:`Z_\tau` normalises them over the alignments that end
+at the last position. Each :math:`x_t` is emitted exactly once from a
+normalised Gaussian, so :math:`p` is a proper density, and
+:math:`\log p(x)` is a forward recursion like soft-DTW's. Expectation–
+maximisation fits the prototypes, the variances, the weights
+:math:`\pi_k` and :math:`\tau`.
+
+The prototypes start at soft-DTW medoids of the normal series (three by
+default). Each prototype position has its own variance per channel,
+shrunk towards the variance of the channel with a strength chosen by
+empirical Bayes, so that positions which few time points reach still get
+a sensible variance; ``covariance='shared'`` uses one full covariance over
+the channels instead.
+
+.. code-block:: python
+
+   from prosemble.models import OCAlignmentDensity
+
+   # X_normal: normal series only, one per row (T x C values, time-major)
+   model = OCAlignmentDensity(n_channels=C, nu=0.05)
+   model.fit(X_normal)
+
+   model.score_samples(X_new)            # log density; larger is more normal
+   model.decision_function(X_new)        # in (0, 1), boundary at 0.5
+   model.predict(X_new)                  # 1 normal, -1 anomalous
+   model.prototypes_                     # (3, T, C) prototype series
+   model.step_probabilities_             # probabilities of steps 0, 1, 2
+
+The boundary of :meth:`~OCAlignmentDensity.decision_function` is placed
+so that the fraction ``nu`` of the training series falls outside it. An
+EM step costs time proportional to the number of training series times
+the number of prototypes times :math:`T^2`.
+
+On the one-class benchmark (``benchmarks/time_series/run_one_class.py``),
+each class of a dataset in turn is the normal class, and the AUROC for
+telling its test series from the others is averaged over the classes. On
+the 14 UCR datasets not used for design choices:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Method
+     - Mean AUROC
+     - Better / worse than :class:`OCAlignmentDensity`
+   * - :class:`OCAlignmentDensity`
+     - 0.787
+     -
+   * - Nearest normal series, DTW
+     - 0.745
+     - 3 / 11
+   * - Nearest normal series, Euclidean
+     - 0.741
+     - 4 / 10
+   * - One-class SVM
+     - 0.718
+     - 2 / 12
+   * - Isolation forest
+     - 0.706
+     - 1 / 13
+
+The difference to the nearest-neighbour detector under DTW is significant
+(Holm-adjusted Wilcoxon test, :math:`p = 0.041`). On the 13 UEA
+multivariate datasets not used for design choices it is second, at 0.708
+against 0.716 for the nearest-neighbour detector under DTW (not
+significant), and ahead of the others. With few training series per
+class, results depend on the medoids that start EM.
+
 Benchmark
 ---------
 

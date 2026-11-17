@@ -69,3 +69,26 @@ python benchmarks/time_series/run_multivariate.py --summary multivariate.jsonl
 jobs. The long series need the most memory and time: StandWalkJump
 (length 2500), SelfRegulationSCP2 (1152) and SelfRegulationSCP1 (896).
 `RESULTS_multivariate.md` is the report of a full run.
+
+## One-class benchmark
+
+`run_one_class.py` compares `OCAlignmentDensity` with one-class detectors
+on the 24 UCR datasets and the 17 UEA datasets above.
+
+| Step | Choice |
+|---|---|
+| Task | Each class in turn is the normal class: a detector is fitted to the training series of that class only and scores every test series |
+| Metric | Area under the ROC curve (AUROC) for telling the normal test series from the others, averaged over the classes of a dataset |
+| Data | UCR series as distributed (z-normalised); UEA channels standardised with the statistics of the normal training series |
+| Baselines | Distance to the nearest normal training series, Euclidean and (dependent) DTW; a one-class SVM (RBF kernel, `nu=0.1`); an isolation forest (500 trees) |
+| `OCAlignmentDensity` | Defaults (3 prototypes, per-position variances), the same on every dataset |
+
+```bash
+python benchmarks/time_series/run_one_class.py --archive ucr --out ucr.jsonl
+python benchmarks/time_series/run_one_class.py --archive uea --out uea.jsonl
+python benchmarks/time_series/run_one_class.py --archive ucr --summary ucr.jsonl
+```
+
+`--datasets`, `--methods` and `--classes` split the run into jobs;
+`--summary` reads several result files. `RESULTS_one_class.md` is the
+report of a full run.

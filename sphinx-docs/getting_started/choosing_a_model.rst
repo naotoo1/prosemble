@@ -64,6 +64,8 @@ accepted or flagged:
   contrastive soft models (:class:`OCDKRSLVQ`, :class:`OCWRSLVQ`) give
   probabilities.
 * :class:`SVQOCC` combines a Neural Gas ranking with response probabilities.
+* :class:`OCAlignmentDensity` for time series: a normalised density of
+  series under monotone alignment (:doc:`/user_guide/time_series`).
 
 See :doc:`/user_guide/one_class`.
 

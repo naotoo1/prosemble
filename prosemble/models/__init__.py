@@ -134,6 +134,7 @@ try:
     from .oc_riemannian_rslvq import OCRiemannianRSLVQ
     from .soft_dtw_rslvq import SoftDTWRSLVQ
     from .soft_dtw_matrix_rslvq import SoftDTWMRSLVQ
+    from .oc_alignment_density import OCAlignmentDensity
 
 
     # One-Class Differentiating Kernel models
@@ -212,6 +213,7 @@ try:
         # Time series
         'SoftDTWRSLVQ': SoftDTWRSLVQ,
         'SoftDTWMRSLVQ': SoftDTWMRSLVQ,
+        'OCAlignmentDensity': OCAlignmentDensity,
         'DKGLVQ_NG': DKGLVQ_NG, 'DKGRLVQ_NG': DKGRLVQ_NG,
         'DKGMLVQ_NG': DKGMLVQ_NG,
         'DKNeuralGas': DKNeuralGas, 'DKKohonenSOM': DKKohonenSOM,
@@ -293,6 +295,7 @@ __all__ = [
     # Time series
     'SoftDTWRSLVQ',
     'SoftDTWMRSLVQ',
+    'OCAlignmentDensity',
     # Status
     'JAX_AVAILABLE',
 ]

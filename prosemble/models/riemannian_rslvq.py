@@ -23,6 +23,7 @@ References
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from prosemble.core.protocols import Manifold
 from prosemble.models.prototype_base import SupervisedPrototypeModel, SupervisedState
@@ -57,6 +58,36 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
     component depends on :math:`\\sigma` but not on the prototype. With
     one shared :math:`\\sigma` it cancels in the likelihood ratio.
 
+    The likelihood ratio is at most 1, and on training data that the
+    model separates it keeps growing as the prototypes move away from the
+    data along directions that separate the classes: the margin
+    :math:`(d^2(x, w_j) - d^2(x, w_k)) / 2\\sigma^2` grows without bound, so
+    the cost has no finite minimiser and gradient descent drifts. On small
+    training sets the drift acts like a margin-maximising bias and helps
+    accuracy. On SPD(n), however, a geodesic distance :math:`t` stretches
+    the eigenvalues by :math:`e^{\\pm t}`, and after a long run with a large
+    ``lr`` the prototypes can become too ill-conditioned for float32
+    arithmetic; training then stops with a warning and keeps the parameters
+    with the lowest training loss. The drifted prototypes are also no longer
+    typical matrices of their classes.
+
+    With ``prototype_prior=True`` each prototype has a Riemannian Gaussian
+    prior centred at the Karcher mean of its class, with the mean squared
+    distance of the class to that mean as variance, and the cost is the
+    negative log posterior
+
+    .. math::
+
+        -\\frac{1}{n} \\Big( \\sum_i \\log P(y_i \\mid x_i)
+        - \\sum_k \\frac{d^2(w_k, m_{c(k)})}{2 s_{c(k)}^2} \\Big),
+
+    whose prior term grows quadratically while the likelihood ratio stays
+    bounded, so the cost has a finite minimiser and the prototypes stay near
+    their classes, where they can be read as typical class members. On a
+    simulated SPD(6) task this was slightly more accurate with 40 training
+    matrices per class and less accurate with 5, so the prior is off by
+    default.
+
     Prototypes are updated intrinsically (see :class:`RiemannianSRNG`):
     the optimizer step is taken in the tangent space and followed along
     the geodesic.
@@ -76,6 +107,10 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
     rejection_confidence : float, optional
         Minimum class posterior for ``predict_with_rejection``.
         Default: None (no rejection).
+    prototype_prior : bool
+        If True, add the Riemannian Gaussian prior that keeps each prototype
+        near the Karcher mean of its class (see above). Default: False (the
+        plain likelihood-ratio cost).
     tau : float
         Safety factor in (0, 1]. With ``update_rule='riemannian'`` the
         geodesic length of a prototype step is limited to ``tau`` times
@@ -155,8 +190,12 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
     RiemannianSRNG : Margin-based counterpart with neural-gas cooperation.
     """
 
+    _hyperparams = ('prototype_prior',)
+    _divergence_hint = ('prototype_prior=True keeps the prototypes near '
+                        'their classes, which prevents it.')
+
     def __init__(self, manifold: Manifold, sigma='auto', adapt_sigma=True,
-                 rejection_confidence=None, tau=0.95,
+                 rejection_confidence=None, prototype_prior=False, tau=0.95,
                  update_rule='riemannian',
                  n_prototypes_per_class=1, max_iter=100, lr=0.01,
                  epsilon=1e-6, random_seed=42, optimizer='adam',
@@ -188,6 +227,8 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
         # does not have.
         self.freeze_params = freeze_params
         self._setup_soft(sigma, adapt_sigma, rejection_confidence)
+        self.prototype_prior = bool(prototype_prior)
+        self._prior = None
 
     def _squared_distances(self, params, X):
         prototypes = params['prototypes']
@@ -209,6 +250,7 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
         params = self._add_metric_params({'prototypes': prototypes}, X.shape[1])
         params['log_sigma'] = self._initial_log_sigma(
             self._squared_distances(params, X), y, proto_labels)
+        self._prior = self._class_prior(X, y, proto_labels) if self.prototype_prior else None
         state = SupervisedState(
             prototypes=prototypes,
             opt_state=self._optimizer.init(params),
@@ -217,6 +259,50 @@ class RiemannianRSLVQ(SoftAssignmentMixin, RiemannianSRNG):
             converged=False,
         )
         return state, params, proto_labels
+
+    def fit(self, X, y, *args, **kwargs):
+        """Fit the model (see :meth:`SupervisedPrototypeModel.fit`)."""
+        if (kwargs.get('resume') and self.prototype_prior and self._prior is None
+                and self.prototypes_ is not None):
+            # A loaded model resumes with the prior of the data it is given.
+            self._prior = self._class_prior(
+                jnp.asarray(X, dtype=jnp.float32), self._encode_y(y), self.prototype_labels_)
+        return super().fit(X, y, *args, **kwargs)
+
+    def _karcher_mean(self, points, n_iter=20):
+        """Karcher mean of manifold points, by the fixed-point iteration
+        :math:`m \\leftarrow \\operatorname{Exp}_m(\\tfrac{1}{n} \\sum_i \\operatorname{Log}_m(x_i))`."""
+        m = points[0]
+        for _ in range(n_iter):
+            step = jnp.mean(jax.vmap(lambda p: self.manifold.log_map(m, p))(points), axis=0)
+            m = self.manifold.project(self.manifold.exp_map(m, step))
+        return m
+
+    def _class_prior(self, X, y, proto_labels):
+        """Centre and variance of the prior of each prototype, from its class."""
+        y, labels = np.asarray(y), np.asarray(proto_labels)
+        centres, variances = {}, {}
+        for c in np.unique(labels):
+            members = X[y == c]
+            pts = self._reshape_to_manifold(members, members.shape[0])
+            m = self._karcher_mean(pts)
+            centres[c] = m.reshape(-1)
+            d2 = self._geodesic_distances(pts, m[None])[:, 0]
+            variances[c] = jnp.maximum(jnp.mean(d2), 1e-6)
+        return (jnp.stack([centres[c] for c in labels]),
+                jnp.stack([variances[c] for c in labels]),
+                float(X.shape[0]))
+
+    def _compute_loss(self, params, X, y, proto_labels):
+        loss = super()._compute_loss(params, X, y, proto_labels)
+        if self._prior is None:
+            return loss
+        centres, variances, n_train = self._prior
+        n_protos = centres.shape[0]
+        d2 = jnp.diagonal(self._geodesic_distances(
+            self._reshape_to_manifold(params['prototypes'], n_protos),
+            self._reshape_to_manifold(centres, n_protos)))
+        return loss + jnp.sum(d2 / (2.0 * variances)) / n_train
 
     def _logits(self, params, X):
         return self._scale_by_sigma(

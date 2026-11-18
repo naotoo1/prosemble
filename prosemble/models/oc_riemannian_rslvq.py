@@ -79,10 +79,16 @@ class OCRiemannianRSLVQ(RiemannianReferenceMixin, OneClassSoftMixin, RiemannianR
     RiemannianRSLVQ : The multi-class model with the same distance.
     """
 
+    _divergence_hint = ''
+
     def __init__(self, manifold, n_prototypes=3, n_outlier_prototypes=3,
                  target_label=None, noise_ratio=5, noise_scale=2.5, nu=0.05,
                  outlier_weight='balanced', **kwargs):
+        # The prior of RiemannianRSLVQ belongs to its likelihood-ratio cost;
+        # the contrastive cost of this model does not use it.
+        kwargs.pop('prototype_prior', None)
         super().__init__(
+            prototype_prior=False,
             n_prototypes=n_prototypes,
             n_outlier_prototypes=n_outlier_prototypes,
             target_label=target_label, noise_ratio=noise_ratio,

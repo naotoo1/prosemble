@@ -37,6 +37,11 @@ Unreleased
 * :class:`SoftDTWRSLVQ`, a soft prototype classifier for time series under
   the soft-DTW divergence, with a benchmark on 24 UCR datasets
   (`#116 <https://github.com/naotoo1/prosemble/pull/116>`_).
+* ``prototype_prior`` option of :class:`RiemannianRSLVQ` and
+  :class:`RiemannianMRSLVQ`: a Riemannian Gaussian prior at the Karcher
+  mean of each class gives the cost a finite minimiser and keeps the
+  prototypes near their classes. Off by default, because on small training
+  sets the unregularised drift is more accurate.
 * Intrinsic prototype updates for the supervised Riemannian models
   (`#106 <https://github.com/naotoo1/prosemble/pull/106>`_).
 * The documentation was reorganised: getting-started pages, a user guide
@@ -48,6 +53,14 @@ Unreleased
   supervised and unsupervised models (full-batch and mini-batch), NeuralGas,
   KohonenSOM and HeskesSOM: the convergence check took the argmax of an
   empty array of loss changes.
+* Training of the supervised gradient-trained models stops at the first
+  non-finite loss or parameter update, warns, and keeps the parameters with
+  the lowest training loss. Before, such an update silently left NaN
+  prototypes and a model that predicted one class. This happened to
+  :class:`RiemannianRSLVQ` on SPD matrices with a large ``lr``: on training
+  data that it separates, its likelihood-ratio cost has no finite minimiser,
+  so the prototypes drift away from the data until they are too
+  ill-conditioned for float32. Runs that stay finite are unchanged.
 * The contrastive one-class models (:class:`OCDKRSLVQ`, :class:`OCWRSLVQ`)
   scale the steps of their prototypes and kernel bandwidths by the spread
   of the target features, so that ``lr`` is relative to the data. On data

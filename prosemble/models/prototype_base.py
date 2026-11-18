@@ -172,6 +172,18 @@ def _decode_predictions(predict):
     return wrapper
 
 
+def _noisy_sgd(optax, lr, seed):
+    """``optax.noisy_sgd`` with a key from the model's seed.
+
+    Recent optax versions warn when no key is given and will require one.
+    """
+    seed = int(seed) if seed is not None else 0
+    try:
+        return optax.noisy_sgd(lr, key=seed)
+    except TypeError:  # optax versions before the ``key`` argument
+        return optax.noisy_sgd(lr, seed=seed)
+
+
 # --- Divergence guard for the training loops ---
 
 def _all_finite(tree):
@@ -506,13 +518,18 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
 
         Supports string names or pre-built optax GradientTransformations.
 
-        String options (26 optimizers):
+        String options (25 optimizers):
             adam, adamw, adamax, adamaxw, adan, adabelief, adadelta,
             adafactor, adagrad, amsgrad, fromage, lamb, lars, lion,
             novograd, radam, rmsprop, rprop, sgd, sign_sgd, signum,
-            sm3, yogi, noisy_sgd, lbfgs, dpsgd.
+            sm3, yogi, noisy_sgd, lbfgs.
         """
         import optax
+        if optimizer == 'dpsgd':
+            raise ValueError(
+                "optimizer='dpsgd' is not supported: differentially private "
+                "SGD clips the gradient of each training example, and the "
+                "training loops compute the gradient of the mean loss.")
         if isinstance(optimizer, str):
             optimizers = {
                 # Adam family
@@ -531,7 +548,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                 'sgd': optax.sgd,
                 'sign_sgd': optax.sign_sgd,
                 'signum': optax.signum,
-                'noisy_sgd': optax.noisy_sgd,
+                'noisy_sgd': lambda lr: _noisy_sgd(optax, lr, self.random_seed),
                 'lars': optax.lars,
                 # Adaptive
                 'rmsprop': optax.rmsprop,
@@ -544,7 +561,6 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                 'fromage': optax.fromage,
                 # Special
                 'lbfgs': optax.lbfgs,
-                'dpsgd': optax.dpsgd,
             }
             if optimizer in optimizers:
                 return optimizers[optimizer](lr)

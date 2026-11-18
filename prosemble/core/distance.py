@@ -47,16 +47,16 @@ def euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
     """
     Compute pairwise Euclidean distances between rows of X and Y.
 
-    Uses the expansion trick: :math:`\|x - y\|^2 = \|x\|^2 + \|y\|^2 - 2 x^T y`.
+    Uses the expansion trick: :math:`\\|x - y\\|^2 = \\|x\\|^2 + \\|y\\|^2 - 2 x^T y`.
 
-    Formula: :math:`D_{ij} = \|X_i - Y_j\| = \sqrt{\sum_k (X_{ik} - Y_{jk})^2}`
+    Formula: :math:`D_{ij} = \\|X_i - Y_j\\| = \\sqrt{\\sum_k (X_{ik} - Y_{jk})^2}`
 
     Args:
         X: Array of shape (n, d) - n samples with d features
         Y: Array of shape (m, d) - m samples with d features
 
     Returns:
-        D: Array of shape (n, m) where :math:`D_{ij} = \|X_i - Y_j\|`
+        D: Array of shape (n, m) where :math:`D_{ij} = \\|X_i - Y_j\\|`
 
     Complexity:
         Time: O(nmd) - single matrix multiplication
@@ -104,14 +104,14 @@ def squared_euclidean_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Arra
     More efficient than euclidean_distance_matrix(X, Y)**2 because it avoids
     the sqrt operation entirely.
 
-    Formula: :math:`D^2_{ij} = \|X_i - Y_j\|^2 = \sum_k (X_{ik} - Y_{jk})^2`
+    Formula: :math:`D^2_{ij} = \\|X_i - Y_j\\|^2 = \\sum_k (X_{ik} - Y_{jk})^2`
 
     Args:
         X: Array of shape (n, d)
         Y: Array of shape (m, d)
 
     Returns:
-        D: Array of shape (n, m) where :math:`D^2_{ij} = \|X_i - Y_j\|^2`
+        D: Array of shape (n, m) where :math:`D^2_{ij} = \\|X_i - Y_j\\|^2`
 
     Complexity:
         Time: O(nmd)
@@ -147,7 +147,7 @@ def manhattan_distance_matrix(X: chex.Array, Y: chex.Array) -> chex.Array:
     """
     Compute pairwise Manhattan (L1) distances.
 
-    Formula: :math:`D_{ij} = \|X_i - Y_j\|_1 = \sum_k |X_{ik} - Y_{jk}|`
+    Formula: :math:`D_{ij} = \\|X_i - Y_j\\|_1 = \\sum_k |X_{ik} - Y_{jk}|`
 
     Args:
         X: Array of shape (n, d)
@@ -197,12 +197,12 @@ def lpnorm_distance_matrix(
     """
     Compute pairwise L-p norm distances.
 
-    Formula: :math:`D_{ij} = \|X_i - Y_j\|_p = (\sum_k |X_{ik} - Y_{jk}|^p)^{1/p}`
+    Formula: :math:`D_{ij} = \\|X_i - Y_j\\|_p = (\\sum_k |X_{ik} - Y_{jk}|^p)^{1/p}`
 
     Special Cases:
         p = 1: Manhattan distance
         p = 2: Euclidean distance
-        p = :math:`\infty`: Chebyshev distance (max absolute difference)
+        p = :math:`\\infty`: Chebyshev distance (max absolute difference)
 
     Args:
         X: Array of shape (n, d)
@@ -254,8 +254,8 @@ def omega_distance_matrix(
     """
     Compute distances in projected space using projection matrix Omega.
 
-    Formula: :math:`D_{ij} = \|X_i \Omega - Y_j \Omega\|^2`
-    where :math:`\Omega` is a projection matrix that transforms the feature space.
+    Formula: :math:`D_{ij} = \\|X_i \\Omega - Y_j \\Omega\\|^2`
+    where :math:`\\Omega` is a projection matrix that transforms the feature space.
 
     Args:
         X: Array of shape (n, d)
@@ -272,7 +272,7 @@ def omega_distance_matrix(
     Use Cases:
         - Dimensionality reduction for distance computation
         - Learning relevance of features (omega learned from data)
-        - Mahalanobis-like distances (when :math:`\Omega = L` where :math:`\Sigma = LL^T`)
+        - Mahalanobis-like distances (when :math:`\\Omega = L` where :math:`\\Sigma = LL^T`)
 
     Example:
         >>> X = jnp.array([[1, 2, 3], [4, 5, 6]])
@@ -312,8 +312,8 @@ def lomega_distance_matrix(
     """
     Compute distances using multiple projection matrices (Local Omega).
 
-    Formula: :math:`D_{ij} = \sum_p \|X_i \Omega_p - Y_j \Omega_p\|^2`
-    where :math:`\Omega_p` are multiple projection matrices (one per prototype or cluster).
+    Formula: :math:`D_{ij} = \\sum_p \\|X_i \\Omega_p - Y_j \\Omega_p\\|^2`
+    where :math:`\\Omega_p` are multiple projection matrices (one per prototype or cluster).
 
     Args:
         X: Array of shape (n, d) - data points
@@ -391,12 +391,12 @@ def tangent_distance_matrix(
     """
     Compute pairwise localized tangent distances.
 
-    Each prototype j has an orthogonal subspace basis :math:`\Omega_j` of shape (d, s).
+    Each prototype j has an orthogonal subspace basis :math:`\\Omega_j` of shape (d, s).
     The tangent distance projects out the subspace directions:
 
     .. math::
 
-        d(x, w_j) = \|(I - \Omega_j \Omega_j^T)(x - w_j)\|^2
+        d(x, w_j) = \\|(I - \\Omega_j \\Omega_j^T)(x - w_j)\\|^2
 
     Parameters
     ----------
@@ -784,8 +784,8 @@ def polynomial_kernel_matrix(
     Args:
         X: Array of shape (n, d)
         Y: Array of shape (m, d)
-        degree: Polynomial degree (:math:`d \ge 1`)
-        coef0: Coefficient (:math:`c \ge 0`)
+        degree: Polynomial degree (:math:`d \\ge 1`)
+        coef0: Coefficient (:math:`c \\ge 0`)
 
     Returns:
         K: Array of shape (n, m) with polynomial kernel values

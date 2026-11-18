@@ -428,3 +428,20 @@ class TestFrozenParameters:
         before = np.asarray(model.prototypes_)
         model.fit(X, y, resume=True)
         np.testing.assert_array_equal(model.prototypes_, before)
+
+
+# --- Optimizer options ---
+
+def test_dpsgd_is_rejected_with_the_reason(iris):
+    with pytest.raises(ValueError, match='gradient of each training example'):
+        GLVQ(optimizer='dpsgd')
+
+
+def test_noisy_sgd_is_seeded_without_warnings(iris):
+    import warnings
+    X, y = iris
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        a = GLVQ(optimizer='noisy_sgd', max_iter=3, epsilon=0.0, random_seed=3).fit(X, y)
+    b = GLVQ(optimizer='noisy_sgd', max_iter=3, epsilon=0.0, random_seed=3).fit(X, y)
+    np.testing.assert_array_equal(np.asarray(a.prototypes_), np.asarray(b.prototypes_))

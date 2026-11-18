@@ -236,14 +236,14 @@ Fuzzy clustering models also support patience-based early stopping:
 Optimizer Configuration
 -----------------------
 
-Prosemble supports 26 optimizers via optax. Pass a string name or a
+Prosemble supports 25 optimizers via optax. Pass a string name or a
 pre-built ``optax.GradientTransformation`` to the ``optimizer`` parameter:
 
 .. code-block:: python
 
    from prosemble.models import GLVQ
 
-   # String name (26 options)
+   # String name (25 options)
    model = GLVQ(
        n_prototypes_per_class=2,
        max_iter=100,
@@ -256,7 +256,7 @@ Available optimizer strings: ``adam``, ``adamw``, ``adamax``, ``adamaxw``,
 ``adan``, ``adabelief``, ``amsgrad``, ``radam``, ``lamb``, ``lion``,
 ``novograd``, ``sgd``, ``sign_sgd``, ``signum``, ``noisy_sgd``, ``lars``,
 ``rmsprop``, ``adagrad``, ``adadelta``, ``adafactor``, ``sm3``, ``yogi``,
-``rprop``, ``fromage``, ``lbfgs``, ``dpsgd``.
+``rprop``, ``fromage``, ``lbfgs``.
 
 You can also pass a custom optax optimizer directly:
 

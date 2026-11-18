@@ -172,6 +172,19 @@ def _decode_predictions(predict):
 
 # --- Supervised Base ---
 
+
+def scan_iterations(loss_history, max_iter, epsilon):
+    """Number of iterations that a ``lax.scan`` training run needed.
+
+    The first iteration whose loss changed by less than ``epsilon`` from
+    the one before, counting from one, or ``max_iter`` if none did. A run
+    of a single iteration has no change to measure and needed that one.
+    """
+    if loss_history.shape[0] < 2:
+        return int(loss_history.shape[0])
+    converged = jnp.abs(jnp.diff(loss_history)) < epsilon
+    return int(jnp.where(jnp.any(converged), jnp.argmax(converged) + 2, max_iter))
+
 class SupervisedState(NamedTuple):
     """Base state for gradient-based supervised models.
 
@@ -1281,11 +1294,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             X, y, params, opt_state, proto_labels
         )
 
-        # Find actual convergence iteration
-        converged_mask = jnp.abs(jnp.diff(loss_history)) < self.epsilon
-        first_converged = jnp.argmax(converged_mask)
-        has_any_converged = jnp.any(converged_mask)
-        n_iter = jnp.where(has_any_converged, first_converged + 2, self.max_iter)
+        n_iter = scan_iterations(loss_history, self.max_iter, self.epsilon)
 
         self._store_results(
             final_state.params, proto_labels,
@@ -1448,11 +1457,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
 
         final_state, loss_history = _run_scan(initial_state, X, y)
 
-        # Find convergence iteration
-        converged_mask = jnp.abs(jnp.diff(loss_history)) < self.epsilon
-        first_converged = jnp.argmax(converged_mask)
-        has_any = jnp.any(converged_mask)
-        n_iter = jnp.where(has_any, first_converged + 2, self.max_iter)
+        n_iter = scan_iterations(loss_history, self.max_iter, self.epsilon)
 
         self._store_results(
             final_state.params, proto_labels,

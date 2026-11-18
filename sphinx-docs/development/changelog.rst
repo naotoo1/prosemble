@@ -44,6 +44,10 @@ Unreleased
 
 **Fixes**
 
+* ``max_iter=1`` no longer crashes the ``lax.scan`` training loops of the
+  supervised and unsupervised models (full-batch and mini-batch), NeuralGas,
+  KohonenSOM and HeskesSOM: the convergence check took the argmax of an
+  empty array of loss changes.
 * The contrastive one-class models (:class:`OCDKRSLVQ`, :class:`OCWRSLVQ`)
   scale the steps of their prototypes and kernel bandwidths by the spread
   of the target features, so that ``lr`` is relative to the data. On data

@@ -90,6 +90,15 @@ Unreleased
 * Dependency updates for security advisories
   (`#103 <https://github.com/naotoo1/prosemble/pull/103>`_).
 
+**Development**
+
+* CI builds the documentation for every pull request and fails on any
+  Sphinx warning.
+* The test suite runs in parallel in CI (pytest-xdist, now part of the
+  ``all`` and ``dev`` extras). The tests clear JAX's compiled functions
+  after each module, which keeps the memory of each worker from growing
+  through the suite.
+
 2.4.0 (2026-08-30)
 ------------------
 

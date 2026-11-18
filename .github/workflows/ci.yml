@@ -33,11 +33,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install .[all]
       - name: Run tests
-        run: pytest tests/ -x -q --tb=short
+        run: pytest tests/ -n auto -x -q --tb=short
+
+  docs:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[docs]
+      - name: Build HTML, warnings as errors
+        run: sphinx-build -W --keep-going -b html sphinx-docs sphinx-docs/_build/html
 
   build:
     name: Build package
-    needs: test
+    needs: [test, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

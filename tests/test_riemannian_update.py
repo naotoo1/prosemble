@@ -83,8 +83,11 @@ class TestTangentGeometry:
 
     @pytest.mark.parametrize('manifold, d2', MANIFOLDS)
     def test_exp_map_of_zero_is_identity(self, manifold, d2):
+        # Relative tolerance: the SPD map goes through an eigendecomposition,
+        # whose float32 rounding error grows with the size of the entries.
         _, w, _, v = _points(manifold)
-        np.testing.assert_allclose(manifold.exp_map(w, 0.0 * v), w, atol=2e-6)
+        np.testing.assert_allclose(
+            manifold.exp_map(w, 0.0 * v), w, rtol=1e-5, atol=2e-6)
 
     @pytest.mark.parametrize('manifold, d2', MANIFOLDS)
     def test_exp_map_is_first_order_consistent(self, manifold, d2):

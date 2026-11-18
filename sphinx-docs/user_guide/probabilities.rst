@@ -13,7 +13,8 @@ be trusted:
   statistical sense; on the classification benchmark their log-loss is far
   above that of the probabilistic models.
 * The probabilistic models (:doc:`classification/probabilistic`) return
-  the posterior of a Gaussian mixture, trained by maximum likelihood.
+  the class posterior whose log-likelihood they are trained to maximise;
+  with one shared distance this is the posterior of a Gaussian mixture.
   After calibration they are among the best-calibrated models on the
   benchmark (:doc:`/benchmarks/index`).
 

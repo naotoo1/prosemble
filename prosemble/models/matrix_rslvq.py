@@ -29,8 +29,7 @@ from functools import partial
 from prosemble.models.prototype_base import SupervisedPrototypeModel
 from prosemble.core.competitions import wtac
 from prosemble.core.initializers import identity_omega_init
-from prosemble.core.losses import rslvq_loss
-from prosemble.core.pooling import stratified_min_pooling
+from prosemble.core.losses import gaussian_mixture_class_proba, rslvq_loss
 
 
 @jit
@@ -43,13 +42,12 @@ def _predict_mrslvq_jit(X, prototypes, omega, proto_labels):
 
 
 @partial(jit, static_argnums=(4,))
-def _predict_proba_mrslvq_jit(X, prototypes, omega, proto_labels, n_classes):
-    """JIT-compiled MRSLVQ probability prediction."""
+def _predict_proba_mrslvq_jit(X, prototypes, omega, proto_labels, n_classes, sigma):
+    """JIT-compiled MRSLVQ class posteriors of the trained mixture."""
     diff = X[:, None, :] - prototypes[None, :, :]
     projected = jnp.einsum('npd,dl->npl', diff, omega)
     distances = jnp.sum(projected ** 2, axis=2)
-    class_dists = stratified_min_pooling(distances, proto_labels, n_classes)
-    return jax.nn.softmax(-class_dists, axis=1)
+    return gaussian_mixture_class_proba(distances, proto_labels, n_classes, sigma)
 
 
 @jit
@@ -62,13 +60,12 @@ def _predict_lmrslvq_jit(X, prototypes, omegas, proto_labels):
 
 
 @partial(jit, static_argnums=(4,))
-def _predict_proba_lmrslvq_jit(X, prototypes, omegas, proto_labels, n_classes):
-    """JIT-compiled LMRSLVQ probability prediction."""
+def _predict_proba_lmrslvq_jit(X, prototypes, omegas, proto_labels, n_classes, sigma):
+    """JIT-compiled LMRSLVQ class posteriors of the trained mixture."""
     diff = X[:, None, :] - prototypes[None, :, :]
     projected = jnp.einsum('npd,pdl->npl', diff, omegas)
     distances = jnp.sum(projected ** 2, axis=2)
-    class_dists = stratified_min_pooling(distances, proto_labels, n_classes)
-    return jax.nn.softmax(-class_dists, axis=1)
+    return gaussian_mixture_class_proba(distances, proto_labels, n_classes, sigma)
 
 
 class MRSLVQ(SupervisedPrototypeModel):
@@ -281,7 +278,7 @@ class MRSLVQ(SupervisedPrototypeModel):
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_proba_mrslvq_jit(
             X, self.prototypes_, self.omega_, self.prototype_labels_,
-            self.n_classes_
+            self.n_classes_, self.sigma
         )
 
     def predict_with_rejection(self, X, confidence=None):
@@ -351,6 +348,13 @@ class LMRSLVQ(SupervisedPrototypeModel):
 
     Combined with the RSLVQ probabilistic loss for metric-adaptive
     soft classification with local relevance learning.
+
+    The class posteriors of :meth:`predict_proba` are those the cost is
+    the log-likelihood of. They are not the posteriors of a normalised
+    Gaussian mixture: the component of prototype :math:`k` would need the
+    normalising term :math:`\\tfrac12 \\log\\det(\\Omega_k^T \\Omega_k)`, which
+    differs between prototypes and is left out. The model is a
+    discriminative classifier, and its scores are not log-densities.
 
     Parameters
     ----------
@@ -537,7 +541,7 @@ class LMRSLVQ(SupervisedPrototypeModel):
         X = jnp.asarray(X, dtype=jnp.float32)
         return _predict_proba_lmrslvq_jit(
             X, self.prototypes_, self.omegas_, self.prototype_labels_,
-            self.n_classes_
+            self.n_classes_, self.sigma
         )
 
     def predict_with_rejection(self, X, confidence=None):

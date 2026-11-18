@@ -21,6 +21,17 @@ and its matrix variants the width :math:`\sigma` is fixed; the
 kernel, Wasserstein and Riemannian soft models can also learn it
 (``adapt_sigma=True``).
 
+``predict_proba`` returns the class posteriors
+:math:`P(c \mid x) = \sum_{k:\, c(k) = c} e^{f_k(x)} / \sum_k e^{f_k(x)}`
+whose log-likelihood the cost is. When all prototypes share one distance
+and one width, these are the posteriors of a Gaussian mixture. Models with
+a metric or a kernel bandwidth per prototype (:class:`LMRSLVQ`,
+:class:`DKRSLVQ`, :class:`DKLMRSLVQ`, :class:`WLMRSLVQ`, ...) leave out
+the normalising term that each component would need, so their scores are
+not log-densities: they are discriminative classifiers, and their
+posteriors are valid conditional probabilities but not those of a
+normalised mixture.
+
 The same cost is available with other distances:
 
 .. list-table::

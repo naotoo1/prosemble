@@ -23,7 +23,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from prosemble.models.prototype_base import SupervisedPrototypeModel
-from prosemble.core.losses import ng_rslvq_loss
+from prosemble.core.losses import gaussian_mixture_class_proba, ng_rslvq_loss
 
 
 class RSLVQ_NG(SupervisedPrototypeModel):
@@ -255,6 +255,27 @@ class RSLVQ_NG(SupervisedPrototypeModel):
             params, proto_labels, loss_history, n_iter, **kwargs
         )
         self.gamma_ = float(params['gamma'])
+
+    def predict_proba(self, X):
+        """Class posteriors :math:`P(c \\mid x)` of the trained mixture.
+
+        Sums the Gaussian components of each class with the width
+        ``sigma`` the model was trained with.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+
+        Returns
+        -------
+        proba : array of shape (n_samples, n_classes)
+            Columns follow the order of ``classes_``.
+        """
+        self._check_fitted()
+        X = jnp.asarray(X, dtype=jnp.float32)
+        distances = self.distance_fn(X, self.prototypes_)
+        return gaussian_mixture_class_proba(
+            distances, self.prototype_labels_, self.n_classes_, self.sigma)
 
     def predict_with_rejection(self, X, confidence=None):
         """Predict with rejection option.

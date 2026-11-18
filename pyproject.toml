@@ -71,7 +71,8 @@ dev = [
     "sphinx-copybutton",
     "twine",
     "autopep8",
-    "pytest"
+    "pytest",
+    "pytest-xdist"
 ]
 # JAX is a core dependency; this extra is kept so that existing
 # ``pip install "prosemble[jax]"`` commands continue to work.
@@ -112,6 +113,7 @@ all = [
     "twine",
     "autopep8",
     "pytest",
+    "pytest-xdist",
     "jax>=0.4.23",
     "jaxlib>=0.4.23",
     "chex>=0.1.85",

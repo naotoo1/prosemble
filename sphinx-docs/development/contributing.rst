@@ -36,10 +36,13 @@ Running the tests
 
 .. code-block:: bash
 
-   pytest tests/ -x -q
+   pytest tests/ -n auto -x -q
 
-Continuous integration runs the full suite on Python 3.11, 3.12 and 3.13
-for every pull request. The suite trains many models and takes a while;
+``-n auto`` runs the tests in parallel, one worker per CPU core
+(pytest-xdist, installed with the ``all`` and ``dev`` extras); drop it to
+run them in one process. Continuous integration runs the full suite on
+Python 3.11, 3.12 and 3.13 for every pull request. The suite trains many
+models and takes a while;
 while working on one area, run its test file, for example
 ``pytest tests/test_evaluation.py``.
 
@@ -50,7 +53,10 @@ Building the documentation
 
    pip install -e ".[docs]"
    cd sphinx-docs
-   make html          # open _build/html/index.html
+   make html SPHINXOPTS="-W --keep-going"   # open _build/html/index.html
+
+Continuous integration builds the documentation for every pull request
+and fails on any warning, so build with ``-W`` before opening one.
 
 The API pages are generated from the docstrings at build time. The figures
 in the tutorials are committed images; after changing a tutorial, redraw

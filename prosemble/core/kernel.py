@@ -17,7 +17,7 @@ def gaussian_kernel(x: chex.Array, y: chex.Array, sigma: float) -> chex.Array:
     """
     Compute Gaussian (RBF) kernel between two vectors.
 
-    :math:`K(x, y) = \exp(-\|x - y\|^2 / (2\sigma^2))`
+    :math:`K(x, y) = \\exp(-\\|x - y\\|^2 / (2\\sigma^2))`
 
     Args:
         x: First vector, shape (n_features,)
@@ -71,7 +71,7 @@ def kernel_distance_squared(
     """
     Compute squared distance in feature space.
 
-    For Gaussian kernel: :math:`\|\phi(x) - \phi(y)\|^2 = K(x,x) + K(y,y) - 2K(x,y) = 2(1 - K(x,y))`,
+    For Gaussian kernel: :math:`\\|\\phi(x) - \\phi(y)\\|^2 = K(x,x) + K(y,y) - 2K(x,y) = 2(1 - K(x,y))`,
     since :math:`K(x,x) = 1`.
 
     Args:

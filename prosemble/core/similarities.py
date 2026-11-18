@@ -93,7 +93,7 @@ def rank_scaled_gaussian(distances, lambd=1.0):
 
     .. math::
 
-        s(d, r) = \exp(-\exp(-r / \lambda) \cdot d)
+        s(d, r) = \\exp(-\\exp(-r / \\lambda) \\cdot d)
 
     where *r* is the rank of each distance (0 = closest).
 

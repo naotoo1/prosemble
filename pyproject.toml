@@ -41,6 +41,9 @@ Repository = "https://github.com/naotoo1/prosemble"
 Issues = "https://github.com/naotoo1/prosemble/issues"
 
 [tool]
+[tool.pytest.ini_options]
+markers = ["slow: long-running tests"]
+
 [tool.setuptools.package-data]
 prosemble = ["py.typed"]
 

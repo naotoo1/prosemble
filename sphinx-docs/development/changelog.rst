@@ -49,6 +49,14 @@ Unreleased
 
 **Fixes**
 
+* ``optimizer='dpsgd'`` is rejected with an explanation. It never worked
+  (the optimizer was built without its required clipping and noise
+  arguments), and differentially private SGD needs per-example gradients,
+  which the training loops do not compute. Looking it up also raised a
+  deprecation warning every time a model was created.
+* ``optimizer='noisy_sgd'`` takes its noise key from ``random_seed``, as
+  recent optax versions require.
+
 * ``max_iter=1`` no longer crashes the ``lax.scan`` training loops of the
   supervised and unsupervised models (full-batch and mini-batch), NeuralGas,
   KohonenSOM and HeskesSOM: the convergence check took the argmax of an

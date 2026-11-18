@@ -241,6 +241,7 @@ class TestJAXDataTypes:
 
         assert X_jax.dtype == jnp.float32
 
+    @pytest.mark.filterwarnings('ignore:Explicitly requested dtype float64')
     def test_float64_conversion(self, data_instance):
         """Test float64 conversion (if x64 enabled)."""
         dataset = data_instance.breast_cancer

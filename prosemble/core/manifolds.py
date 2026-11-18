@@ -53,7 +53,7 @@ def logm_safe(A):
 def sqrt_spd(A):
     """Matrix square root for symmetric positive definite matrices.
 
-    Uses eigendecomposition: :math:`A^{1/2} = V \operatorname{diag}(\sqrt{\lambda}) V^T`.
+    Uses eigendecomposition: :math:`A^{1/2} = V \\operatorname{diag}(\\sqrt{\\lambda}) V^T`.
 
     Parameters
     ----------
@@ -71,7 +71,7 @@ def sqrt_spd(A):
 def inv_sqrt_spd(A):
     """Inverse matrix square root for symmetric positive definite matrices.
 
-    Uses eigendecomposition: :math:`A^{-1/2} = V \operatorname{diag}(1/\sqrt{\lambda}) V^T`.
+    Uses eigendecomposition: :math:`A^{-1/2} = V \\operatorname{diag}(1/\\sqrt{\\lambda}) V^T`.
 
     Parameters
     ----------

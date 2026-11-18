@@ -359,6 +359,15 @@ class TestMatrixLearningRate:
         assert moved[0.1] < 0.5 * moved[1.0]
 
 
+
+@pytest.fixture(scope='module')
+def concentric():
+    """A narrow class inside a wide one, both centred at the origin."""
+    rng = np.random.default_rng(1)
+    X = np.vstack([0.5 * rng.normal(size=(150, 3)), 3.0 * rng.normal(size=(150, 3))])
+    return jnp.asarray(X, dtype=jnp.float32), jnp.asarray([0] * 150 + [1] * 150)
+
+
 class TestWhatTheMatrixLearns:
 
     @pytest.mark.parametrize('cls', [DKMRSLVQ, WMRSLVQ])
@@ -378,13 +387,6 @@ class TestWhatTheMatrixLearns:
         assert abs(eigenvectors[:, -1] @ rotation[:, 1]) >= 0.98
         assert eigenvalues[-1] >= 5.0 * eigenvalues[0]
         assert float(jnp.mean(model.predict(X) == y)) >= 0.9
-
-    @pytest.fixture(scope='class')
-    def concentric(self):
-        """A narrow class inside a wide one, both centred at the origin."""
-        rng = np.random.default_rng(1)
-        X = np.vstack([0.5 * rng.normal(size=(150, 3)), 3.0 * rng.normal(size=(150, 3))])
-        return jnp.asarray(X, dtype=jnp.float32), jnp.asarray([0] * 150 + [1] * 150)
 
     @pytest.mark.parametrize('cls', [DKLMRSLVQ, WLMRSLVQ])
     def test_local_matrices_separate_concentric_classes(self, concentric, cls):

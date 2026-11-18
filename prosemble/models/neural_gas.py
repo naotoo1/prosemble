@@ -19,7 +19,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import jit, lax
 
-from prosemble.models.prototype_base import UnsupervisedPrototypeModel
+from prosemble.models.prototype_base import UnsupervisedPrototypeModel, scan_iterations
 from prosemble.core.distance import squared_euclidean_distance_matrix
 
 
@@ -179,10 +179,7 @@ class NeuralGas(UnsupervisedPrototypeModel):
         lambda_init = jnp.array(lambda_init_val, dtype=jnp.float32)
         final_state, loss_history = self._fit_scan(X, prototypes, lambda_init)
 
-        converged_mask = jnp.abs(jnp.diff(loss_history)) < self.epsilon
-        first_converged = jnp.argmax(converged_mask)
-        has_any = jnp.any(converged_mask)
-        n_iter = jnp.where(has_any, first_converged + 2, self.max_iter)
+        n_iter = scan_iterations(loss_history, self.max_iter, self.epsilon)
 
         self.prototypes_ = final_state.prototypes
         self.n_iter_ = int(n_iter)

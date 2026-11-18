@@ -113,6 +113,10 @@ class RiemannianMRSLVQ(SoftMetricMixin, RiemannianRSLVQ):
     rejection_confidence : float, optional
         Minimum class posterior for ``predict_with_rejection``.
         Default: None (no rejection).
+    prototype_prior : bool
+        If True, keep each prototype near the Karcher mean of its class with
+        a Riemannian Gaussian prior (see :class:`RiemannianRSLVQ`).
+        Default: False.
     tau : float
         Safety factor in (0, 1] for the geodesic step of a prototype.
         Default: 0.95.
@@ -136,7 +140,7 @@ class RiemannianMRSLVQ(SoftMetricMixin, RiemannianRSLVQ):
     def __init__(self, manifold: Manifold, latent_dim=None, matrix_lr_ratio=0.3,
                  log_map=None,
                  sigma='auto', adapt_sigma=True,
-                 rejection_confidence=None, tau=0.95,
+                 rejection_confidence=None, prototype_prior=False, tau=0.95,
                  update_rule='riemannian',
                  n_prototypes_per_class=1, max_iter=100, lr=0.01,
                  epsilon=1e-6, random_seed=42, optimizer='adam',
@@ -150,7 +154,8 @@ class RiemannianMRSLVQ(SoftMetricMixin, RiemannianRSLVQ):
                  gradient_checkpointing=False, devices=None):
         super().__init__(
             manifold=manifold, sigma=sigma, adapt_sigma=adapt_sigma,
-            rejection_confidence=rejection_confidence, tau=tau,
+            rejection_confidence=rejection_confidence,
+            prototype_prior=prototype_prior, tau=tau,
             update_rule=update_rule,
             n_prototypes_per_class=n_prototypes_per_class,
             max_iter=max_iter, lr=lr, epsilon=epsilon,

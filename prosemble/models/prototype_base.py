@@ -12,6 +12,8 @@ Both follow prosemble's established patterns:
 
 import functools
 import json
+import math
+import warnings
 from abc import ABC, abstractmethod
 from typing import NamedTuple, Self
 
@@ -170,6 +172,41 @@ def _decode_predictions(predict):
     return wrapper
 
 
+# --- Divergence guard for the training loops ---
+
+def _all_finite(tree):
+    """True when every leaf of a parameter tree is finite; usable under jit."""
+    leaves = [jnp.all(jnp.isfinite(leaf)) for leaf in jax.tree.leaves(tree)]
+    return jnp.all(jnp.stack(leaves)) if leaves else jnp.array(True)
+
+
+_all_finite_jit = jax.jit(_all_finite)
+
+
+class _DivergenceGuard:
+    """Stop a Python training loop at the first non-finite loss or update.
+
+    ``check(loss, params, new_params)`` is called once per step with the
+    loss measured at ``params`` and the parameters after the update. It
+    remembers the finite parameters with the lowest loss and returns True
+    when the loss or the update is not finite. Then the loop stops and the
+    model keeps ``best_params``: just before a numerical blow-up the loss
+    is often already rising, so the last finite iterate is a poor model.
+    """
+
+    def __init__(self, params):
+        self.best_params = params
+        self.best_loss = float('inf')
+        self.diverged = False
+
+    def check(self, loss, params, new_params):
+        loss = float(loss)
+        if math.isfinite(loss) and loss < self.best_loss:
+            self.best_loss, self.best_params = loss, params
+        self.diverged = not (math.isfinite(loss) and bool(_all_finite_jit(new_params)))
+        return self.diverged
+
+
 # --- Supervised Base ---
 
 
@@ -204,6 +241,9 @@ class ScanTrainState(NamedTuple):
     loss: jnp.ndarray             # current loss (scalar)
     prev_loss: jnp.ndarray        # previous iteration loss
     converged: jnp.ndarray        # boolean convergence flag
+    diverged: jnp.ndarray         # a loss or an update was not finite
+    best_params: dict             # finite parameters with the lowest loss
+    best_loss: jnp.ndarray        # their loss
 
 
 class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCollectorMixin, QuantizationMixin, ABC):
@@ -1204,7 +1244,8 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
     @partial(jit, static_argnums=(0,))
     def _training_step_scan(self, state, X, y, proto_labels):
         """Single JIT-compiled training step for lax.scan."""
-        params, opt_state, loss, prev_loss, converged = state
+        params, opt_state, loss, prev_loss, converged = state[:5]
+        diverged, best_params, best_loss = state[5:]
 
         # Compute loss and gradients
         loss_val, grads = self._value_and_grad_fn(params, X, y, proto_labels)
@@ -1219,16 +1260,27 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         # Check convergence
         has_converged = converged | (jnp.abs(loss_val - prev_loss) < self.epsilon)
 
-        # Freeze params when converged (keep old values)
+        # Divergence guard: remember the finite parameters with the lowest
+        # loss, and stop at the first non-finite loss or update.
+        stopped = converged | diverged
+        loss_ok = jnp.isfinite(loss_val)
+        step_ok = loss_ok & _all_finite(new_params)
+        improved = ~stopped & loss_ok & (loss_val < best_loss)
+        best_params = jax.tree.map(
+            lambda cur, best: jnp.where(improved, cur, best), params, best_params)
+        best_loss = jnp.where(improved, loss_val, best_loss)
+        halt = stopped | ~step_ok
+
+        # Freeze params when converged or diverged (keep old values)
         frozen_params = jax.tree.map(
-            lambda new, old: jnp.where(converged, old, new),
+            lambda new, old: jnp.where(halt, old, new),
             new_params, params
         )
         frozen_opt_state = jax.tree.map(
-            lambda new, old: jnp.where(converged, old, new),
+            lambda new, old: jnp.where(halt, old, new),
             new_opt_state, opt_state
         )
-        frozen_loss = jnp.where(converged, loss, loss_val)
+        frozen_loss = jnp.where(stopped | ~loss_ok, loss, loss_val)
 
         new_state = ScanTrainState(
             params=frozen_params,
@@ -1236,6 +1288,9 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             loss=frozen_loss,
             prev_loss=loss_val,
             converged=has_converged,
+            diverged=diverged | (~converged & ~step_ok),
+            best_params=best_params,
+            best_loss=best_loss,
         )
         return new_state, frozen_loss
 
@@ -1248,6 +1303,9 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             loss=jnp.array(float('inf')),
             prev_loss=jnp.array(float('inf')),
             converged=jnp.array(False),
+            diverged=jnp.array(False),
+            best_params=params,
+            best_loss=jnp.array(float('inf')),
         )
 
         def scan_fn(state, _):
@@ -1257,6 +1315,24 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             scan_fn, initial_state, None, length=self.max_iter
         )
         return final_state, loss_history
+
+    _divergence_hint = ''
+
+    def _warn_diverged(self):
+        """Warn that training stopped at a non-finite loss or update."""
+        warnings.warn(
+            f'{type(self).__name__}: training diverged (the loss or a parameter '
+            'update became non-finite) and was stopped; the model keeps the '
+            'parameters with the lowest training loss. A smaller lr usually '
+            'avoids this.' + (' ' + self._divergence_hint if self._divergence_hint else ''),
+            RuntimeWarning, stacklevel=4)
+
+    def _scan_result_params(self, final_state):
+        """Parameters to keep after a scan loop: the best finite ones if it diverged."""
+        if bool(final_state.diverged):
+            self._warn_diverged()
+            return final_state.best_params
+        return final_state.params
 
     def _needs_python_loop(self):
         """True if an option is set that only the Python loops implement."""
@@ -1297,7 +1373,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         n_iter = scan_iterations(loss_history, self.max_iter, self.epsilon)
 
         self._store_results(
-            final_state.params, proto_labels,
+            self._scan_result_params(final_state), proto_labels,
             loss_history.tolist(), int(n_iter),
             opt_state=final_state.opt_state,
         )
@@ -1313,6 +1389,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         key = self.key
         ema_params = self._init_ema(params)
         slow_params = self._init_lookahead(params)
+        guard = _DivergenceGuard(params)
 
         for i in range(self.max_iter):
             # Apply sample weighting via resampling
@@ -1327,11 +1404,14 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             loss_val, grads = self._value_and_grad_fn(
                 params, X_step, y_step, proto_labels
             )
+            updates, new_opt_state = self._active_optimizer.update(grads, opt_state, params)
+            new_params = self._post_update(optax.apply_updates(params, updates))
+            if guard.check(loss_val, params, new_params):
+                if math.isfinite(float(loss_val)):
+                    loss_history.append(float(loss_val))
+                break
             loss_history.append(float(loss_val))
-
-            updates, opt_state = self._active_optimizer.update(grads, opt_state, params)
-            params = optax.apply_updates(params, updates)
-            params = self._post_update(params)
+            params, opt_state = new_params, new_opt_state
             slow_params, params = self._update_lookahead(slow_params, params, i)
             ema_params = self._update_ema(ema_params, params)
 
@@ -1359,6 +1439,9 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         final_params = slow_params if slow_params is not None else params
         if ema_params is not None and not (self.restore_best and best_params is not None):
             final_params = ema_params
+        if guard.diverged:
+            self._warn_diverged()
+            final_params = guard.best_params
 
         self._store_results(
             final_params, proto_labels, loss_history, i + 1,
@@ -1394,6 +1477,9 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             loss=jnp.array(float('inf')),
             prev_loss=jnp.array(float('inf')),
             converged=jnp.array(False),
+            diverged=jnp.array(False),
+            best_params=params,
+            best_loss=jnp.array(float('inf')),
         )
 
         @partial(jit, static_argnums=())
@@ -1434,15 +1520,25 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                 has_converged = state.converged | (
                     jnp.abs(epoch_loss - state.prev_loss) < self.epsilon
                 )
+                # Divergence guard, per epoch: the mean loss of an epoch is
+                # credited to the parameters at its end.
+                stopped = state.converged | state.diverged
+                epoch_ok = jnp.isfinite(epoch_loss) & _all_finite(new_params)
+                improved = ~stopped & epoch_ok & (epoch_loss < state.best_loss)
+                best_params = jax.tree.map(
+                    lambda cur, best: jnp.where(improved, cur, best),
+                    new_params, state.best_params,
+                )
+                halt = stopped | ~epoch_ok
                 frozen_params = jax.tree.map(
-                    lambda new, old: jnp.where(state.converged, old, new),
+                    lambda new, old: jnp.where(halt, old, new),
                     new_params, state.params,
                 )
                 frozen_opt = jax.tree.map(
-                    lambda new, old: jnp.where(state.converged, old, new),
+                    lambda new, old: jnp.where(halt, old, new),
                     new_opt_state, state.opt_state,
                 )
-                frozen_loss = jnp.where(state.converged, state.loss, epoch_loss)
+                frozen_loss = jnp.where(halt, state.loss, epoch_loss)
 
                 new_state = ScanTrainState(
                     params=frozen_params,
@@ -1450,6 +1546,9 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                     loss=frozen_loss,
                     prev_loss=epoch_loss,
                     converged=has_converged,
+                    diverged=state.diverged | (~state.converged & ~epoch_ok),
+                    best_params=best_params,
+                    best_loss=jnp.where(improved, epoch_loss, state.best_loss),
                 )
                 return new_state, frozen_loss
 
@@ -1460,7 +1559,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         n_iter = scan_iterations(loss_history, self.max_iter, self.epsilon)
 
         self._store_results(
-            final_state.params, proto_labels,
+            self._scan_result_params(final_state), proto_labels,
             loss_history.tolist(), int(n_iter),
             opt_state=final_state.opt_state,
         )
@@ -1479,6 +1578,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         sw = self._sample_weight
         ema_params = self._init_ema(params)
         slow_params = self._init_lookahead(params)
+        guard = _DivergenceGuard(params)
 
         for epoch in range(self.max_iter):
             key, subkey = jax.random.split(key)
@@ -1510,9 +1610,11 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
                 params = optax.apply_updates(params, updates)
                 params = self._post_update(params)
 
+            avg_loss = sum(epoch_losses) / len(epoch_losses)
+            if guard.check(avg_loss, params, params):
+                break
             slow_params, params = self._update_lookahead(slow_params, params, epoch)
             ema_params = self._update_ema(ema_params, params)
-            avg_loss = sum(epoch_losses) / len(epoch_losses)
             loss_history.append(avg_loss)
 
             # Validation loss
@@ -1538,6 +1640,9 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         final_params = slow_params if slow_params is not None else params
         if ema_params is not None and not (self.restore_best and best_params is not None):
             final_params = ema_params
+        if guard.diverged:
+            self._warn_diverged()
+            final_params = guard.best_params
 
         self._store_results(
             final_params, proto_labels, loss_history, epoch + 1,
@@ -1559,6 +1664,7 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         key = self.key
         ema_params = self._init_ema(params)
         slow_params = self._init_lookahead(params)
+        guard = _DivergenceGuard(params)
 
         for i in range(self.max_iter):
             # Apply sample weighting
@@ -1573,11 +1679,14 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             loss_val, grads = self._value_and_grad_fn(
                 params, X_step, y_step, proto_labels
             )
+            updates, new_opt_state = self._active_optimizer.update(grads, opt_state, params)
+            new_params = self._post_update(optax.apply_updates(params, updates))
+            if guard.check(loss_val, params, new_params):
+                if math.isfinite(float(loss_val)):
+                    loss_history.append(float(loss_val))
+                break
             loss_history.append(float(loss_val))
-
-            updates, opt_state = self._active_optimizer.update(grads, opt_state, params)
-            params = optax.apply_updates(params, updates)
-            params = self._post_update(params)
+            params, opt_state = new_params, new_opt_state
             slow_params, params = self._update_lookahead(slow_params, params, i)
             ema_params = self._update_ema(ema_params, params)
 
@@ -1610,6 +1719,9 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
         final_params = slow_params if slow_params is not None else params
         if ema_params is not None and not (self.restore_best and best_params is not None):
             final_params = ema_params
+        if guard.diverged:
+            self._warn_diverged()
+            final_params = guard.best_params
 
         self._store_results(
             final_params, proto_labels, loss_history, i + 1,
@@ -1618,7 +1730,8 @@ class SupervisedPrototypeModel(RejectOptionMixin, SerializationMixin, MetadataCo
             best_params=best_params,
             best_loss=best_loss,
         )
-        info = self._build_info(final_params, proto_labels, i, loss_history[-1])
+        info = self._build_info(final_params, proto_labels, i,
+                                loss_history[-1] if loss_history else float('nan'))
         self._notify_fit_end(info)
         return self
 

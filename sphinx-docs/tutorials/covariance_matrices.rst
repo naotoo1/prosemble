@@ -165,9 +165,17 @@ Settings
 --------
 
 * Prototype updates move along geodesics of the manifold. Keep the
-  learning rate small (``lr=0.01`` here) and check that ``loss_history_``
-  decreases smoothly; large steps can carry the prototypes far from the
-  data.
+  learning rate small (``lr=0.01`` here). On training data that it
+  separates, the model keeps moving its prototypes away from the data to
+  widen its margins; after a long run with a large ``lr`` they can become
+  too ill-conditioned for float32, and training stops with a warning and
+  keeps the parameters with the lowest training loss.
+* ``prototype_prior=True`` keeps each prototype near the Karcher mean of
+  its class, so the prototypes stay typical covariance matrices of their
+  classes and training cannot diverge this way. On this data it was less
+  accurate with 5 recordings per class (0.863 against 0.903 without it,
+  mean over 30 training sets) and slightly more accurate with 40; see
+  :doc:`/user_guide/riemannian`.
 * With ``adapt_sigma=True`` the model also learns the width of its
   Gaussian components; ``sigma='auto'`` sets the initial width from the
   data.

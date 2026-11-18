@@ -233,6 +233,32 @@ Fuzzy clustering models also support patience-based early stopping:
 
    print(f"Stopped at iteration {model.n_iter_}")
 
+.. _training-divergence:
+
+Divergence
+~~~~~~~~~~
+
+If the loss or a parameter update of a supervised model becomes
+non-finite (NaN or infinite), ``fit`` stops, issues a
+``RuntimeWarning`` and keeps the parameters with the lowest training loss
+seen so far. It does not keep the last finite ones, because the loss
+usually rises in the iterations before a numerical blow-up. This
+applies to every training loop: ``lax.scan`` and Python, full batch and
+mini-batch, with or without callbacks. With mini-batches the check is
+made once per epoch. ``loss_history_`` and ``n_iter_`` end where
+training stopped.
+
+The usual cause is a learning rate that is too large for the data. To
+turn the warning into an error, for example in a hyperparameter search:
+
+.. code-block:: python
+
+   import warnings
+
+   with warnings.catch_warnings():
+       warnings.simplefilter('error', RuntimeWarning)
+       model.fit(X_train, y_train)
+
 Optimizer Configuration
 -----------------------
 

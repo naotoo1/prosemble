@@ -189,6 +189,35 @@ distribution centred at its prototype.
    proba = model.predict_proba(X)          # class posteriors
    labels = model.predict_with_rejection(X, confidence=0.8)
 
+The likelihood ratio is at most 1, so on training data that the model
+separates it has no finite maximiser: training keeps increasing it by
+moving the prototypes away from the data along directions that separate
+the classes.  On small training sets this drift helps accuracy, much as
+a margin does.  It has two costs.  The drifted prototypes are no longer
+typical members of their classes.  On SPD matrices a geodesic distance
+:math:`t` stretches the eigenvalues by :math:`e^{\pm t}`, so after a long
+run with a large ``lr`` the prototypes can become too ill-conditioned
+for float32 arithmetic; training then stops with a warning (see
+:ref:`training-divergence`).
+
+``prototype_prior=True`` adds a Riemannian Gaussian prior on each
+prototype, centred at the Karcher mean of its class with the class's
+mean squared distance to that mean as variance.  The cost then has a
+finite minimiser and the prototypes stay near their classes, where they
+can be read as typical class members:
+
+.. code-block:: python
+
+   model = RiemannianRSLVQ(manifold=SPD(4), prototype_prior=True,
+                           max_iter=300, lr=0.05)
+
+On the SPD(6) task of :doc:`/tutorials/covariance_matrices`, with 40
+training matrices per class and ``lr=0.05``, the prior prevented the one
+divergence in 50 runs and raised test accuracy by 0.004; with 5 matrices
+per class it lowered accuracy from 0.903 to 0.863 (mean over 30 training
+sets).  It is therefore off by default.  :class:`~prosemble.models.RiemannianMRSLVQ` takes the same
+option.
+
 RiemannianMRSLVQ
 ----------------
 

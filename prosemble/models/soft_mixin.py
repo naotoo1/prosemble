@@ -1,18 +1,27 @@
 """
 Shared machinery for soft (probabilistic) prototype classifiers.
 
-A soft prototype model is a labelled mixture: prototype :math:`k` carries
-a class label :math:`c(k)` and a score
+A soft prototype model gives each prototype :math:`k` a class label
+:math:`c(k)` and a score :math:`f_k(x)`, and the class posterior
 
 .. math::
 
-    f_k(x) = \\log P(k) + \\log p(x | k) + \\text{const},
+    P(c \\mid x) = \\frac{\\sum_{k: c(k) = c} e^{f_k(x)}}{\\sum_j e^{f_j(x)}}.
 
-and is trained by maximising the likelihood ratio
-:math:`\\sum_i \\log [p(x_i, y_i) / p(x_i)] = \\sum_i \\log P(y_i | x_i)`,
-the robust soft LVQ cost. :class:`SoftAssignmentMixin` implements that
-cost, a learnable global width, and prediction from the class posterior.
-A model only has to say what its component scores are.
+It is trained by maximising :math:`\\sum_i \\log P(y_i \\mid x_i)`, the
+robust soft LVQ cost. :class:`SoftAssignmentMixin` implements that cost,
+a learnable global width, and prediction from the class posterior. A
+model only has to say what its component scores are.
+
+The posterior is a valid conditional distribution for any scores, so
+the cost is the conditional log-likelihood of a discriminative model.
+When all prototypes share one distance and one width, the scores are
+also :math:`\\log p(x \\mid k)` of a Gaussian mixture up to a constant
+shared by all components, and the cost is the likelihood ratio
+:math:`\\sum_i \\log [p(x_i, y_i) / p(x_i)]` of that mixture. With a
+kernel bandwidth or a metric per prototype, the components would have
+different normalising constants, which the scores leave out: they are
+then not log-densities, and the model is discriminative only.
 """
 
 import jax.numpy as jnp
@@ -34,8 +43,11 @@ class SoftAssignmentMixin:
     :math:`f_k = -d_k / (2 \\sigma^2)` is one global value. It is stored
     as ``params['log_sigma']`` so that it stays positive, and is learned
     by gradient descent on the same cost unless ``adapt_sigma`` is False.
-    With one shared width the normalising constant of the components
-    cancels in the likelihood ratio, so it does not have to be known.
+    With one shared width and one shared distance, the normalising
+    constant of the components cancels in the posterior, so it does not
+    have to be known. With a bandwidth or metric per prototype it would
+    not cancel, and the scores are not log-densities (see the module
+    docstring).
     """
 
     _hyperparams = ('sigma', 'adapt_sigma', 'rejection_confidence')

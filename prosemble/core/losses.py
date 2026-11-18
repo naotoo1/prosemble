@@ -357,6 +357,33 @@ def class_log_posterior(logits, prototype_labels, n_classes):
     return per_class - jax.scipy.special.logsumexp(logits, axis=1, keepdims=True)
 
 
+def gaussian_mixture_class_proba(distances, prototype_labels, n_classes, sigma):
+    r"""Class posteriors of a labelled Gaussian mixture with one shared width.
+
+    .. math::
+
+        P(c \mid x) = \frac{\sum_{k: c(k) = c} \exp(-d_k / 2\sigma^2)}
+                          {\sum_j \exp(-d_j / 2\sigma^2)}
+
+    This is the posterior that the robust soft LVQ cost
+    (:func:`rslvq_loss`) is the log-likelihood of.
+
+    Parameters
+    ----------
+    distances : array of shape (n, p)
+        Squared distances :math:`d_k` from the samples to the prototypes.
+    prototype_labels : array of shape (p,)
+    n_classes : int
+    sigma : float
+
+    Returns
+    -------
+    array of shape (n, n_classes)
+    """
+    logits = -distances / (2.0 * sigma ** 2)
+    return jnp.exp(class_log_posterior(logits, prototype_labels, n_classes))
+
+
 # --- Cross-Entropy LVQ Loss ---
 
 @partial(jit, static_argnums=(3,))

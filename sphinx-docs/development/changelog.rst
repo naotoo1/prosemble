@@ -6,6 +6,23 @@ Changelog
 Notable changes in each release. Pull request numbers link to the
 details on GitHub.
 
+Unreleased
+----------
+
+**Fixes**
+
+* ``predict_proba`` of :class:`RSLVQ`, :class:`SLVQ`, :class:`MRSLVQ`,
+  :class:`LMRSLVQ`, :class:`RSLVQ_NG`, :class:`MRSLVQ_NG` and
+  :class:`LMRSLVQ_NG` returns the class posteriors of the trained mixture.
+  It used to apply a softmax to the distance to the nearest prototype of
+  each class, which ignored the width ``sigma`` and the other prototypes of
+  a class, so it was not the posterior the models are trained on.
+  ``predict`` is unchanged; ``predict_with_rejection`` thresholds the new
+  posteriors.
+* The documentation no longer describes the soft models with a metric or
+  kernel bandwidth per prototype as Gaussian mixtures: their scores are not
+  normalised densities, and they are discriminative classifiers.
+
 2.5.0 (2026-11-18)
 ------------------
 

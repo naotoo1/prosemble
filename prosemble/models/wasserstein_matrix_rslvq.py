@@ -148,6 +148,10 @@ class WLMRSLVQ(WMRSLVQ):
     boundaries. The matrices are not normalised: the size of
     :math:`\\Lambda_k` sets how quickly the score of prototype :math:`k`
     falls off.
+    Because each prototype has its own matrix, the scores are not the
+    log-densities of a normalised mixture (each component would need its
+    own normalising term); the class posteriors are those of a
+    discriminative model, which is what the cost is the log-likelihood of.
 
     The model has :math:`p \\cdot d \\cdot l` matrix parameters for
     :math:`p` prototypes, :math:`d` features and ``latent_dim``

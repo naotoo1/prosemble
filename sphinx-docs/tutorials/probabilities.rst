@@ -35,9 +35,9 @@ model makes enough mistakes to measure its calibration:
                      random_seed=0)
    model.fit(X_train, y_train)
 
-:class:`DKLMRSLVQ` is a soft model: each prototype is a Gaussian component
-in a learned kernel metric, and ``predict_proba`` returns mixture
-posteriors. It classifies 84.2 % of the test samples correctly.
+:class:`DKLMRSLVQ` is a soft model: each prototype scores a sample with
+its own learned kernel metric, and ``predict_proba`` returns the class
+posteriors that the model is trained on. It classifies 84.2 % of the test samples correctly.
 
 Calibrate
 ---------
